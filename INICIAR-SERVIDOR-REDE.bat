@@ -15,33 +15,36 @@ if not defined PY where python >nul 2>&1 && set PY=python
 if not defined PY where python3 >nul 2>&1 && set PY=python3
 
 if not defined PY (
-  echo  [ERRO] Python nao encontrado. Instale Python 3 com PATH.
+  echo  [ERRO] Python nao encontrado.
   pause
   exit /b 1
 )
 
+set PORTA=8080
+netstat -ano | findstr ":%PORTA% " | findstr "LISTENING" >nul 2>&1
+if not errorlevel 1 set PORTA=8081
+
 echo  Obtendo IP desta maquina...
+set IP=127.0.0.1
 for /f "tokens=2 delims=:" %%a in ('ipconfig ^| findstr /c:"IPv4"') do (
-  set IP=%%a
+  set "IP=%%a"
   goto :found
 )
 :found
 set IP=%IP: =%
 
 echo.
-echo  Outros PCs da rede devem abrir no navegador:
-echo.
-echo      http://%IP%:8080
-echo.
-echo  Se nao abrir, libere a porta 8080 no firewall do Windows
-echo  (veja COMANDOS-DISTRIBUICAO-LOCAL.md)
-echo.
-echo  Este PC tambem: http://localhost:8080
-echo  Para parar: Ctrl+C ou feche esta janela
-echo  ========================================
+echo  Servidor na porta %PORTA%
+echo  Este PC:     http://localhost:%PORTA%/
+echo  Outros PCs:  http://%IP%:%PORTA%/
 echo.
 
-start "" "http://localhost:8080"
-%PY% -m http.server 8080 --bind 0.0.0.0
+start "Controle RC - Servidor Rede" cmd /k "%PY% -m http.server %PORTA% --bind 0.0.0.0"
 
+timeout /t 3 /nobreak >nul
+start "" "http://localhost:%PORTA%/"
+
+echo  Deixe a janela do servidor aberta.
+echo  Firewall: libere TCP %PORTA% se outros PCs nao conectarem.
+echo.
 pause
