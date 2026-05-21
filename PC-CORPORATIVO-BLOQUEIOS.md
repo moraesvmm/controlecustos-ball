@@ -27,22 +27,25 @@ Mensagem comum quando o TI bloqueia instalações, scripts ou ferramentas.
 3. Extraia para uma pasta que você tenha permissão, por exemplo:  
    `C:\Users\SEU_USUARIO\Documents\controle-rcs-main`
 
-### 2) Subir o servidor SEM arquivo .bat
+### 2) Subir o servidor SEM Python (PowerShell — ja vem no Windows)
 
-Abra **Prompt de Comando** (cmd.exe) — não precisa ser administrador:
+Duplo clique em **`INICIAR-SERVIDOR-POWERSHELL.bat`**
+
+Ou no PowerShell:
+
+```powershell
+cd C:\Users\vmarque2\Documents\controle-rc-system
+powershell -ExecutionPolicy Bypass -File .\servidor.ps1 -Porta 8080
+```
+
+### 2b) Se tiver Python
 
 ```cmd
 cd C:\Users\SEU_USUARIO\Documents\controle-rcs-main
 py -3 -m http.server 8080
 ```
 
-Se `py` não funcionar, tente:
-
-```cmd
-python -m http.server 8080
-```
-
-Se **Python também for bloqueado**, pule para a seção **"Um PC servidor para todos"**.
+Se **Python e PowerShell estiverem bloqueados**, pule para **"Um PC servidor para todos"**.
 
 ### 3) Abrir o sistema
 
