@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle RC — Sistema</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="js/env.runtime.js"></script>
+</head>
+<body>
+  <div class="app-bg"></div>
+
+  <header class="app-header">
+    <div class="brand">
+      <div class="brand-mark">RC</div>
+      <div>
+        <h1>Controle RC</h1>
+        <span>Requisições · Conserto &amp; Serviços</span>
+      </div>
+    </div>
+    <div id="appStatus" class="app-status">Carregando…</div>
+  </header>
+
+  <nav class="tabs">
+    <button type="button" data-tab="dashboard" class="active">Dashboard</button>
+    <button type="button" data-tab="rc">Controle RC</button>
+    <button type="button" data-tab="consertos">Consertos</button>
+    <button type="button" data-tab="compras">Compras</button>
+    <button type="button" data-tab="fabricacao">Fabricação</button>
+  </nav>
+
+  <main class="main-layout">
+    <section class="kpi-grid">
+      <div class="kpi-card">
+        <div class="label">Registros</div>
+        <div class="value" id="kpiTotal">—</div>
+      </div>
+      <div class="kpi-card kpi-gold">
+        <div class="label">Valor total</div>
+        <div class="value" id="kpiValor">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">Previsto (mês+)</div>
+        <div class="value" id="kpiPrevisto">—</div>
+      </div>
+      <div class="kpi-card">
+        <div class="label">Recebido</div>
+        <div class="value" id="kpiRecebido">—</div>
+      </div>
+      <div class="kpi-card kpi-alert kpi-clickable" id="kpiCardAtrasados" role="button" tabindex="0" title="Clique para ver itens atrasados">
+        <div class="label">Atrasados</div>
+        <div class="value" id="kpiAtrasados">—</div>
+      </div>
+      <div class="kpi-card kpi-wide">
+        <div class="label">Por status (clique para filtrar)</div>
+        <div class="kpi-chips" id="kpiStatusChips"></div>
+      </div>
+    </section>
+
+    <section class="filters panel">
+      <label class="search-field">
+        <span>Busca</span>
+        <input type="search" id="filtroBusca" placeholder="Item, RC, PO, solicitante…" />
+      </label>
+      <label><span>Natureza</span><select id="filtroNatureza"><option value="TODOS">TODOS</option></select></label>
+      <label><span>Status</span><select id="filtroStatus"><option value="TODOS">TODOS</option></select></label>
+      <label><span>Criticidade</span><select id="filtroCriticidade"><option value="TODOS">TODOS</option></select></label>
+      <label><span>Linha</span><select id="filtroLinha"><option value="TODOS">TODOS</option></select></label>
+      <label><span>Máquina</span><select id="filtroMaquina"><option value="TODOS">TODOS</option></select></label>
+      <label><span>Fornecedor</span><select id="filtroFornecedor"><option value="TODOS">TODOS</option></select></label>
+      <button type="button" class="btn btn-ghost" id="btnLimparFiltros">Limpar filtros</button>
+    </section>
+
+    <div id="view-dashboard" class="view active">
+      <div id="secaoDashboard">
+        <p class="section-hint">Clique em qualquer barra do gráfico para abrir o detalhamento dos gastos.</p>
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div></div>
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartMes"></canvas></div></div>
+          <div class="chart-box chart-wide"><div class="chart-canvas-wrap chart-tall"><canvas id="chartMaquina"></canvas></div></div>
+        </div>
+      </div>
+      <aside id="secaoAlertas" class="alertas-panel panel">
+        <h3>⚠ Itens atrasados</h3>
+        <div id="alertasLista"></div>
+      </aside>
+    </div>
+
+    <div id="view-rc" class="view"></div>
+    <div id="view-consertos" class="view"></div>
+    <div id="view-compras" class="view"></div>
+    <div id="view-fabricacao" class="view"></div>
+
+    <section id="secaoTabela" class="crud-section hidden">
+      <div class="toolbar panel">
+        <div>
+          <h2 class="crud-title" id="crudTitle">Controle RC</h2>
+          <span class="table-count" id="tableCount">0 registros</span>
+        </div>
+        <div class="toolbar-actions">
+          <button type="button" class="btn btn-ghost" id="btnExport">Exportar CSV</button>
+          <button type="button" class="btn" id="btnNovo">+ Novo registro</button>
+        </div>
+      </div>
+
+      <div class="row-action-bar hidden" id="rowActionBar" aria-live="polite">
+        <div class="row-action-info">
+          <span class="row-action-label" id="rowActionLabel">Linha selecionada</span>
+          <span class="row-action-hint">Duplo clique na linha para ver detalhes</span>
+        </div>
+        <div class="row-action-buttons">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDetalhe">Ver detalhes</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowEditar">Editar</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDuplicar">Duplicar</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnRowExcluir">Excluir</button>
+        </div>
+      </div>
+
+      <div class="table-scroll-main" id="tableScrollMain">
+        <div class="table-scroll-inner" id="tableScrollInner">
+          <table class="data-table">
+            <thead id="tabelaHead"></thead>
+            <tbody id="tabelaBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal CRUD completo -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal modal-lg">
+      <header class="modal-header">
+        <h2 id="modalTitulo">Registro RC</h2>
+        <button type="button" class="btn-icon" id="btnFecharModal" aria-label="Fechar">✕</button>
+      </header>
+      <form id="formRegistro">
+        <div class="form-section">
+          <h3>Identificação</h3>
+          <p id="formIdHint" class="form-hint"></p>
+          <div class="form-grid">
+            <label><span>Sinal</span><input name="sinal" /></label>
+            <label>
+              <span>ID (agrupa o mesmo item — pode repetir)</span>
+              <div class="input-with-btn">
+                <input name="item_id" type="number" min="1" step="1" />
+                <button type="button" class="btn btn-ghost btn-sm" id="btnProximoId" title="Sugerir próximo ID">Próximo ID</button>
+              </div>
+            </label>
+            <label><span>Natureza</span>
+              <select name="natureza">
+                <option value="CONSERTO">Conserto</option>
+                <option value="FABRICACAO">Fabricação</option>
+                <option value="COMPRA">Compra</option>
+              </select>
+            </label>
+            <label class="full"><span>Item *</span><input name="item" required /></label>
+            <label class="full"><span>Descrição da falha</span><textarea name="descricao_falha" rows="2"></textarea></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Local &amp; responsável</h3>
+          <div class="form-grid">
+            <label><span>Solicitante</span><input name="solicitante" /></label>
+            <label><span>Criticidade</span>
+              <select name="criticidade">
+                <option value="">—</option>
+                <option value="CRITICA">CRITICA</option>
+                <option value="ALTA">ALTA</option>
+                <option value="MEDIA">MEDIA</option>
+                <option value="BAIXA">BAIXA</option>
+              </select>
+            </label>
+            <label><span>Linha</span><input name="linha" /></label>
+            <label><span>Máquina</span><input name="maquina" /></label>
+            <label><span>Fornecedor</span><input name="fornecedor" /></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Documentos &amp; valores</h3>
+          <div class="form-grid">
+            <label><span>NF saída</span><input name="nf_saida" /></label>
+            <label><span>Data saída</span><input name="data_saida" type="date" /></label>
+            <label><span>Orçamento</span><input name="orcamento" /></label>
+            <label><span>RC</span><input name="rc" /></label>
+            <label><span>PO</span><input name="po" /></label>
+            <label><span>Valor (R$)</span><input name="valor" type="number" step="0.01" /></label>
+            <label><span>Previsão entrega</span><input name="previsao_entrega" type="date" /></label>
+            <label><span>Data recebimento</span><input name="data_recebimento" type="date" /></label>
+            <label class="full"><span>Comentário</span><textarea name="comentario" rows="2"></textarea></label>
+          </div>
+        </div>
+        <div class="form-section calc-section">
+          <h3>Campos calculados (somente leitura)</h3>
+          <div class="calc-preview" id="calcPreview"></div>
+        </div>
+        <footer class="form-actions">
+          <button type="button" class="btn btn-danger" id="btnExcluirModal" style="display:none">Excluir</button>
+          <button type="button" class="btn btn-ghost" id="btnMarcarEntregue">Marcar entregue hoje</button>
+          <button type="submit" class="btn">Salvar alterações</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Painel drill-down (clique nos gráficos) -->
+  <div class="drill-overlay" id="drillOverlay"></div>
+  <aside class="drill-panel" id="drillPanel">
+    <header class="drill-header">
+      <div>
+        <h2 id="drillTitulo">Detalhes</h2>
+        <p id="drillSubtitulo"></p>
+      </div>
+      <button type="button" class="btn-icon" id="drillFechar">✕</button>
+    </header>
+    <div class="drill-stats" id="drillStats"></div>
+    <div class="drill-insight panel" id="drillInsight"></div>
+    <div class="drill-lista" id="drillLista"></div>
+  </aside>
+
+  <div id="toast" class="toast"></div>
+
+  <script type="module" src="js/app.js?v=8"></script>
+</body>
+</html>
