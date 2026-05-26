@@ -1,5 +1,5 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA } from './config.js';
-import { enriquecerRegistro, normalizarNatureza } from './logic.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA } from './config.js?v=2';
+import { enriquecerRegistro, normalizarNatureza } from './logic.js?v=9';
 
 let supabaseClient = null;
 
@@ -28,7 +28,7 @@ function mapFromExcel(row) {
     item: row.ITEM || row.item || '',
     descricao_falha: row['DESCRIÇÃO FALHA'] || row.descricao_falha,
     solicitante: row.SOLICITANTE || row.solicitante,
-    criticidade: (row.CRITICIDADE || row.criticidade || '').toUpperCase().replace('CRITICA', 'CRITICA'),
+    criticidade: (row.CRITICIDADE || row.criticidade || '').toUpperCase().replace('CRÍTICA', 'CRITICA'),
     linha: row.LINHA || row.linha,
     maquina: row.MAQUINA || row.maquina,
     fornecedor: row.FORNECEDOR || row.fornecedor,
@@ -41,6 +41,7 @@ function mapFromExcel(row) {
     previsao_entrega: parseDateField(row.PREVISAO_ENTREGA || row.previsao_entrega),
     data_recebimento: parseDateField(row['DATA RECEBIMENTO'] || row.data_recebimento),
     comentario: row.comentario,
+    foto_url: row.foto_url || null,
   });
 }
 
@@ -85,7 +86,16 @@ export async function salvarRegistro(registro) {
     previsao_entrega: registro.previsao_entrega,
     data_recebimento: registro.data_recebimento,
     comentario: registro.comentario,
+    foto_url: registro.foto_url || null,
   };
+
+  if (!USE_LOCAL_DATA) {
+    const user = await getCurrentUser();
+    if (user && user.user_metadata && user.user_metadata.username) {
+      payload.last_modified_by = user.user_metadata.username;
+      payload.last_modified_at = new Date().toISOString();
+    }
+  }
 
   if (USE_LOCAL_DATA) {
     if (registro.id) {
@@ -134,3 +144,67 @@ export async function duplicarRegistro(id) {
   };
   return salvarRegistro(copia);
 }
+
+/* AUTENTICAÇÃO */
+export async function signUp(email, password, username) {
+  if (USE_LOCAL_DATA) {
+    return { user: { email, user_metadata: { username: username || 'Modo Local' } } };
+  }
+  const client = getClient();
+  if (!client) throw new Error('Supabase no carregado');
+  const { data, error } = await client.auth.signUp({ email, password, options: { data: { username } } });
+  if (error) throw error;
+  return data;
+}
+
+export async function signIn(email, password) {
+  if (USE_LOCAL_DATA) {
+    return { user: { email, user_metadata: { username: 'Modo Local' } } };
+  }
+  const client = getClient();
+  if (!client) throw new Error('Supabase no carregado');
+  const { data, error } = await client.auth.signInWithPassword({ email, password });
+  if (error) throw error;
+  return data;
+}
+
+export async function signOut() {
+  if (USE_LOCAL_DATA) return;
+  const client = getClient();
+  if (!client) throw new Error('Supabase no carregado');
+  const { error } = await client.auth.signOut();
+  if (error) throw error;
+}
+
+export async function getCurrentUser() {
+  if (USE_LOCAL_DATA) {
+    return {
+      id: 'local-user',
+      email: 'local@controle.rc',
+      user_metadata: { username: 'Modo Local' },
+    };
+  }
+  const client = getClient();
+  if (!client) return null;
+  const { data: { user } } = await client.auth.getUser();
+  return user;
+}
+
+export async function onAuthStateChange(callback) {
+  if (USE_LOCAL_DATA) {
+    callback({
+      id: 'local-user',
+      email: 'local@controle.rc',
+      user_metadata: { username: 'Modo Local' },
+    });
+    return null;
+  }
+  const client = getClient();
+  if (!client) return null;
+  const { data: { session } } = await client.auth.getSession();
+  callback(session ? session.user : null);
+  client.auth.onAuthStateChange((event, session) => {
+    callback(session ? session.user : null);
+  });
+}
+

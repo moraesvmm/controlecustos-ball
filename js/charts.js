@@ -2,9 +2,10 @@ import {
   agregarPorStatus,
   agregarRecebidosPrevistos,
   agregarPorMaquina,
-} from './logic.js';
-import { abrirDrilldown, registrosPorClique } from './drilldown.js';
-import { fmtMoeda } from './ui.js';
+  agregarPrazosRetorno,
+} from './logic.js?v=9';
+import { abrirDrilldown, registrosPorClique } from './drilldown.js?v=4';
+import { fmtMoeda } from './ui.js?v=2';
 
 const COLORS = {
   ENTREGUE: '#34d399',
@@ -17,6 +18,7 @@ const COLORS = {
 const CHART_FONT = { family: "'DM Sans', system-ui", size: 12 };
 let chartInstances = [];
 let registrosRef = [];
+let crudMesChartInstance = null;
 
 const premiumDefaults = {
   responsive: true,
@@ -38,8 +40,11 @@ const premiumDefaults = {
       padding: 12,
       callbacks: {
         label: (ctx) => {
-          const v = ctx.parsed.y ?? ctx.parsed.x ?? 0;
-          return `${ctx.dataset.label}: ${fmtMoeda(v)}`;
+          let v = 0;
+          if (typeof ctx.parsed === 'number') v = ctx.parsed;
+          else if (ctx.chart?.options?.indexAxis === 'y') v = ctx.parsed.x;
+          else v = ctx.parsed.y;
+          return ` ${ctx.dataset.label}: ${fmtMoeda(v)}`;
         },
         footer: () => 'Clique para ver detalhes',
       },
@@ -76,8 +81,8 @@ function makeClickHandler(chartId) {
 
     const total = regs.reduce((s, r) => s + (Number(r.valor) || 0), 0);
     abrirDrilldown({
-      titulo: titulos[chartKey] || label,
-      subtitulo: `${regs.length} registro(s) · Total ${fmtMoeda(total)}`,
+      titulo: titulos[chartKey] || `${datasetLabel} — ${label}`,
+      subtitulo: chartKey === 'prazos' ? `${regs.length} iten(s) nesta faixa` : `${regs.length} registro(s) · Total ${fmtMoeda(total)}`,
       registros: regs,
       meta: {
         insight:
@@ -85,7 +90,9 @@ function makeClickHandler(chartId) {
             ? `Este status representa ${((total / (registrosRef.reduce((a, r) => a + (Number(r.valor) || 0), 0) || 1)) * 100).toFixed(1)}% do valor filtrado no dashboard.`
             : chartKey === 'maquina'
               ? 'Considere priorizar manutenção preventiva se o custo concentrar em uma única máquina/linha.'
-              : 'Compare previsto vs recebido para ajustar fluxo de caixa do mês.',
+              : chartKey === 'prazos'
+                ? 'Acompanhe os itens atrasados para evitar gargalos na produção.'
+                : 'Compare previsto vs recebido para ajustar fluxo de caixa do mês.',
       },
     });
   };
@@ -96,13 +103,74 @@ export function destroyCharts() {
   chartInstances = [];
 }
 
+export function destroyCrudMesChart() {
+  if (crudMesChartInstance) {
+    crudMesChartInstance.destroy();
+    crudMesChartInstance = null;
+  }
+}
+
+export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') {
+  destroyCrudMesChart();
+  registrosRef = registros;
+
+  const ctx = document.getElementById('chartCrudMes');
+  if (!ctx) return;
+
+  const byMes = agregarRecebidosPrevistos(registros);
+
+  crudMesChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: byMes.map((x) => x.mes),
+      datasets: [
+        {
+          label: 'Valor Previsto',
+          data: byMes.map((x) => x.previsto),
+          backgroundColor: (c) => gradient(c, 'rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'),
+          borderRadius: 6,
+        },
+        {
+          label: 'Valor Recebido',
+          data: byMes.map((x) => x.recebido),
+          backgroundColor: (c) => gradient(c, 'rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'),
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...premiumDefaults,
+      onClick: makeClickHandler('mes'),
+      plugins: {
+        ...premiumDefaults.plugins,
+        title: {
+          display: true,
+          text: titulo,
+          color: '#f8fafc',
+          font: { ...CHART_FONT, size: 14, weight: '600' },
+        },
+      },
+      scales: {
+        x: { ticks: { color: '#94a3b8', font: CHART_FONT }, grid: { display: false } },
+        y: {
+          ticks: { color: '#94a3b8', font: CHART_FONT, callback: (v) => fmtMoeda(v) },
+          grid: { color: 'rgba(148,163,184,0.08)' },
+        },
+      },
+    },
+  });
+}
+
 export function renderDashboardCharts(registros) {
   destroyCharts();
   registrosRef = registros;
 
   const byStatus = agregarPorStatus(registros);
   const byMes = agregarRecebidosPrevistos(registros);
-  const byMaquina = agregarPorMaquina(registros);
+  const byMaquina = agregarPorMaquina(registros)
+    .filter(x => x.valor > 0)
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, 10);
 
   const ctx1 = document.getElementById('chartStatus');
   if (ctx1) {
@@ -123,6 +191,7 @@ export function renderDashboardCharts(registros) {
         onClick: makeClickHandler('status'),
         plugins: {
           ...premiumDefaults.plugins,
+          legend: { display: false },
           title: {
             display: true,
             text: 'STATUS × CUSTO',
@@ -198,6 +267,8 @@ export function renderDashboardCharts(registros) {
           data: byMaquina.map((x) => x.valor),
           backgroundColor: (c) => gradient(c, 'rgba(212, 175, 55, 0.85)', 'rgba(180, 140, 40, 0.35)'),
           borderRadius: 6,
+          barThickness: Math.min(24, Math.max(12, 300 / (byMaquina.length || 1))),
+          maxBarThickness: 32
         }],
       },
       options: {
@@ -224,4 +295,61 @@ export function renderDashboardCharts(registros) {
     });
     chartInstances.push(ch3);
   }
+
+  // --- Gráficos de Pizza (Prazos de Retorno) ---
+  const prazosColors = {
+    'Em dias': '#34d399', // Verde
+    'Pendente de retorno': '#fbbf24', // Amarelo
+    'Atrasado para retorno': '#f87171' // Vermelho
+  };
+
+  function renderPrazoChart(canvasId, title, natureza) {
+    const ctx = document.getElementById(canvasId);
+    if (!ctx) return;
+    const data = agregarPrazosRetorno(registros, natureza);
+    // Se não houver dados e quisermos mostrar vazio, não retornamos, renderizamos vazio
+    
+    const ch = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: data.map(d => d.label),
+        datasets: [{
+          label: natureza,
+          data: data.map(d => d.qtde),
+          backgroundColor: data.map(d => prazosColors[d.label]),
+          borderWidth: 2,
+          borderColor: '#0f172a',
+          hoverOffset: 4
+        }]
+      },
+      options: {
+        ...premiumDefaults,
+        cutout: '60%',
+        onClick: makeClickHandler('prazos'),
+        plugins: {
+          ...premiumDefaults.plugins,
+          title: {
+            display: true,
+            text: title,
+            color: '#f8fafc',
+            font: { ...CHART_FONT, size: 14, weight: '600' }
+          },
+          tooltip: {
+            ...premiumDefaults.plugins.tooltip,
+            callbacks: {
+              label: (ctx) => {
+                return ` ${ctx.label}: ${ctx.parsed} item(ns)`;
+              },
+              footer: () => 'Clique para ver detalhes'
+            }
+          }
+        }
+      }
+    });
+    chartInstances.push(ch);
+  }
+
+  renderPrazoChart('chartConsertoDias', 'CONSERTO', 'CONSERTO');
+  renderPrazoChart('chartComprasDias', 'COMPRAS', 'COMPRA');
+  renderPrazoChart('chartFabricacaoDias', 'FABRICAÇÃO', 'FABRICACAO');
 }
