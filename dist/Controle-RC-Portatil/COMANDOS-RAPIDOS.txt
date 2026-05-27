@@ -1,0 +1,109 @@
+================================================================================
+  CONTROLE RC - COMANDOS RAPIDOS (distribuicao local)
+  Copie e cole no PowerShell ou CMD
+================================================================================
+
+--- BAIXAR SEM GIT (PC corporativo sem git instalado) ---
+
+  1) Abra no navegador:
+     https://github.com/moraesvmm/controle-rcs/archive/refs/heads/main.zip
+
+  2) Extraia o ZIP (botao direito -> Extrair tudo)
+
+  3) A pasta ficara: controle-rcs-main
+     Renomeie para: controle-rc-system (opcional)
+
+  4) Duplo clique: INICIAR-SERVIDOR.bat
+
+  Ou peca a pasta ZIP por rede / pendrive (copia do colega que ja tem).
+
+  Se aparecer "blocked by your policy":
+  -> NAO use winget nem .bat
+  -> Leia: PC-CORPORATIVO-BLOQUEIOS.md
+  -> Use CMD:  cd pasta-do-projeto
+               py -3 -m http.server 8080
+
+
+--- INSTALAR GIT (opcional, se o TI permitir) ---
+
+  Winget (PowerShell):
+    winget install --id Git.Git -e
+
+  Depois feche e abra o terminal e use:
+    git clone https://github.com/moraesvmm/controle-rcs.git
+
+
+--- FORMA MAIS FACIL (recomendada) ---
+  Duplo clique no arquivo:
+    INICIAR-SERVIDOR.bat          -> so este computador
+    INICIAR-SERVIDOR-REDE.bat     -> outros PCs na rede acessam pelo IP
+
+  Depois abra no navegador:  http://localhost:8080
+
+
+--- SUBIR SERVIDOR MANUAL (porta 8080) ---
+
+cd C:\Users\VMORAES1\controle-rc-system
+python -m http.server 8080
+
+  (Se "python" nao funcionar, tente:)
+py -3 -m http.server 8080
+
+
+--- SUBIR PARA A REDE (outros PCs acessam este) ---
+
+cd C:\Users\VMORAES1\controle-rc-system
+python -m http.server 8080 --bind 0.0.0.0
+
+  Descobrir IP desta maquina:
+ipconfig
+
+  Nos outros PCs, abrir no navegador:
+http://SEU_IP_AQUI:8080
+  Exemplo: http://10.50.12.34:8080
+
+
+--- OUTRA PORTA (se 8080 estiver ocupada) ---
+
+python -m http.server 9090
+  Acesse: http://localhost:9090
+
+
+--- PARAR O SERVIDOR ---
+  Na janela do terminal: Ctrl + C
+  Ou feche a janela preta
+
+
+--- VERIFICAR PYTHON ---
+
+python --version
+py -3 --version
+
+
+--- CONFIGURACAO SUPABASE (editar antes de distribuir) ---
+  Arquivo: js\env.runtime.js
+
+  USE_LOCAL_DATA: 'false'  -> todos usam o mesmo banco (recomendado)
+  USE_LOCAL_DATA: 'true'   -> cada PC so le o JSON local
+
+
+--- LIBERAR FIREWALL (PowerShell como Administrador) ---
+
+New-NetFirewallRule -DisplayName "Controle RC 8080" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow
+
+
+--- IMPORTAR DADOS DO EXCEL PARA SUPABASE (admin, uma vez) ---
+
+cd C:\Users\VMORAES1\controle-rc-system
+pip install requests
+$env:SUPABASE_URL = "https://nnbzcukmuziyrobdqlnh.supabase.co"
+$env:SUPABASE_SERVICE_KEY = "SUA_SERVICE_ROLE_KEY"
+python scripts\import_to_supabase.py
+
+
+--- SQL NO SUPABASE (site, uma vez) ---
+  Executar no SQL Editor:
+  1) supabase\migrations\001_schema.sql
+  2) supabase\migrations\002_natureza_id.sql
+
+================================================================================
