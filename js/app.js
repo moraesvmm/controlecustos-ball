@@ -14,7 +14,7 @@ import {
   agregarFornecedores,
 } from './logic.js';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
-import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient } from './db.js';
+import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, subscribeToRealtime } from './db.js';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=4';
 import {
   COLUNAS_TABELA,
@@ -226,11 +226,36 @@ function renderTabela() {
         input.value = rawVal;
         input.className = 'inline-edit-input';
 
+        const wrapper = document.createElement('div');
+        wrapper.style.display = 'flex';
+        wrapper.style.alignItems = 'center';
+        wrapper.style.gap = '4px';
+        wrapper.appendChild(input);
+
+        const btnSave = document.createElement('button');
+        btnSave.innerHTML = '&#10003;';
+        btnSave.title = 'Salvar';
+        btnSave.style.cssText = 'background:var(--success);border:none;color:#fff;border-radius:3px;cursor:pointer;padding:2px 6px;font-size:12px;';
+        
+        const btnCancel = document.createElement('button');
+        btnCancel.innerHTML = '&#10005;';
+        btnCancel.title = 'Cancelar';
+        btnCancel.style.cssText = 'background:var(--danger);border:none;color:#fff;border-radius:3px;cursor:pointer;padding:2px 6px;font-size:12px;';
+
+        wrapper.appendChild(btnSave);
+        wrapper.appendChild(btnCancel);
+
         cell.innerHTML = '';
-        cell.appendChild(input);
+        cell.appendChild(wrapper);
         input.focus();
 
-        const salvarInline = async () => {
+        const cancelInline = (e) => {
+          if (e) { e.preventDefault(); e.stopPropagation(); }
+          refresh();
+        };
+
+        const salvarInline = async (e) => {
+          if (e) { e.preventDefault(); e.stopPropagation(); }
           const newVal = input.value.trim();
           if (newVal === rawVal) {
             refresh();
@@ -251,15 +276,16 @@ function renderTabela() {
           refresh();
         };
 
-        input.addEventListener('blur', salvarInline);
+        btnSave.addEventListener('click', salvarInline);
+        btnCancel.addEventListener('click', cancelInline);
+
         input.addEventListener('keydown', (evt) => {
           if (evt.key === 'Enter') {
             evt.preventDefault();
-            input.blur();
+            salvarInline();
           }
           if (evt.key === 'Escape') {
-            input.removeEventListener('blur', salvarInline);
-            refresh();
+            cancelInline();
           }
         });
       });
@@ -502,10 +528,10 @@ function atualizarBotaoEdicao() {
   const btn = $('#btnInlineEdit');
   if (!btn) return;
   if (isInlineEditMode) {
-    btn.style.background = 'var(--primary)';
-    btn.style.color = '#0f172a';
+    btn.style.background = 'var(--danger)';
+    btn.style.color = '#ffffff';
     btn.style.fontWeight = '700';
-    btn.style.borderColor = 'var(--primary)';
+    btn.style.borderColor = 'var(--danger)';
     btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg><span style="pointer-events:none">Sair da Edição</span>`;
   } else {
     btn.style.background = 'transparent';
@@ -520,11 +546,12 @@ async function init() {
   try {
     registros = await carregarRegistros();
   } catch (e) {
-    $('#appStatus').textContent = 'Erro: ' + e.message;
-    return;
+    console.error("Initialization error:", e);
+    toast('Modo Offline: Não foi possível baixar registros (' + e.message + ')', 'warning');
+    registros = []; // Fallback gracefully to allow app to finish initializing UI
   }
 
-  $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros · Supabase`;
+  $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros`;
 
   STATUS_LIST.forEach((s) => {
     $('#filtroStatus').innerHTML += `<option value="${s}">${s}</option>`;
@@ -534,6 +561,55 @@ async function init() {
   });
 
   renderFiltros();
+
+  subscribeToRealtime((payload) => {
+    if (!payload || !payload.eventType) return;
+    let changed = false;
+    
+    if (payload.eventType === 'INSERT') {
+      const idx = registros.findIndex(r => r.id === payload.new.id);
+      if (idx === -1) {
+        registros.push(enriquecerRegistro(payload.new));
+        changed = true;
+      }
+    } else if (payload.eventType === 'UPDATE') {
+      const idx = registros.findIndex(r => r.id === payload.new.id);
+      if (idx !== -1) {
+        registros[idx] = enriquecerRegistro(payload.new);
+        changed = true;
+      } else {
+        registros.push(enriquecerRegistro(payload.new));
+        changed = true;
+      }
+    } else if (payload.eventType === 'DELETE') {
+      const oldLen = registros.length;
+      registros = registros.filter(r => r.id !== payload.old.id);
+      if (registros.length < oldLen) changed = true;
+    }
+    
+    if (changed) {
+      // Shield 1: Check if the user is editing the exact same row in the Modal
+      const isModalOpen = $('#modal').classList.contains('open');
+      if (isModalOpen && editando?.id === payload.new?.id) {
+        toast('⚠️ Atenção: O registro que você está editando acabou de ser modificado por outro usuário.', 'warning');
+      }
+
+      // Shield 2: Check if there is an active inline edit (prevent UI destruction)
+      const isInlineEditing = !!document.querySelector('.inline-edit-input');
+      
+      clearTimeout(window._realtimeDebounce);
+      window._realtimeDebounce = setTimeout(() => {
+        if (isInlineEditing) {
+          $('#appStatus').innerHTML = `<span class="dot-online" style="background:var(--warning)"></span> ${registros.length} registros (Atualização pendente)`;
+          toast('Mudanças de outros usuários recebidas. Termine de editar para atualizar a tela.', 'info');
+        } else {
+          $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros`;
+          refresh();
+          toast('Tabela sincronizada (tempo real)', 'success');
+        }
+      }, 400); // Shield 3: Debounce to prevent UI freezing on massive bulk updates
+    }
+  });
   setDrilldownEditHandler((id) => abrirModal(id));
   setDrilldownPhotoHandler(async (id, dataUrl) => {
     const r = registros.find((x) => x.id === id);
@@ -626,6 +702,7 @@ async function init() {
     refresh();
   });
   $('#btnFecharModal').addEventListener('click', () => $('#modal').classList.remove('open'));
+  $('#btnCancelarModal')?.addEventListener('click', () => $('#modal').classList.remove('open'));
   $('#btnExcluirModal').addEventListener('click', async () => {
     if (editando?.id) {
       $('#modal').classList.remove('open');
@@ -814,23 +891,35 @@ function renderFornecedoresSLA() {
 // Initialize Excel Import feature
 initExcelImport(getClient(), toast, async () => {
   registros = await carregarRegistros();
-  renderFiltros();
-  refresh();
+  window.location.reload();
 });
 
-onAuthStateChange((user) => {
-  if (user) {
-    document.getElementById('login-container').style.display = 'none';
-    document.getElementById('app-container').style.display = 'flex';
-    if (!isAppInitialized) {
-      isAppInitialized = true;
-      init().then(() => {
-        initCalendario(registros);
-      });
-    }
-  } else {
-    isAppInitialized = false;
-    document.getElementById('login-container').style.display = 'flex';
-    document.getElementById('app-container').style.display = 'none';
+window.addEventListener('DOMContentLoaded', async () => {
+  // Se veio do inicializador (.bat), forçamos o deslogue (tela de login garantida ao executar)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('login') === 'force') {
+    try {
+      await signOut();
+    } catch(e) {}
+    // Remove o parâmetro da URL sem recarregar a página para que o F5 não deslogue
+    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+    window.history.replaceState({path: cleanUrl}, '', cleanUrl);
   }
+
+  onAuthStateChange((user) => {
+    if (user) {
+      document.getElementById('login-container').style.display = 'none';
+      document.getElementById('app-container').style.display = 'flex';
+      if (!isAppInitialized) {
+        isAppInitialized = true;
+        init().then(() => {
+          initCalendario(registros);
+        });
+      }
+    } else {
+      isAppInitialized = false;
+      document.getElementById('login-container').style.display = 'flex';
+      document.getElementById('app-container').style.display = 'none';
+    }
+  });
 });

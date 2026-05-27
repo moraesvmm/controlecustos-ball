@@ -88,7 +88,7 @@ export function valorCelula(r, col) {
     else if (st === 'ENTREGUE') color = 'var(--success)'; // Verde
     else if (st.includes('RC')) color = 'var(--warning)'; // Amarelo
     
-    return `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${color}; margin-right:8px; flex-shrink:0;"></span>${v || ''}`;
+    return `<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:${color}; margin-right:0; flex-shrink:0;" title="${v || ''}"></span>`;
   }
 
   if (col.key === 'natureza') return NATUREZA_LABELS[r.natureza] || r.natureza || '—';

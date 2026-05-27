@@ -148,10 +148,12 @@ export async function duplicarRegistro(id) {
 /* AUTENTICAÇÃO */
 export async function signUp(email, password, username) {
   if (USE_LOCAL_DATA) {
-    return { user: { email, user_metadata: { username: username || 'Modo Local' } } };
+    const u = { user: { email, user_metadata: { username: username || 'Modo Local' } } };
+    if (window._localAuthCallback) window._localAuthCallback(u.user);
+    return u;
   }
   const client = getClient();
-  if (!client) throw new Error('Supabase no carregado');
+  if (!client) throw new Error('Supabase não carregado');
   const { data, error } = await client.auth.signUp({ email, password, options: { data: { username } } });
   if (error) throw error;
   return data;
@@ -159,19 +161,24 @@ export async function signUp(email, password, username) {
 
 export async function signIn(email, password) {
   if (USE_LOCAL_DATA) {
-    return { user: { email, user_metadata: { username: 'Modo Local' } } };
+    const u = { user: { email, user_metadata: { username: 'Modo Local' } } };
+    if (window._localAuthCallback) window._localAuthCallback(u.user);
+    return u;
   }
   const client = getClient();
-  if (!client) throw new Error('Supabase no carregado');
+  if (!client) throw new Error('Supabase não carregado');
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
 
 export async function signOut() {
-  if (USE_LOCAL_DATA) return;
+  if (USE_LOCAL_DATA) {
+    if (window._localAuthCallback) window._localAuthCallback(null);
+    return;
+  }
   const client = getClient();
-  if (!client) throw new Error('Supabase no carregado');
+  if (!client) throw new Error('Supabase não carregado');
   const { error } = await client.auth.signOut();
   if (error) throw error;
 }
@@ -192,11 +199,8 @@ export async function getCurrentUser() {
 
 export async function onAuthStateChange(callback) {
   if (USE_LOCAL_DATA) {
-    callback({
-      id: 'local-user',
-      email: 'local@controle.rc',
-      user_metadata: { username: 'Modo Local' },
-    });
+    window._localAuthCallback = callback;
+    callback(null);
     return null;
   }
   const client = getClient();
@@ -207,4 +211,19 @@ export async function onAuthStateChange(callback) {
     callback(session ? session.user : null);
   });
 }
+
+export function subscribeToRealtime(callback) {
+  if (USE_LOCAL_DATA) return null;
+  const client = getClient();
+  if (!client) return null;
+
+  const channel = client.channel('public:rc_registros')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'rc_registros' }, payload => {
+      callback(payload);
+    })
+    .subscribe();
+
+  return channel;
+}
+
 

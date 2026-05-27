@@ -17,18 +17,23 @@ set "LOCAL_RUNTIME_ZIP=%PROJECT_ROOT%\runtime\python_env.zip"
 set "TEMP_RUNTIME_ZIP=%PROJECT_ROOT%\python_env.zip"
 cd /d "%PROJECT_ROOT%"
 
-if exist "%PROJECT_ROOT%\.python_local\tools\python.exe" (
-    echo O sistema ja esta instalado! Voce ja pode fechar esta janela e rodar o 2_Iniciar_Sistema.bat.
-    pause
-    exit
-)
+if exist "%PROJECT_ROOT%\.python_local\tools\python.exe" goto :ja_instalado
+if exist "%PROJECT_ROOT%\.python_local\python.exe" goto :ja_instalado
+goto :continuar_install
+
+:ja_instalado
+echo O sistema ja esta instalado! Voce ja pode fechar esta janela e rodar o 2_Iniciar_Sistema.bat.
+pause
+exit
+
+:continuar_install
 
 if exist "%LOCAL_RUNTIME_ZIP%" (
     echo [1/3] Encontrado pacote local do Python em:
     echo        %LOCAL_RUNTIME_ZIP%
 ) else (
     echo [1/3] Baixando ambiente de execucao seguro da Microsoft/Python...
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Invoke-WebRequest -Uri 'https://www.nuget.org/api/v2/package/python/3.12.8' -OutFile '%TEMP_RUNTIME_ZIP%'"
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $urls = @('https://www.nuget.org/api/v2/package/python/3.12.8', 'https://www.python.org/ftp/python/3.12.8/python-3.12.8-embed-amd64.zip'); $success=$false; foreach($u in $urls){ try { Write-Host \"Tentando: $u\"; Invoke-WebRequest -UseBasicParsing -Uri $u -OutFile '%TEMP_RUNTIME_ZIP%'; $success=$true; break; } catch { Write-Host \"Falhou.\" } }; if(-not $success){ exit 1 }"
     if errorlevel 1 goto :download_error
 )
 

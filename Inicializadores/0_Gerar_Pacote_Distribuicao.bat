@@ -10,8 +10,12 @@ set "ZIP_FILE=%DIST_DIR%\Controle-RC-Portatil.zip"
 
 cd /d "%PROJECT_ROOT%"
 
-if not exist "%PROJECT_ROOT%\.python_local\tools\python.exe" (
-    echo ERRO: a pasta ".python_local" nao foi encontrada.
+set "PYTHON_EXE="
+if exist "%PROJECT_ROOT%\.python_local\tools\python.exe" set "PYTHON_EXE=1"
+if exist "%PROJECT_ROOT%\.python_local\python.exe" set "PYTHON_EXE=1"
+
+if not defined PYTHON_EXE (
+    echo ERRO: a pasta ".python_local" e seu executavel nao foram encontrados.
     echo Rode primeiro o "1_Instalar_Requisitos.bat" neste PC para preparar o runtime portatil.
     pause
     exit /b 1
