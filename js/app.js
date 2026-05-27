@@ -553,9 +553,12 @@ async function init() {
 
   $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros`;
 
+  $('#filtroStatus').innerHTML = `<option value="TODOS">TODOS</option>`;
   STATUS_LIST.forEach((s) => {
     $('#filtroStatus').innerHTML += `<option value="${s}">${s}</option>`;
   });
+  
+  $('#filtroCriticidade').innerHTML = `<option value="TODOS">TODOS</option>`;
   CRITICIDADE_LIST.forEach((c) => {
     $('#filtroCriticidade').innerHTML += `<option value="${c}">${c}</option>`;
   });
@@ -693,6 +696,26 @@ async function init() {
 
   $('#btnNovo').addEventListener('click', () => abrirModal(null));
   $('#btnExport').addEventListener('click', () => exportarExcel(getFiltrados(), viewAtual));
+  
+  // Exportação em PDF com templates profissionais
+  $('#btnExportDashboardPdf')?.addEventListener('click', () => {
+    import('./pdf_report.js?v=' + Date.now()).then(m => {
+      m.gerarRelatorioExecutivoPDF(registros).catch(e => alert('Erro interno Executivo: ' + e.message));
+    }).catch(err => {
+      console.error('Erro ao carregar módulo PDF:', err);
+      alert('Erro de Importação PDF: ' + err.message + '\\n' + err.stack);
+    });
+  });
+
+  $('#btnExportSlaPdf')?.addEventListener('click', () => {
+    import('./pdf_report.js?v=' + Date.now()).then(m => {
+      m.gerarRelatorioSLAPDF(registros).catch(e => alert('Erro interno SLA: ' + e.message));
+    }).catch(err => {
+      console.error('Erro ao carregar módulo PDF:', err);
+      alert('Erro de Importação SLA: ' + err.message + '\\n' + err.stack);
+    });
+  });
+
   $('#btnLimparFiltros').addEventListener('click', () => {
     filtros = { natureza: 'TODOS', status: 'TODOS', criticidade: 'TODOS', linha: 'TODOS', maquina: 'TODOS', fornecedor: 'TODOS', busca: '' };
     document.querySelectorAll('.filters select, .filters input').forEach((el) => {

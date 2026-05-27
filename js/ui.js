@@ -99,42 +99,91 @@ export function valorCelula(r, col) {
   return String(v);
 }
 
-export function exportarExcel(registros, nome = 'controle-rc') {
-  if (typeof XLSX === 'undefined') {
-    alert('Biblioteca XLSX não carregada. Verifique sua conexão.');
+export async function exportarExcel(registros, nome = 'controle-rc') {
+  if (typeof ExcelJS === 'undefined') {
+    alert('Biblioteca ExcelJS não carregada. Atualize a página ou verifique sua conexão.');
     return;
   }
 
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Dados');
+
   const cols = COLUNAS_TABELA;
-  const header = cols.map((c) => c.label);
-  const data = registros.map((r) => {
-    return cols.map((c) => {
+
+  // 1. Cabeçalho formatado
+  const headerRow = ws.addRow(cols.map(c => c.label));
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF0F172A' } // Cor do tema escuro corporativo
+  };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRow.height = 25;
+
+  // 2. Inserção de dados
+  registros.forEach(r => {
+    const rowData = cols.map(c => {
       let v = r[c.key];
-      if (c.key === 'status') v = r.status;
+      if (c.key === 'status') v = r.status || v;
       if (v == null) return '';
-      // Se for moeda, mantemos o número para o Excel entender como valor somável
-      // Mas se o usuário quiser formatado, usamos texto. Vamos deixar numérico.
       return v;
     });
-  });
-
-  const ws = XLSX.utils.aoa_to_sheet([header, ...data]);
-
-  // Aplicar larguras automáticas
-  const colWidths = cols.map((c, i) => {
-    let max = c.label.length;
-    data.forEach((row) => {
-      const val = row[i];
-      if (val) {
-        const len = String(val).length;
-        if (len > max) max = len;
+    const row = ws.addRow(rowData);
+    
+    // 3. Formatação das células (moeda, datas)
+    row.eachCell((cell, colNumber) => {
+      const col = cols[colNumber - 1];
+      cell.alignment = { vertical: 'middle' };
+      
+      if (col.isCurrency && typeof cell.value === 'number') {
+        cell.numFmt = '"R$" #,##0.00';
+      }
+      
+      if (col.isDate && cell.value) {
+        // Converte string 'YYYY-MM-DD' para objeto Date para que o Excel entenda nativamente
+        if (typeof cell.value === 'string' && cell.value.includes('-')) {
+          const parts = cell.value.split('-');
+          if (parts.length === 3) {
+            cell.value = new Date(parts[0], parts[1] - 1, parts[2]);
+            cell.numFmt = 'dd/mm/yyyy';
+            cell.alignment = { horizontal: 'center' };
+          }
+        }
+      }
+      
+      // Centraliza a coluna Status e outras chaves comuns
+      if (col.key === 'status' || col.key === 'criticidade') {
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
       }
     });
-    return { wch: Math.min(max + 2, 50) };
   });
-  ws['!cols'] = colWidths;
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Dados");
-  XLSX.writeFile(wb, `${nome}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  // 4. Auto-ajuste de colunas
+  ws.columns.forEach((column, i) => {
+    let max = cols[i].label.length;
+    column.eachCell({ includeEmpty: true }, (cell) => {
+      let len = cell.value ? cell.value.toString().length : 0;
+      if (cell.type === ExcelJS.ValueType.Date) len = 10;
+      if (cols[i].isCurrency) len = 12; // espaço para R$
+      if (len > max) max = len;
+    });
+    column.width = Math.min(max + 3, 40);
+  });
+
+  // 5. Adicionar botões de AutoFiltro
+  ws.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: cols.length }
+  };
+
+  // 6. Gerar e baixar arquivo
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${nome}-${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.click();
+  window.URL.revokeObjectURL(url);
 }

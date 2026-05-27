@@ -172,16 +172,19 @@ export function renderDashboardCharts(registros) {
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 10);
 
+  const ignoredStatuses = ['PENDENTE', 'PENDENTE DE ENVIO', 'PENDENTE DE RC'];
+  const byStatusFiltered = byStatus.filter(x => !ignoredStatuses.includes(x.status));
+
   const ctx1 = document.getElementById('chartStatus');
   if (ctx1) {
     const ch1 = new Chart(ctx1, {
       type: 'bar',
       data: {
-        labels: byStatus.map((x) => x.status),
+        labels: byStatusFiltered.map((x) => x.status),
         datasets: [{
           label: 'Soma de VALOR',
-          data: byStatus.map((x) => x.valor),
-          backgroundColor: byStatus.map((x) => COLORS[x.status] || '#64748b'),
+          data: byStatusFiltered.map((x) => x.valor),
+          backgroundColor: byStatusFiltered.map((x) => COLORS[x.status] || '#64748b'),
           borderRadius: 8,
           borderSkipped: false,
         }],
