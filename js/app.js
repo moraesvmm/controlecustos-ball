@@ -746,17 +746,65 @@ async function init() {
 }
 
 // ========== Login / Auth handlers ==========
+// Helpers de Login Visual
+function showLoginAlert(msg, type = 'error') {
+  const alertEl = document.getElementById('loginAlert');
+  if (!alertEl) {
+    toast(msg, type); // Fallback
+    return;
+  }
+
+  // Reseta a classe (retira ao estado oculto via CSS transition)
+  alertEl.className = 'login-alert';
+  alertEl.textContent = msg;
+
+  // Um frame depois aplica o tipo para disparar a transição CSS
+  requestAnimationFrame(() => {
+    alertEl.className = 'login-alert ' + type;
+  });
+
+  if (type === 'error') {
+    const wrapper = document.querySelector('.login-wrapper');
+    if (wrapper) {
+      wrapper.classList.remove('shake');
+      void wrapper.offsetWidth;
+      wrapper.classList.add('shake');
+    }
+  }
+}
+
+function translateAuthError(err) {
+  const msg = (err?.message || '').toLowerCase();
+  if (msg.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
+  if (msg.includes('user already registered')) return 'Este e-mail já está em uso.';
+  if (msg.includes('password should be at least')) return 'A senha deve ter no mínimo 6 caracteres.';
+  if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde um momento.';
+  return 'Falha na autenticação. Verifique os dados.';
+}
+
 document.getElementById('formLogin')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const email = document.getElementById('loginEmail').value.trim();
-  const senha = document.getElementById('loginSenha').value;
+  const emailInput = document.getElementById('loginEmail');
+  const senhaInput = document.getElementById('loginSenha');
+  
+  emailInput.classList.remove('input-error');
+  senhaInput.classList.remove('input-error');
+  const alertEl = document.getElementById('loginAlert');
+  if (alertEl) alertEl.className = 'login-alert'; // esconde o alert
+  
+  const email = emailInput.value.trim();
+  const senha = senhaInput.value;
   const btn = e.target.querySelector('button[type="submit"]');
+  
   btn.disabled = true;
-  btn.textContent = 'Entrando...';
+  btn.textContent = 'Autenticando...';
+  
   try {
     await signIn(email, senha);
   } catch (err) {
-    toast('Credenciais inválidas: ' + err.message, 'error');
+    showLoginAlert(translateAuthError(err), 'error');
+    emailInput.classList.add('input-error');
+    senhaInput.classList.add('input-error');
     btn.disabled = false;
     btn.textContent = 'Entrar na Conta';
   }
@@ -765,23 +813,46 @@ document.getElementById('formLogin')?.addEventListener('submit', async (e) => {
 document.getElementById('formCadastro')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const nome = document.getElementById('cadNome')?.value.trim();
-  const email = document.getElementById('cadEmail')?.value.trim();
-  const senha = document.getElementById('cadSenha')?.value;
+  const emailInput = document.getElementById('cadEmail');
+  const senhaInput = document.getElementById('cadSenha');
+  const btn = e.target.querySelector('button[type="submit"]');
+  
+  emailInput.classList.remove('input-error');
+  senhaInput.classList.remove('input-error');
+  const alertEl = document.getElementById('loginAlert');
+  if (alertEl) alertEl.className = 'login-alert';
+
+  btn.disabled = true;
+  btn.textContent = 'Registrando...';
+
   try {
-    await signUp(email, senha, nome);
-    toast('Conta criada com sucesso! Faça login para acessar.', 'success');
+    await signUp(emailInput.value.trim(), senhaInput.value, nome);
+    showLoginAlert('Conta criada com sucesso! Faça login abaixo.', 'success');
     document.getElementById('cadEmail').value = '';
     document.getElementById('cadSenha').value = '';
     if (document.getElementById('cadNome')) document.getElementById('cadNome').value = '';
-    document.getElementById('loginEmail').value = email;
-    const fCad = document.getElementById('formCadastro');
-    const fLog = document.getElementById('formLogin');
-    if (fCad.style.display !== 'none') {
+    document.getElementById('loginEmail').value = emailInput.value.trim();
+    
+    // Switch to login form smoothly
+    setTimeout(() => {
+      const fCad = document.getElementById('formCadastro');
+      const fLog = document.getElementById('formLogin');
+      const p = document.querySelector('.login-footer p');
+      const btnToggle = document.getElementById('btnToggleCadastro');
+      
       fCad.style.display = 'none';
       fLog.style.display = 'flex';
-    }
+      if (btnToggle) btnToggle.textContent = 'Criar nova conta agora';
+      if (p) p.textContent = 'Ainda não possui acesso?';
+    }, 2000);
+
   } catch (err) {
-    toast('Erro no cadastro: ' + err.message, 'error');
+    showLoginAlert(translateAuthError(err), 'error');
+    emailInput.classList.add('input-error');
+    senhaInput.classList.add('input-error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Registrar Acesso';
   }
 });
 
