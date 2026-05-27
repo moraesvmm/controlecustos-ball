@@ -1004,6 +1004,41 @@ window.addEventListener('DOMContentLoaded', async () => {
     if (user) {
       document.getElementById('login-container').style.display = 'none';
       document.getElementById('app-container').style.display = 'flex';
+
+      // ── Painel de usuário ──────────────────────────────────────
+      const rawName = user.user_metadata?.username
+                   || user.user_metadata?.name
+                   || user.email?.split('@')[0]
+                   || 'Usuário';
+
+      // Formata nome: capitaliza cada palavra
+      const displayName = rawName
+        .split(/[\s._]+/)
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+
+      // Saudação por hora
+      const hora = new Date().getHours();
+      const greeting = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+
+      // Inicial do avatar (primeira letra do primeiro nome)
+      const initial = displayName.charAt(0).toUpperCase();
+
+      // Sidebar
+      const elAvatar   = document.getElementById('userAvatar');
+      const elGreeting = document.getElementById('userGreeting');
+      const elName     = document.getElementById('userName');
+      if (elAvatar)   elAvatar.textContent   = initial;
+      if (elGreeting) elGreeting.textContent = greeting;
+      if (elName)     elName.textContent     = displayName;
+
+      // Topbar badge
+      const elTopbarBadge = document.getElementById('topbarUserBadge');
+      const elTopbarName  = document.getElementById('topbarUserName');
+      if (elTopbarName)  elTopbarName.textContent  = `${greeting}, ${displayName.split(' ')[0]}`;
+      if (elTopbarBadge) elTopbarBadge.style.display = 'flex';
+      // ──────────────────────────────────────────────────────────
+
       if (!isAppInitialized) {
         isAppInitialized = true;
         init().then(() => {
@@ -1014,6 +1049,10 @@ window.addEventListener('DOMContentLoaded', async () => {
       isAppInitialized = false;
       document.getElementById('login-container').style.display = 'flex';
       document.getElementById('app-container').style.display = 'none';
+
+      // Limpa painel
+      const elTopbarBadge = document.getElementById('topbarUserBadge');
+      if (elTopbarBadge) elTopbarBadge.style.display = 'none';
     }
   });
 });

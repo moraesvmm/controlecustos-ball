@@ -105,20 +105,35 @@
         </div>
       </nav>
       
-      <div style="padding: 1.5rem; border-top: 1px solid var(--border);">
-        <div id="appStatus" class="app-status" style="font-size: 0.8rem; margin-bottom: 1rem;">Carregando…</div>
-        <button type="button" class="btn btn-ghost" id="btnSair" style="width: 100%; font-size: 0.85rem; padding: 0.6rem; border-color: rgba(255,255,255,0.1);">Sair do Sistema</button>
+      <!-- PAINEL DO USUÁRIO LOGADO -->
+      <div class="sidebar-user-panel">
+        <div class="sidebar-user-avatar" id="userAvatar">?</div>
+        <div class="sidebar-user-info">
+          <span class="sidebar-user-greeting" id="userGreeting">Bem-vindo</span>
+          <span class="sidebar-user-name" id="userName">Carregando…</span>
+          <span class="sidebar-user-role">Equipe Manutenção</span>
+        </div>
+      </div>
+
+      <div style="padding: 0 1rem 1.25rem;">
+        <div id="appStatus" class="app-status" style="font-size: 0.8rem; margin-bottom: 0.75rem;">Carregando…</div>
+        <button type="button" class="btn btn-ghost" id="btnSair" style="width: 100%; font-size: 0.85rem; padding: 0.6rem; border-color: rgba(255,255,255,0.1);">↪ Sair do Sistema</button>
       </div>
     </aside>
 
     <!-- MAIN CONTENT AREA -->
     <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg);">
       
-      <header class="topbar" style="padding: 1.25rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface);">
+      <header class="topbar" style="padding: 1rem 2.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface);">
         <div>
           <h2 id="topbarTitle" style="font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1.25rem; color: var(--text); margin: 0;">Visão Geral</h2>
+          <p id="topbarSubtitle" style="font-size: 0.78rem; color: var(--muted); margin: 0.15rem 0 0;">Ball Packaging · Itupeva/SP</p>
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
+          <div class="topbar-user-badge" id="topbarUserBadge" style="display:none;">
+            <span class="topbar-user-dot"></span>
+            <span id="topbarUserName">—</span>
+          </div>
           <input type="file" id="fileImportExcel" accept=".xlsx, .xls" style="display: none;" />
           <button type="button" class="btn btn-outline" id="btnImportarExcel" style="font-size: 0.85rem;">Importar Base de Dados</button>
         </div>

@@ -1194,3 +1194,102 @@ body.view-crud .main-layout {
   background: rgba(248, 113, 113, 0.05) !important;
 }
 
+/* --- Sidebar User Panel --- */
+.sidebar-user-panel {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  margin: 0 0.75rem 0.75rem;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(212,175,55,0.08), rgba(56,189,248,0.05));
+  border: 1px solid rgba(212,175,55,0.18);
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUserPanel 0.5s ease;
+}
+
+.sidebar-user-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 0% 50%, rgba(212,175,55,0.06), transparent);
+  pointer-events: none;
+}
+
+@keyframes fadeInUserPanel {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.sidebar-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gold), #b8941f);
+  color: #0f172a;
+  font-weight: 800;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px rgba(212,175,55,0.3), 0 4px 12px rgba(212,175,55,0.2);
+}
+
+.sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 0.05rem;
+}
+
+.sidebar-user-greeting {
+  font-size: 0.68rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+}
+
+.sidebar-user-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.sidebar-user-role {
+  font-size: 0.68rem;
+  color: var(--gold);
+  opacity: 0.8;
+  font-weight: 500;
+}
+
+/* --- Topbar User Badge --- */
+.topbar-user-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.9rem;
+  background: rgba(212,175,55,0.08);
+  border: 1px solid rgba(212,175,55,0.2);
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text);
+  animation: fadeInUserPanel 0.4s ease;
+}
+
+.topbar-user-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 6px var(--success);
+  flex-shrink: 0;
+}
+
