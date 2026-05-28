@@ -16,9 +16,10 @@ echo Nao feche esta janela preta enquanto estiver usando.
 echo O navegador vai abrir sozinho agora...
 echo.
 
+set "PYTHON_DIR=%LOCALAPPDATA%\ControleRC_Python"
 set "PYTHON_EXE="
-if exist "%PROJECT_ROOT%\.python_local\tools\python.exe" set "PYTHON_EXE=%PROJECT_ROOT%\.python_local\tools\python.exe"
-if exist "%PROJECT_ROOT%\.python_local\python.exe" set "PYTHON_EXE=%PROJECT_ROOT%\.python_local\python.exe"
+if exist "%PYTHON_DIR%\tools\python.exe" set "PYTHON_EXE=%PYTHON_DIR%\tools\python.exe"
+if exist "%PYTHON_DIR%\python.exe" set "PYTHON_EXE=%PYTHON_DIR%\python.exe"
 
 if defined PYTHON_EXE (
     echo [1/3] Tentando iniciar com Python portatil...

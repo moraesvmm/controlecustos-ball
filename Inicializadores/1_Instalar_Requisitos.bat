@@ -15,10 +15,11 @@ set "PROJECT_ROOT=%~dp0.."
 for %%I in ("%PROJECT_ROOT%") do set "PROJECT_ROOT=%%~fI"
 set "LOCAL_RUNTIME_ZIP=%PROJECT_ROOT%\runtime\python_env.zip"
 set "TEMP_RUNTIME_ZIP=%PROJECT_ROOT%\python_env.zip"
+set "PYTHON_DIR=%LOCALAPPDATA%\ControleRC_Python"
 cd /d "%PROJECT_ROOT%"
 
-if exist "%PROJECT_ROOT%\.python_local\tools\python.exe" goto :ja_instalado
-if exist "%PROJECT_ROOT%\.python_local\python.exe" goto :ja_instalado
+if exist "%PYTHON_DIR%\tools\python.exe" goto :ja_instalado
+if exist "%PYTHON_DIR%\python.exe" goto :ja_instalado
 goto :continuar_install
 
 :ja_instalado
@@ -37,8 +38,8 @@ if exist "%LOCAL_RUNTIME_ZIP%" (
     if errorlevel 1 goto :download_error
 )
 
-echo [2/3] Extraindo arquivos locais para a pasta do projeto...
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$zipPath = if (Test-Path '%LOCAL_RUNTIME_ZIP%') { '%LOCAL_RUNTIME_ZIP%' } else { '%TEMP_RUNTIME_ZIP%' }; Expand-Archive -Path $zipPath -DestinationPath '%PROJECT_ROOT%\.python_local' -Force"
+echo [2/3] Extraindo arquivos locais para o computador (AppData)...
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$zipPath = if (Test-Path '%LOCAL_RUNTIME_ZIP%') { '%LOCAL_RUNTIME_ZIP%' } else { '%TEMP_RUNTIME_ZIP%' }; Expand-Archive -Path $zipPath -DestinationPath '%PYTHON_DIR%' -Force"
 if errorlevel 1 goto :install_error
 
 echo [3/3] Limpando arquivos temporarios...
