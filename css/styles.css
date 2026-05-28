@@ -507,17 +507,14 @@ body.view-crud .main-layout {
 
 .table-scroll-main {
   flex: 1;
-  min-height: 320px;
-  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-solid);
+  overflow: visible;
 }
 
 .table-scroll-inner {
-  height: 100%;
-  min-height: 320px;
-  overflow: auto;
+  overflow: visible;
 }
 
 .table-scroll-inner::-webkit-scrollbar {
@@ -556,8 +553,8 @@ body.view-crud .main-layout {
 .data-table th {
   background: #1a2438;
   position: sticky;
-  top: 0;
-  z-index: 2;
+  top: calc(var(--filters-height, 80px) + 0px); /* Adjusts below the sticky filters */
+  z-index: 20;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;
