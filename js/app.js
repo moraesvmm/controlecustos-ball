@@ -872,6 +872,7 @@ function translateAuthError(err) {
   if (msg.includes('user already registered')) return 'Este e-mail já está em uso.';
   if (msg.includes('password should be at least')) return 'A senha deve ter no mínimo 6 caracteres.';
   if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde um momento.';
+  if (msg.includes('email not confirmed')) return 'Por favor, confirme seu e-mail antes de entrar.';
   return 'Falha na autenticação. Verifique os dados.';
 }
 
@@ -919,8 +920,15 @@ document.getElementById('formCadastro')?.addEventListener('submit', async (e) =>
   btn.textContent = 'Registrando...';
 
   try {
-    await signUp(emailInput.value.trim(), senhaInput.value, nome);
-    showLoginAlert('Conta criada com sucesso! Faça login abaixo.', 'success');
+    const res = await signUp(emailInput.value.trim(), senhaInput.value, nome);
+    
+    // Se o Supabase exigir confirmação de e-mail (session null), avisa o usuário.
+    if (res && res.user && !res.user.confirmed_at && !res.session) {
+      showLoginAlert('Conta criada! Verifique seu e-mail para validar o acesso.', 'success');
+    } else {
+      showLoginAlert('Conta criada com sucesso! Faça login abaixo.', 'success');
+    }
+    
     document.getElementById('cadEmail').value = '';
     document.getElementById('cadSenha').value = '';
     if (document.getElementById('cadNome')) document.getElementById('cadNome').value = '';
