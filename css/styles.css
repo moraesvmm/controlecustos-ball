@@ -240,7 +240,7 @@ nav.tabs button.active {
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
   position: sticky;
-  top: 0;
+  top: -1px;
   z-index: 30;
 }
 
@@ -448,12 +448,19 @@ nav.tabs button.active {
 .alerta-item small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 0.2rem; }
 
 /* CRUD Table — scroll melhorado */
+body.view-crud .main-layout {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  max-height: none;
+  min-height: calc(100vh - 130px);
+}
 
 .crud-section {
   display: flex;
   flex-direction: column;
   margin-top: 0.5rem;
-  flex: none; /* Height is managed by JS to perfectly lock scroll */
+  flex: none; /* Height is dynamically managed by JS */
 }
 
 .crud-section.hidden { display: none !important; }
@@ -501,14 +508,17 @@ nav.tabs button.active {
 
 .table-scroll-main {
   flex: 1;
+  min-height: 320px;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--surface-solid);
-  overflow: visible;
 }
 
 .table-scroll-inner {
-  overflow: visible;
+  height: 100%;
+  min-height: 320px;
+  overflow: auto;
 }
 
 .table-scroll-inner::-webkit-scrollbar {
@@ -547,8 +557,8 @@ nav.tabs button.active {
 .data-table th {
   background: #1a2438;
   position: sticky;
-  top: calc(var(--filters-height, 80px) + 0px); /* Adjusts below the sticky filters */
-  z-index: 20;
+  top: 0;
+  z-index: 2;
   font-weight: 600;
   color: var(--muted);
   text-transform: uppercase;

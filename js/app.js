@@ -46,11 +46,20 @@ let isAppInitialized = false;
 
 const $ = (sel) => document.querySelector(sel);
 
-function updateFiltersHeight() {
-  const f = $('.filters.panel');
-  if (f) document.documentElement.style.setProperty('--filters-height', f.offsetHeight + 'px');
+function ajustarAlturaTabela() {
+  const mainLayout = $('.main-layout');
+  const secaoTabela = $('#secaoTabela');
+  const filters = $('.filters.panel');
+  if (!mainLayout || !secaoTabela || !filters || secaoTabela.classList.contains('hidden')) return;
+
+  // topbar padding+height = ~75px. mainLayout padding-top = 24px, padding-bottom = 32px.
+  // filters margin-bottom = 20px.
+  // We want secaoTabela to exactly fill the remaining visible viewport below the filters.
+  const offset = 75 + 24 + filters.offsetHeight + 20 + 32;
+  const avail = window.innerHeight - offset;
+  secaoTabela.style.height = `${Math.max(300, avail)}px`;
 }
-window.addEventListener('resize', updateFiltersHeight);
+window.addEventListener('resize', ajustarAlturaTabela);
 
 function getFiltrados() {
   let base = registros;
@@ -403,7 +412,7 @@ function showView(name) {
   const t = $('#crudTitle');
   if (t && titles[name]) t.textContent = titles[name];
 
-  requestAnimationFrame(() => updateFiltersHeight());
+  requestAnimationFrame(() => ajustarAlturaTabela());
 
   refresh();
 }
