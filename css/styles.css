@@ -239,6 +239,9 @@ nav.tabs button.active {
   align-items: flex-end;
   padding: 1rem 1.25rem;
   margin-bottom: 1.25rem;
+  position: sticky;
+  top: 0;
+  z-index: 30;
 }
 
 .filters label,
@@ -450,15 +453,13 @@ body.view-crud .main-layout {
   flex-direction: column;
   height: auto;
   max-height: none;
-  min-height: calc(100vh - 130px);
 }
 
 .crud-section {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   margin-top: 0.5rem;
+  flex: none; /* Height is managed by JS to perfectly lock scroll */
 }
 
 .crud-section.hidden { display: none !important; }

@@ -1,0 +1,10 @@
+# REGRAS DO PROJETO - CONTROLE RC SYSTEM
+
+## Localização do Projeto
+O projeto do Controle Global agora é desenvolvido e mantido TOTALMENTE nesta pasta compartilhada:
+`\\britufps01\group\Manutenção\25 - SISTEMA CONTROLE DE CUSTOS\controle-rc-system`
+
+**Instruções para o Agente:**
+1. Todo e qualquer desenvolvimento, alteração de código ou push deve ser feito operando sob este diretório de rede.
+2. Evite trabalhar no diretório local obsoleto (`C:\Users\VMORAES1\controle-rc-system`).
+3. Ao ser invocado, sempre verifique em qual diretório você se encontra. Se não for a pasta de rede acima, avise o usuário.

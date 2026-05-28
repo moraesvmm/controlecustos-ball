@@ -46,6 +46,21 @@ let isAppInitialized = false;
 
 const $ = (sel) => document.querySelector(sel);
 
+function ajustarAlturaTabela() {
+  const mainLayout = $('.main-layout');
+  const secaoTabela = $('#secaoTabela');
+  const filters = $('.filters.panel');
+  if (!mainLayout || !secaoTabela || !filters || secaoTabela.classList.contains('hidden')) return;
+
+  // Calcula a altura exata para que a tabela preencha o restante da tela abaixo dos filtros.
+  // Dessa forma, quando os filtros tocarem o topo (sticky), o scroll principal trava na base,
+  // e o usuário passa a rolar apenas a tabela interna.
+  const avail = mainLayout.clientHeight - filters.offsetHeight;
+  secaoTabela.style.height = `${Math.max(300, avail)}px`;
+}
+
+window.addEventListener('resize', ajustarAlturaTabela);
+
 function getFiltrados() {
   let base = registros;
   if (viewAtual === 'consertos') base = base.filter((r) => r.natureza === 'CONSERTO');
@@ -396,6 +411,10 @@ function showView(name) {
 
   const t = $('#crudTitle');
   if (t && titles[name]) t.textContent = titles[name];
+
+  requestAnimationFrame(() => {
+    ajustarAlturaTabela();
+  });
 
   refresh();
 }
