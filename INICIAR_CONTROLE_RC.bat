@@ -1,40 +1,40 @@
 @echo off
-title Controle RC
+title Servidor Controle RC
 setlocal
 
 set "PROJECT_ROOT=%~dp0"
 for %%I in ("%PROJECT_ROOT%") do set "PROJECT_ROOT=%%~fI"
-set "PYTHON_DIR=%LOCALAPPDATA%\ControleRC_Python"
-set "PYTHON_EXE=%PYTHON_DIR%\tools\python.exe"
-set "INSTALLER=%PROJECT_ROOT%\Inicializadores\1_Instalar_Requisitos.bat"
-set "STARTER=%PROJECT_ROOT%\Inicializadores\2_Iniciar_Sistema.bat"
+set "PORT=8000"
+set "PID_FILE=%PROJECT_ROOT%\.server_pid"
 
 cd /d "%PROJECT_ROOT%"
 
 echo ========================================================
-echo CONTROLE RC
+echo INICIANDO O SISTEMA CONTROLE RC (MOTOR NATIVO Windows)
 echo ========================================================
 echo.
+echo O sistema esta ligando...
+echo O navegador vai abrir sozinho agora...
+echo.
 
-if not exist "%STARTER%" (
-    echo ERRO: arquivo de inicializacao nao encontrado.
-    echo Esperado: %STARTER%
-    echo.
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p = Start-Process -FilePath 'powershell.exe' -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','%PROJECT_ROOT%\servidor.ps1','-Porta','%PORT%' -WorkingDirectory '%PROJECT_ROOT%' -WindowStyle Hidden -PassThru; Set-Content -LiteralPath '%PID_FILE%' -Value $p.Id"
+
+if errorlevel 1 (
+    echo ERRO CRITICO: Nao foi possivel iniciar o servidor PowerShell.
     pause
     exit /b 1
 )
 
-if not exist "%PYTHON_EXE%" (
-    echo Preparando arquivos locais pela primeira vez...
-    echo.
-    call "%INSTALLER%"
-    if errorlevel 1 (
-        echo.
-        echo Nao foi possivel preparar o ambiente local.
-        pause
-        exit /b 1
-    )
-)
+timeout /t 2 /nobreak >nul
+start http://localhost:%PORT%/?login=force
 
-call "%STARTER%"
-exit /b %errorlevel%
+echo O servidor esta rodando em segundo plano.
+echo Para desligar o sistema, feche esta janela.
+pause >nul
+
+if exist "%PID_FILE%" (
+    for /f "usebackq delims=" %%P in ("%PID_FILE%") do set "SERVER_PID=%%P"
+    if defined SERVER_PID taskkill /f /pid %SERVER_PID% >nul 2>&1
+    del /f /q "%PID_FILE%" >nul 2>&1
+)
+exit
