@@ -1,4 +1,4 @@
-@echo off
+﻿@echo off
 title Servidor Controle RC
 setlocal
 
@@ -16,7 +16,6 @@ echo O sistema esta ligando...
 echo O navegador vai abrir sozinho agora...
 echo.
 
-start http://localhost:%PORT%/?login=force
 
 powershell -NoProfile -ExecutionPolicy Bypass -File "servidor.ps1" -Porta "%PORT%"
 
@@ -28,3 +27,4 @@ if errorlevel 1 (
 
 popd
 exit
+

@@ -1,4 +1,4 @@
-# Servidor HTTP Raw Socket � nativo do PowerShell (Nao exige Admin para 0.0.0.0)
+﻿# Servidor HTTP Raw Socket — nativo do PowerShell (Nao exige Admin para 0.0.0.0)
 param([int]$Porta = 8000, [string]$Pasta = $PSScriptRoot)
 $ErrorActionPreference = 'Stop'
 $Pasta = (Resolve-Path $Pasta).Path
@@ -65,3 +65,4 @@ while ($true) {
     Start-Sleep -Milliseconds 10
   }
 }
+
