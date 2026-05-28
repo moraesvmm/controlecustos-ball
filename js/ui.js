@@ -69,9 +69,8 @@ export function valorCelula(r, col) {
   
   if (col.key === 'item_id') {
     let suffix = '';
-    const nat = r.natureza ? r.natureza.toUpperCase() : '';
+    const nat = String(r.natureza || '').toUpperCase();
     if (nat === 'COMPRA') suffix = 'C';
-    if (nat === 'FABRICACAO' || nat === 'FABRICAÇÃO') suffix = 'F';
     return `${v || ''}${suffix}`;
   }
 

@@ -142,10 +142,9 @@ function processExcelData(json) {
     let natureza = 'PENDENTE';
     if (nat) {
       nat = String(nat).toUpperCase();
-      if (nat.includes('FABRICA')) natureza = 'FABRICACAO';
-      else if (nat.includes('SERVI')) natureza = 'SERVICO';
+      if (nat.includes('SERVI')) natureza = 'SERVICO';
       else if (nat.includes('CONSERTO')) natureza = 'CONSERTO';
-      else if (nat.includes('COMPRA')) natureza = 'COMPRA';
+      else if (nat.includes('COMPRA') || nat.includes('C')) natureza = 'COMPRA';
     }
 
     let titulo = r['ID'] ? r['ITEM'] : (r['TÍTULO'] || r['TITULO'] || 'Sem Título');

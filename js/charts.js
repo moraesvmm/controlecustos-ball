@@ -172,7 +172,7 @@ export function renderDashboardCharts(registros) {
     .sort((a, b) => b.valor - a.valor)
     .slice(0, 10);
 
-  const ignoredStatuses = ['PENDENTE', 'PENDENTE DE ENVIO', 'PENDENTE DE RC'];
+  const ignoredStatuses = ['PENDENTE', 'PENDENTE DE ENVIO', 'PENDENTE DE RC', 'PENDENTE DE ORÇAMENTO', 'PENDENTE DE ORCAMENTO'];
   const byStatusFiltered = byStatus.filter(x => !ignoredStatuses.includes(x.status));
 
   const ctx1 = document.getElementById('chartStatus');
@@ -354,5 +354,4 @@ export function renderDashboardCharts(registros) {
 
   renderPrazoChart('chartConsertoDias', 'CONSERTO', 'CONSERTO');
   renderPrazoChart('chartComprasDias', 'COMPRAS', 'COMPRA');
-  renderPrazoChart('chartFabricacaoDias', 'FABRICAÇÃO', 'FABRICACAO');
 }

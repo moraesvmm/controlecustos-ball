@@ -13,11 +13,10 @@ export const STATUS_LIST = [
 ];
 
 export const CRITICIDADE_LIST = ['CRITICA', 'ALTA', 'MEDIA', 'BAIXA'];
-export const NATUREZA_LIST = ['CONSERTO', 'FABRICACAO', 'COMPRA'];
+export const NATUREZA_LIST = ['CONSERTO', 'COMPRA'];
 
 export const NATUREZA_LABELS = {
   CONSERTO: 'Conserto',
-  FABRICACAO: 'Fabricação',
   COMPRA: 'Compra',
   SERVICO: 'Serviço',
 };
@@ -28,7 +27,6 @@ export function normalizarNatureza(v) {
     .toUpperCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '');
-  if (s.includes('FABRIC')) return 'FABRICACAO';
   if (s.includes('COMPRA')) return 'COMPRA';
   if (s.includes('SERV')) return 'SERVICO';
   if (s.includes('CONSERT')) return 'CONSERTO';

@@ -297,7 +297,7 @@ nav.tabs button.active {
 }
 
 .charts-grid-prazos {
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .chart-wide { grid-column: 1 / -1; }
@@ -1044,10 +1044,41 @@ body.view-crud .main-layout {
   cursor: pointer;
 }
 
-.foto-input-hidden {
-  display: none;
+.foto-input-hidden { display: none; }
+
+/* --- Lightbox Overlay --- */
+.lightbox-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
 }
 
+.lightbox-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.lightbox-img {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--border);
+  transform: scale(0.95);
+  transition: transform 0.3s ease;
+}
+
+.lightbox-overlay.open .lightbox-img {
+  transform: scale(1);
+}
 
 /* SLA Fornecedores Premium UI */
 .sla-floating-card { width: 300px; background: rgba(30, 41, 59, 0.4); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; font-size: 0.8rem; line-height: 1.5; color: var(--muted); flex-shrink: 0; backdrop-filter: blur(8px); box-shadow: var(--shadow); position: sticky; top: 1rem; }

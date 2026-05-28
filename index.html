@@ -95,7 +95,6 @@
           <button type="button" data-tab="rc" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Controle Global</button>
           <button type="button" data-tab="consertos" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Consertos</button>
           <button type="button" data-tab="compras" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Compras</button>
-          <button type="button" data-tab="fabricacao" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Fabricação</button>
         </div>
 
         <div>
@@ -218,7 +217,6 @@
         <div class="charts-grid charts-grid-prazos">
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartConsertoDias"></canvas></div></div>
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartComprasDias"></canvas></div></div>
-          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartFabricacaoDias"></canvas></div></div>
         </div>
       </div>
       <aside id="secaoAlertas" class="alertas-panel panel">
@@ -230,7 +228,6 @@
     <div id="view-rc" class="view"></div>
     <div id="view-consertos" class="view"></div>
     <div id="view-compras" class="view"></div>
-    <div id="view-fabricacao" class="view"></div>
     <div id="view-fornecedores" class="view">
       <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem;">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -460,7 +457,6 @@
             <label><span>Natureza</span>
               <select name="natureza">
                 <option value="CONSERTO">Conserto</option>
-                <option value="FABRICACAO">Fabricação</option>
                 <option value="COMPRA">Compra</option>
               </select>
             </label>
@@ -546,6 +542,11 @@
   </aside>
 
   <div id="toast" class="toast"></div>
+
+  <!-- Lightbox Overlay -->
+  <div id="lightboxOverlay" class="lightbox-overlay">
+    <img id="lightboxImg" class="lightbox-img" alt="Foto RC Ampliada" />
+  </div>
 
   </div>
   </div>

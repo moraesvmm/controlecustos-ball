@@ -50,7 +50,6 @@ function getFiltrados() {
   let base = registros;
   if (viewAtual === 'consertos') base = base.filter((r) => r.natureza === 'CONSERTO');
   if (viewAtual === 'compras') base = base.filter((r) => r.natureza === 'COMPRA');
-  if (viewAtual === 'fabricacao') base = base.filter((r) => r.natureza === 'FABRICACAO');
   return aplicarFiltros(base, filtros);
 }
 
@@ -361,7 +360,7 @@ function showView(name) {
   $(`#view-${name}`)?.classList.add('active');
   document.querySelectorAll(`[data-tab="${name}"]`).forEach((el) => el.classList.add('active'));
 
-  const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
+  const crud = ['rc', 'consertos', 'compras'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario'].includes(name);
 
@@ -389,7 +388,6 @@ function showView(name) {
     rc: 'Controle Global',
     consertos: 'Consertos',
     compras: 'Compras',
-    fabricacao: 'Fabricação',
     fornecedores: 'SLA Fornecedores',
     calendario: 'Calendário',
   };
@@ -406,7 +404,6 @@ function abrirModal(id) {
   const naturezaPadrao = {
     consertos: 'CONSERTO',
     compras: 'COMPRA',
-    fabricacao: 'FABRICACAO',
     rc: 'CONSERTO',
   };
   editando = id
@@ -425,11 +422,31 @@ function abrirModal(id) {
     'valor', 'previsao_entrega', 'data_recebimento', 'comentario',
   ];
   fields.forEach((name) => {
-    const input = f.elements[name];
+    const input = f.elements.namedItem(name);
     if (!input) return;
     const v = editando[name];
     input.value = v ?? '';
   });
+
+  // Render Foto
+  fotoUrlAtual = editando.foto_url || null;
+  const preview = $('#fotoPreview');
+  const placeholder = $('#fotoPlaceholder');
+  const btnRemover = $('#btnRemoverFoto');
+  
+  if (fotoUrlAtual) {
+    preview.src = fotoUrlAtual;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+    btnRemover.style.display = 'inline-flex';
+    $('#fotoPreviewWrap').style.cursor = 'pointer';
+  } else {
+    preview.src = '';
+    preview.style.display = 'none';
+    placeholder.style.display = 'block';
+    btnRemover.style.display = 'none';
+    $('#fotoPreviewWrap').style.cursor = 'default';
+  }
 
   const irmas = editando.item_id != null ? registrosDoMesmoItem(registros, editando.item_id) : [];
   const hintId =
@@ -464,7 +481,7 @@ async function salvarForm(e) {
     sinal: f.sinal.value || null,
     item_id: f.item_id.value ? parseInt(f.item_id.value, 10) : null,
     natureza: normalizarNatureza(f.natureza.value),
-    item: f.item.value,
+    item: f.elements.namedItem('item').value, // Fix item empty bug
     descricao_falha: f.descricao_falha.value,
     solicitante: f.solicitante.value,
     criticidade: f.criticidade.value || null,
@@ -480,6 +497,7 @@ async function salvarForm(e) {
     previsao_entrega: f.previsao_entrega.value || null,
     data_recebimento: f.data_recebimento.value || null,
     comentario: f.comentario.value,
+    foto_url: fotoUrlAtual, // Add photo to payload
   };
   try {
     await salvarRegistro(payload);
@@ -740,6 +758,64 @@ async function init() {
   $('#formRegistro').addEventListener('submit', salvarForm);
   $('#drillFechar').addEventListener('click', fecharDrilldown);
   $('#drillOverlay').addEventListener('click', fecharDrilldown);
+
+  // Foto listeners no CRUD modal
+  $('#inputFoto')?.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Imagem muito grande. Máximo 2 MB.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      fotoUrlAtual = reader.result;
+      const preview = $('#fotoPreview');
+      preview.src = fotoUrlAtual;
+      preview.style.display = 'block';
+      $('#fotoPlaceholder').style.display = 'none';
+      $('#btnRemoverFoto').style.display = 'inline-flex';
+      $('#fotoPreviewWrap').style.cursor = 'pointer';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  $('#btnRemoverFoto')?.addEventListener('click', () => {
+    fotoUrlAtual = null;
+    const preview = $('#fotoPreview');
+    preview.src = '';
+    preview.style.display = 'none';
+    $('#fotoPlaceholder').style.display = 'block';
+    $('#btnRemoverFoto').style.display = 'none';
+    $('#inputFoto').value = '';
+    $('#fotoPreviewWrap').style.cursor = 'default';
+  });
+
+  // Lightbox genérico (expansão de imagem)
+  const openLightbox = (src) => {
+    if (!src) return;
+    const lb = $('#lightboxOverlay');
+    const lbImg = $('#lightboxImg');
+    if (lb && lbImg) {
+      lbImg.src = src;
+      lb.classList.add('open');
+    }
+  };
+  
+  $('#fotoPreviewWrap')?.addEventListener('click', () => openLightbox(fotoUrlAtual));
+
+  // Ocultar lightbox
+  $('#lightboxOverlay')?.addEventListener('click', (e) => {
+    $('#lightboxOverlay').classList.remove('open');
+    $('#lightboxImg').src = '';
+  });
+
+  document.addEventListener('click', (e) => {
+    if (e.target.classList.contains('drill-foto-img')) {
+      openLightbox(e.target.src);
+    }
+  });
 
   atualizarBotaoEdicao();
   showView('dashboard');
