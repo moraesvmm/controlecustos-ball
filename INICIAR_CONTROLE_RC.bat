@@ -3,7 +3,6 @@ title Servidor Controle RC
 setlocal
 
 set "PROJECT_ROOT=%~dp0"
-for %%I in ("%PROJECT_ROOT%") do set "PROJECT_ROOT=%%~fI"
 set "PORT=8000"
 set "PID_FILE=%PROJECT_ROOT%\.server_pid"
 
