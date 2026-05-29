@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <link rel="stylesheet" href="css/styles.css?v=64">
+  <link rel="stylesheet" href="css/styles.css?v=58">
   <link rel="stylesheet" href="css/components.css?v=58">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
@@ -33,8 +33,6 @@
       <h2 class="login-title">Acesso ao Sistema</h2>
       <p class="login-subtitle">Insira suas credenciais corporativas para continuar.</p>
       
-      <div id="loginAlert" class="login-alert"></div>
-
       <form id="formLogin" style="flex-direction: column;">
         <div class="login-form-group">
           <label>E-mail</label>
@@ -95,6 +93,21 @@
           <button type="button" data-tab="rc" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Controle Global</button>
           <button type="button" data-tab="consertos" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Consertos</button>
           <button type="button" data-tab="compras" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Compras</button>
+          <button type="button" data-tab="fabricacao" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Fabricação</button>
+        </div>
+
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo Preventiva</div>
+          <button type="button" data-tab="controle-preventiva" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Controle <span class="sub-tab-arrow" style="font-size: 0.6rem; opacity: 0.5; transition: transform 0.2s;">▼</span></button>
+          <div class="sub-tabs-container" style="display: none; flex-direction: column; margin-top: 0.25rem;">
+            <div class="sub-tab-wrapper" style="position: relative;">
+              <button type="button" data-tab="preventiva-l06" class="nav-item sub-tab" style="width: 100%; text-align: left; padding: 0.5rem 1rem 0.5rem 3rem; background: transparent; border: none; color: var(--muted); font-size: 0.85rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; position: relative;">Preventiva L(06) <span style="float:right; font-size: 0.6rem; opacity: 0.5;">▶</span></button>
+              <div class="flyout-menu">
+                <button type="button" data-tab="preventiva-l06-backend" class="nav-item">Back-End</button>
+                <button type="button" data-tab="preventiva-l06-frontend" class="nav-item">Front-End</button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -104,36 +117,22 @@
         </div>
       </nav>
       
-      <!-- PAINEL DO USUÁRIO LOGADO -->
-      <div class="sidebar-user-panel">
-        <div class="sidebar-user-avatar" id="userAvatar">?</div>
-        <div class="sidebar-user-info">
-          <span class="sidebar-user-greeting" id="userGreeting">Bem-vindo</span>
-          <span class="sidebar-user-name" id="userName">Carregando…</span>
-          <span class="sidebar-user-role">Equipe Manutenção</span>
-        </div>
-      </div>
-
-      <div style="padding: 0 1rem 1.25rem;">
-        <div id="appStatus" class="app-status" style="font-size: 0.8rem; margin-bottom: 0.75rem;">Carregando…</div>
-        <button type="button" class="btn btn-ghost" id="btnSair" style="width: 100%; font-size: 0.85rem; padding: 0.6rem; border-color: rgba(255,255,255,0.1);">↪ Sair do Sistema</button>
+      <div style="padding: 1.5rem; border-top: 1px solid var(--border);">
+        <div id="appStatus" class="app-status" style="font-size: 0.8rem; margin-bottom: 1rem;">Carregando…</div>
+        <button type="button" class="btn btn-ghost" id="btnSair" style="width: 100%; font-size: 0.85rem; padding: 0.6rem; border-color: rgba(255,255,255,0.1);">Sair do Sistema</button>
       </div>
     </aside>
 
     <!-- MAIN CONTENT AREA -->
     <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg);">
       
-      <header class="topbar" style="padding: 1rem 2.5rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface);">
+      <header class="topbar" style="padding: 1.25rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface);">
         <div>
           <h2 id="topbarTitle" style="font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1.25rem; color: var(--text); margin: 0;">Visão Geral</h2>
-          <p id="topbarSubtitle" style="font-size: 0.78rem; color: var(--muted); margin: 0.15rem 0 0;">Ball Packaging · Itupeva/SP</p>
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
-          <div class="topbar-user-badge" id="topbarUserBadge" style="display:none;">
-            <span class="topbar-user-dot"></span>
-            <span id="topbarUserName">—</span>
-          </div>
           <input type="file" id="fileImportExcel" accept=".xlsx, .xls" style="display: none;" />
+          <input type="file" id="fileImportExcelPreventiva" accept=".xlsx, .xls" style="display: none;" />
           <button type="button" class="btn btn-outline" id="btnImportarExcel" style="font-size: 0.85rem;">Importar Base de Dados</button>
         </div>
       </header>
@@ -228,6 +227,191 @@
     <div id="view-rc" class="view"></div>
     <div id="view-consertos" class="view"></div>
     <div id="view-compras" class="view"></div>
+    <div id="view-fabricacao" class="view"></div>
+    
+    <div id="view-controle-preventiva" class="view">
+      <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; align-items: center; justify-content: center; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
+        <div style="background: rgba(56,189,248,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 9.36l-7.1 7.1a2.12 2.12 0 0 1-3-3l7.1-7.1a6 6 0 0 1 9.36-7.94z"></path></svg>
+        </div>
+        <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text); margin: 0;">HUB PREVENTIVA</h2>
+        <p style="color: var(--muted); max-width: 600px; text-align: center; font-size: 1.1rem; line-height: 1.6; margin: 0;">Gerencie suas paradas programadas e atividades de manutenção. Acesse as sub-abas na lateral para visualizar as tabelas por linha, ou crie um novo registro agora mesmo.</p>
+        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+           <button type="button" class="btn btn-primary" id="btnNovaLinhaLanding" style="padding: 0.8rem 1.5rem; font-size: 1.05rem;">+ Nova Linha</button>
+        </div>
+        <div class="kpi-grid" style="margin-top: 3rem; width: 100%; max-width: 400px;">
+          <div class="kpi-card kpi-preventiva-hub" style="text-align: center; justify-content: center; background: linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(14,165,233,0.05) 100%); border-color: rgba(56,189,248,0.3); padding: 2rem;">
+            <div style="margin-bottom: 0.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>
+            <div class="label" style="justify-content: center; color: #38bdf8; font-size: 0.9rem; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 0.5rem;">ATIVIDADES L(06)</div>
+            <div class="value" id="contagemPrevL06" style="justify-content: center; font-size: 2.5rem; color: #f8fafc; font-family: 'Outfit', sans-serif;">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HUB Preventiva L06 -->
+    <div id="view-preventiva-l06" class="view">
+      <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; align-items: center; justify-content: flex-start; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
+        
+        <header style="text-align: center; margin-bottom: 2rem;">
+          <div style="background: rgba(16,185,129,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          </div>
+          <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text); margin: 0;">PREVENTIVA L(06)</h2>
+          <p style="color: var(--muted); max-width: 600px; margin: 0.5rem auto 0; font-size: 1.1rem; line-height: 1.6;">Selecione o mês desejado para abrir os controles de manutenção (Back-End ou Front-End).</p>
+        </header>
+
+        <div class="months-grid">
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">JANEIRO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'JANEIRO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'JANEIRO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">FEVEREIRO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'FEVEREIRO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'FEVEREIRO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">MARÇO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'MARÇO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'MARÇO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">ABRIL</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'ABRIL')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'ABRIL')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">MAIO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'MAIO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'MAIO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">JUNHO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'JUNHO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'JUNHO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">JULHO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'JULHO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'JULHO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">AGOSTO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'AGOSTO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'AGOSTO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">SETEMBRO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'SETEMBRO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'SETEMBRO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">OUTUBRO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'OUTUBRO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'OUTUBRO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">NOVEMBRO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'NOVEMBRO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'NOVEMBRO')">Front-End</button>
+            </div>
+          </div>
+          <div class="month-card" tabindex="0">
+            <div class="month-card-header">DEZEMBRO</div>
+            <div class="month-card-actions">
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'DEZEMBRO')">Back-End</button>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'DEZEMBRO')">Front-End</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela Back-End L06 -->
+    <div id="view-preventiva-l06-backend" class="view">
+      <div class="panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+        <header style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 class="crud-title">Controle Preventiva</h2>
+          <div class="toolbar-actions">
+            <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly">Importar Excel (Preventiva)</button>
+            <button type="button" class="btn btn-ghost" id="btnExportPreventiva">Exportar Excel</button>
+            <button type="button" class="btn" id="btnNovaPreventiva">+ Novo registro</button>
+          </div>
+        </header>
+
+        <section class="filters panel" style="margin-top: 1rem; border-color: rgba(255,255,255,0.05); background: transparent;">
+          <label class="search-field">
+            <span>Busca</span>
+            <input type="search" id="filtroBuscaPreventiva" placeholder="Identificador, Máquina..." />
+          </label>
+          <label><span>Status/Auditoria</span><select id="filtroStatusPreventiva"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Plano Padrão</span>
+            <select id="filtroPlanoPreventiva">
+              <option value="TODOS">TODOS</option>
+              <option value="S">S</option>
+              <option value="N">N</option>
+            </select>
+          </label>
+          <button type="button" class="btn btn-ghost" id="btnLimparFiltrosPreventiva">Limpar filtros</button>
+        </section>
+        <div class="table-scroll-main">
+          <div class="table-scroll-inner">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Identificador</th>
+                  <th>Máquina</th>
+                  <th>Duração (h)</th>
+                  <th>HH Mec</th>
+                  <th>HH Elétrico</th>
+                  <th>Status</th>
+                  <th>Custo Previsto</th>
+                  <th>Ações</th>
+                </tr>
+              </thead>
+              <tbody id="tabelaPreventiva"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela Front-End L06 (Vazia) -->
+    <div id="view-preventiva-l06-frontend" class="view">
+      <div class="panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+        <header style="display: flex; justify-content: space-between; align-items: center;">
+          <h2 class="crud-title">Controle Preventiva L(06) - Front-End</h2>
+        </header>
+        <div style="text-align: center; padding: 4rem; color: var(--muted);">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5; margin-bottom: 1rem;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
+          <p>Área de Front-End em construção ou vazia no momento.</p>
+        </div>
+      </div>
+    </div>
+
     <div id="view-fornecedores" class="view">
       <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem;">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -399,20 +583,6 @@
           </table>
         </div>
       </div>
-
-      <section id="crudMesChartSection" class="crud-chart-section panel hidden">
-        <header class="crud-chart-header">
-          <div>
-            <h3 id="crudMesChartTitle">Previstos x Recebidos</h3>
-            <p class="section-hint">Mesma lógica do dashboard, aplicada ao recorte atual da aba.</p>
-          </div>
-        </header>
-        <div class="chart-box crud-chart-box">
-          <div class="chart-canvas-wrap">
-            <canvas id="chartCrudMes"></canvas>
-          </div>
-        </div>
-      </section>
     </section>
   </main>
 
@@ -457,6 +627,7 @@
             <label><span>Natureza</span>
               <select name="natureza">
                 <option value="CONSERTO">Conserto</option>
+                <option value="FABRICACAO">Fabricação</option>
                 <option value="COMPRA">Compra</option>
               </select>
             </label>
@@ -519,7 +690,6 @@
         <footer class="form-actions">
           <button type="button" class="btn btn-danger" id="btnExcluirModal" style="display:none">Excluir</button>
           <button type="button" class="btn btn-ghost" id="btnMarcarEntregue">Marcar entregue hoje</button>
-          <button type="button" class="btn btn-outline" id="btnCancelarModal" style="margin-right: auto; margin-left: 1rem;">Cancelar</button>
           <button type="submit" class="btn">Salvar alterações</button>
         </footer>
       </form>
@@ -541,15 +711,67 @@
     <div class="drill-lista" id="drillLista"></div>
   </aside>
 
-  <div id="toast" class="toast"></div>
+  <!-- Formulário Tela Cheia de Preventiva -->
+  <div id="view-form-preventiva" class="view" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 50; overflow-y: auto; padding: 2rem;">
+    <div class="panel" style="max-width: 1000px; margin: 0 auto; width: 100%; padding: 2.5rem;">
+      <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 2rem;">
+        <h2 id="formTituloPreventiva" style="font-family: 'DM Sans', sans-serif; font-size: 1.5rem; margin: 0;">Registro Preventiva</h2>
+        <button type="button" class="btn btn-ghost" id="btnFecharFormPreventiva">← Voltar</button>
+      </header>
+      
+      <form id="formRegistroPreventiva">
+        <div class="form-section">
+          <h3>Identificação e Logística</h3>
+          <div class="form-grid">
+            <input type="hidden" name="id" />
+            <label><span>Identificador *</span><input name="identificador" required placeholder="Ex: Atv. 1" /></label>
+            <label><span>Máquina</span><input name="maquina" /></label>
+            <label><span>Material</span><input name="material" /></label>
+            <label><span>Plano padrão?</span>
+              <select name="plano_padrao">
+                <option value="S">S</option>
+                <option value="N">N</option>
+              </select>
+            </label>
+            <label><span>Duração (Horas)</span><input name="duracao_horas" type="number" step="0.1" /></label>
+            <label><span>HH Mec</span><input name="hh_mec" type="number" step="0.1" /></label>
+            <label><span>HH Elétrico</span><input name="hh_eletrico" type="number" step="0.1" /></label>
+            <label><span>Resp. Fábrica</span><input name="resp_fabrica" /></label>
+            <label><span>Resp. Manutenção</span><input name="resp_manutencao" /></label>
+            <label><span>Status/Auditoria</span><input name="status_auditoria" /></label>
+            <label><span>Previsão de Custos (R$)</span><input name="previsao_custos" type="number" step="0.01" /></label>
+          </div>
+        </div>
 
-  <!-- Lightbox Overlay -->
+        <div class="form-section">
+          <h3>Programação (Dias/Turnos)</h3>
+          <p class="section-hint">Lista de dias programados para esta atividade.</p>
+          <div id="listaProgramacao" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnNovaProgramacao">+ Adicionar Dia/Turno</button>
+        </div>
+
+        <div class="form-section">
+          <h3>Descrições / Atividades</h3>
+          <p class="section-hint">Adicione múltiplas descrições associadas a este identificador.</p>
+          <div id="listaDescricoesPreventiva" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnNovaDescricaoPreventiva">+ Adicionar nova atv/descrição</button>
+        </div>
+
+        <footer class="form-actions" style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+          <button type="button" class="btn btn-danger" id="btnExcluirPreventivaModal" style="display:none">Excluir Registro</button>
+          <div style="flex: 1;"></div>
+          <button type="button" class="btn btn-ghost" id="btnCancelarFormPreventiva">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar alterações</button>
+        </footer>
+      </form>
+    </div>
+  </div>
   <div id="lightboxOverlay" class="lightbox-overlay">
     <img id="lightboxImg" class="lightbox-img" alt="Foto RC Ampliada" />
   </div>
 
+  <div id="toast" class="toast"></div>
   </div>
-  </div>
-  <script type="module" src="js/app.js?v=65"></script>
+  <script type="module" src="js/app.js?v=57"></script>
 </body>
 </html>

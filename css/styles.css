@@ -451,16 +451,14 @@ nav.tabs button.active {
 body.view-crud .main-layout {
   display: flex;
   flex-direction: column;
-  height: auto;
-  max-height: none;
-  min-height: calc(100vh - 130px);
 }
 
 .crud-section {
   display: flex;
   flex-direction: column;
   margin-top: 0.5rem;
-  flex: none; /* Height is dynamically managed by JS */
+  flex: 1;
+  min-height: calc(100vh - 160px);
 }
 
 .crud-section.hidden { display: none !important; }
@@ -1325,5 +1323,174 @@ body.view-crud .main-layout {
   background: var(--success);
   box-shadow: 0 0 6px var(--success);
   flex-shrink: 0;
+}
+
+/* ==========================================================
+   MODULO PREVENTIVA
+   ========================================================== */
+.sub-tabs-container {
+  display: flex;
+  flex-direction: column;
+}
+.sub-tab-arrow.open {
+  transform: rotate(180deg);
+}
+.nav-item.sub-tab:hover {
+  background: rgba(255,255,255,0.05);
+}
+.nav-item.sub-tab.active {
+  color: var(--primary) !important;
+  font-weight: 600;
+}
+.nav-item.sub-tab.active::before {
+  content: "";
+  position: absolute;
+  left: 1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--primary);
+}
+
+/* Formulário Tela Cheia - Preventiva */
+#view-form-preventiva .form-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+#view-form-preventiva textarea {
+  resize: vertical;
+  min-height: 80px;
+  padding: 0.75rem;
+}
+#view-form-preventiva .section-hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 1rem;
+}
+
+/* ==========================================================
+   MODULO PREVENTIVA - FLYOUT E HUB
+   ========================================================== */
+.sub-tab-wrapper {
+  position: relative;
+}
+.flyout-menu {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  width: max-content;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(10px);
+  transition: all 0.2s ease;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.sub-tab-wrapper:hover .flyout-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(5px);
+}
+.flyout-menu .nav-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+  cursor: pointer;
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.flyout-menu .nav-item:hover {
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+}
+.kpi-preventiva-hub {
+  box-shadow: 0 8px 32px rgba(56,189,248,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.kpi-preventiva-hub:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(56,189,248,0.15);
+}
+
+/* ==========================================================
+   MONTHS GRID - HUB PREVENTIVA
+   ========================================================== */
+.months-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 1000px;
+}
+.month-card {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+.month-card:hover, .month-card:focus-within {
+  transform: translateY(-4px);
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 10px 20px rgba(16, 185, 129, 0.1);
+  outline: none;
+}
+.month-card-header {
+  padding: 1.25rem;
+  text-align: center;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 500;
+  font-size: 1.1rem;
+  color: var(--text);
+  letter-spacing: 0.05em;
+  background: linear-gradient(180deg, rgba(255,255,255,0.03) 0%, transparent 100%);
+  border-bottom: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+.month-card:hover .month-card-header, .month-card:focus-within .month-card-header {
+  border-bottom-color: rgba(255, 255, 255, 0.05);
+  color: #10b981;
+}
+.month-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  background: rgba(15, 23, 42, 0.4);
+}
+.month-card:hover .month-card-actions, .month-card:focus-within .month-card-actions {
+  padding: 1rem;
+  max-height: 150px;
+  opacity: 1;
+}
+.month-card-actions button {
+  width: 100%;
 }
 

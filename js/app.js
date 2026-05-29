@@ -14,8 +14,8 @@ import {
   agregarFornecedores,
 } from './logic.js';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
-import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, subscribeToRealtime } from './db.js';
-import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=4';
+import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva } from './db.js';
+import { renderDashboardCharts } from './charts.js?v=4';
 import {
   COLUNAS_TABELA,
   valorCelula,
@@ -27,7 +27,11 @@ import {
 import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler } from './drilldown.js?v=5';
 import { initExcelImport } from './import_excel.js?v=8';
 
+import { initExcelImportPreventiva } from './import_excel_preventiva.js?v=1';
+import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF } from './pdf_report.js';
+
 let registros = [];
+let registrosPreventiva = [];
 let filtros = {
   natureza: 'TODOS',
   status: 'TODOS',
@@ -46,25 +50,11 @@ let isAppInitialized = false;
 
 const $ = (sel) => document.querySelector(sel);
 
-function ajustarAlturaTabela() {
-  const mainLayout = $('.main-layout');
-  const secaoTabela = $('#secaoTabela');
-  const filters = $('.filters.panel');
-  if (!mainLayout || !secaoTabela || !filters || secaoTabela.classList.contains('hidden')) return;
-
-  // topbar padding+height = ~75px. mainLayout padding-top = 24px, padding-bottom = 32px.
-  // filters margin-bottom = 20px.
-  // We want secaoTabela to exactly fill the remaining visible viewport below the filters.
-  const offset = 75 + 24 + filters.offsetHeight + 20 + 32;
-  const avail = window.innerHeight - offset;
-  secaoTabela.style.height = `${Math.max(300, avail)}px`;
-}
-window.addEventListener('resize', ajustarAlturaTabela);
-
 function getFiltrados() {
   let base = registros;
   if (viewAtual === 'consertos') base = base.filter((r) => r.natureza === 'CONSERTO');
   if (viewAtual === 'compras') base = base.filter((r) => r.natureza === 'COMPRA');
+  if (viewAtual === 'fabricacao') base = base.filter((r) => r.natureza === 'FABRICACAO');
   return aplicarFiltros(base, filtros);
 }
 
@@ -240,36 +230,11 @@ function renderTabela() {
         input.value = rawVal;
         input.className = 'inline-edit-input';
 
-        const wrapper = document.createElement('div');
-        wrapper.style.display = 'flex';
-        wrapper.style.alignItems = 'center';
-        wrapper.style.gap = '4px';
-        wrapper.appendChild(input);
-
-        const btnSave = document.createElement('button');
-        btnSave.innerHTML = '&#10003;';
-        btnSave.title = 'Salvar';
-        btnSave.style.cssText = 'background:var(--success);border:none;color:#fff;border-radius:3px;cursor:pointer;padding:2px 6px;font-size:12px;';
-        
-        const btnCancel = document.createElement('button');
-        btnCancel.innerHTML = '&#10005;';
-        btnCancel.title = 'Cancelar';
-        btnCancel.style.cssText = 'background:var(--danger);border:none;color:#fff;border-radius:3px;cursor:pointer;padding:2px 6px;font-size:12px;';
-
-        wrapper.appendChild(btnSave);
-        wrapper.appendChild(btnCancel);
-
         cell.innerHTML = '';
-        cell.appendChild(wrapper);
+        cell.appendChild(input);
         input.focus();
 
-        const cancelInline = (e) => {
-          if (e) { e.preventDefault(); e.stopPropagation(); }
-          refresh();
-        };
-
-        const salvarInline = async (e) => {
-          if (e) { e.preventDefault(); e.stopPropagation(); }
+        const salvarInline = async () => {
           const newVal = input.value.trim();
           if (newVal === rawVal) {
             refresh();
@@ -290,16 +255,15 @@ function renderTabela() {
           refresh();
         };
 
-        btnSave.addEventListener('click', salvarInline);
-        btnCancel.addEventListener('click', cancelInline);
-
+        input.addEventListener('blur', salvarInline);
         input.addEventListener('keydown', (evt) => {
           if (evt.key === 'Enter') {
             evt.preventDefault();
-            salvarInline();
+            input.blur();
           }
           if (evt.key === 'Escape') {
-            cancelInline();
+            input.removeEventListener('blur', salvarInline);
+            refresh();
           }
         });
       });
@@ -325,23 +289,6 @@ function refresh() {
   renderTabela();
   if (viewAtual === 'dashboard') {
     requestAnimationFrame(() => renderDashboardCharts(getFiltrados()));
-  } else if (viewAtual === 'consertos' || viewAtual === 'compras') {
-    const chartSection = $('#crudMesChartSection');
-    const chartTitle = $('#crudMesChartTitle');
-    chartSection?.classList.remove('hidden');
-    if (chartTitle) {
-      chartTitle.textContent =
-        viewAtual === 'consertos' ? 'Consertos: Previsto x Recebido' : 'Compras: Previsto x Recebido';
-    }
-    requestAnimationFrame(() =>
-      renderCrudMesChart(
-        getFiltrados(),
-        viewAtual === 'consertos' ? 'CONSERTOS - PREVISTOS X RECEBIDOS' : 'COMPRAS - PREVISTOS X RECEBIDOS'
-      )
-    );
-  } else {
-    $('#crudMesChartSection')?.classList.add('hidden');
-    destroyCrudMesChart();
   }
   renderAlertas();
 }
@@ -369,22 +316,29 @@ function renderAlertas() {
 }
 
 function showView(name) {
+  if (name === 'form-preventiva') {
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+    $('#view-form-preventiva')?.classList.add('active');
+    return;
+  }
+
   viewAtual = name;
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
   document.querySelectorAll('nav.tabs button, .nav-item').forEach((b) => b.classList.remove('active'));
   $(`#view-${name}`)?.classList.add('active');
   document.querySelectorAll(`[data-tab="${name}"]`).forEach((el) => el.classList.add('active'));
 
-  const crud = ['rc', 'consertos', 'compras'].includes(name);
+  const crud = ['rc', 'consertos', 'compras', 'fabricacao', 'preventiva-l06-backend'].includes(name);
   const isDash = name === 'dashboard';
-  const isSpecial = ['fornecedores', 'calendario'].includes(name);
+  const isSpecial = ['fornecedores', 'calendario', 'controle-preventiva', 'preventiva-l06', 'preventiva-l06-backend', 'preventiva-l06-frontend'].includes(name);
 
-  // Seção tabela (toolbar + tabela de RCs)
-  $('#secaoTabela')?.classList.toggle('hidden', !crud);
+  // Seção tabela (toolbar + tabela de RCs) - Hide for preventiva since it has its own
+  $('#secaoTabela')?.classList.toggle('hidden', !['rc', 'consertos', 'compras', 'fabricacao'].includes(name));
 
   // KPIs e filtros — ocultos nas views especiais
   document.querySelector('.kpi-grid')?.classList.toggle('hidden', isSpecial);
-  document.querySelector('.filters.panel')?.classList.toggle('hidden', isSpecial);
+  document.querySelector('main > section.filters.panel')?.classList.toggle('hidden', isSpecial);
+
 
   // Dashboard e alertas
   $('#secaoDashboard')?.classList.toggle('hidden', !isDash);
@@ -403,16 +357,19 @@ function showView(name) {
     rc: 'Controle Global',
     consertos: 'Consertos',
     compras: 'Compras',
+    fabricacao: 'Fabricação',
     fornecedores: 'SLA Fornecedores',
     calendario: 'Calendário',
+    'controle-preventiva': 'Controle Preventiva',
+    'preventiva-l06': 'Hub Preventiva L(06)',
+    'preventiva-l06-backend': 'Preventiva L(06) - Back-End',
+    'preventiva-l06-frontend': 'Preventiva L(06) - Front-End',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
 
   const t = $('#crudTitle');
   if (t && titles[name]) t.textContent = titles[name];
-
-  requestAnimationFrame(() => ajustarAlturaTabela());
 
   refresh();
 }
@@ -421,6 +378,7 @@ function abrirModal(id) {
   const naturezaPadrao = {
     consertos: 'CONSERTO',
     compras: 'COMPRA',
+    fabricacao: 'FABRICACAO',
     rc: 'CONSERTO',
   };
   editando = id
@@ -439,31 +397,11 @@ function abrirModal(id) {
     'valor', 'previsao_entrega', 'data_recebimento', 'comentario',
   ];
   fields.forEach((name) => {
-    const input = f.elements.namedItem(name);
+    const input = f.elements[name];
     if (!input) return;
     const v = editando[name];
     input.value = v ?? '';
   });
-
-  // Render Foto
-  fotoUrlAtual = editando.foto_url || null;
-  const preview = $('#fotoPreview');
-  const placeholder = $('#fotoPlaceholder');
-  const btnRemover = $('#btnRemoverFoto');
-  
-  if (fotoUrlAtual) {
-    preview.src = fotoUrlAtual;
-    preview.style.display = 'block';
-    placeholder.style.display = 'none';
-    btnRemover.style.display = 'inline-flex';
-    $('#fotoPreviewWrap').style.cursor = 'pointer';
-  } else {
-    preview.src = '';
-    preview.style.display = 'none';
-    placeholder.style.display = 'block';
-    btnRemover.style.display = 'none';
-    $('#fotoPreviewWrap').style.cursor = 'default';
-  }
 
   const irmas = editando.item_id != null ? registrosDoMesmoItem(registros, editando.item_id) : [];
   const hintId =
@@ -498,7 +436,7 @@ async function salvarForm(e) {
     sinal: f.sinal.value || null,
     item_id: f.item_id.value ? parseInt(f.item_id.value, 10) : null,
     natureza: normalizarNatureza(f.natureza.value),
-    item: f.elements.namedItem('item').value, // Fix item empty bug
+    item: f.item.value,
     descricao_falha: f.descricao_falha.value,
     solicitante: f.solicitante.value,
     criticidade: f.criticidade.value || null,
@@ -514,7 +452,6 @@ async function salvarForm(e) {
     previsao_entrega: f.previsao_entrega.value || null,
     data_recebimento: f.data_recebimento.value || null,
     comentario: f.comentario.value,
-    foto_url: fotoUrlAtual, // Add photo to payload
   };
   try {
     await salvarRegistro(payload);
@@ -563,10 +500,10 @@ function atualizarBotaoEdicao() {
   const btn = $('#btnInlineEdit');
   if (!btn) return;
   if (isInlineEditMode) {
-    btn.style.background = 'var(--danger)';
-    btn.style.color = '#ffffff';
+    btn.style.background = 'var(--primary)';
+    btn.style.color = '#0f172a';
     btn.style.fontWeight = '700';
-    btn.style.borderColor = 'var(--danger)';
+    btn.style.borderColor = 'var(--primary)';
     btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg><span style="pointer-events:none">Sair da Edição</span>`;
   } else {
     btn.style.background = 'transparent';
@@ -580,74 +517,22 @@ function atualizarBotaoEdicao() {
 async function init() {
   try {
     registros = await carregarRegistros();
+    try { registrosPreventiva = await carregarPreventiva(); } catch (e) { console.warn("Preventiva table not ready yet"); }
   } catch (e) {
-    console.error("Initialization error:", e);
-    toast('Modo Offline: Não foi possível baixar registros (' + e.message + ')', 'warning');
-    registros = []; // Fallback gracefully to allow app to finish initializing UI
+    $('#appStatus').textContent = 'Erro: ' + e.message;
+    return;
   }
 
-  $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros`;
+  $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros · Supabase`;
 
-  $('#filtroStatus').innerHTML = `<option value="TODOS">TODOS</option>`;
   STATUS_LIST.forEach((s) => {
     $('#filtroStatus').innerHTML += `<option value="${s}">${s}</option>`;
   });
-  
-  $('#filtroCriticidade').innerHTML = `<option value="TODOS">TODOS</option>`;
   CRITICIDADE_LIST.forEach((c) => {
     $('#filtroCriticidade').innerHTML += `<option value="${c}">${c}</option>`;
   });
 
   renderFiltros();
-
-  subscribeToRealtime((payload) => {
-    if (!payload || !payload.eventType) return;
-    let changed = false;
-    
-    if (payload.eventType === 'INSERT') {
-      const idx = registros.findIndex(r => r.id === payload.new.id);
-      if (idx === -1) {
-        registros.push(enriquecerRegistro(payload.new));
-        changed = true;
-      }
-    } else if (payload.eventType === 'UPDATE') {
-      const idx = registros.findIndex(r => r.id === payload.new.id);
-      if (idx !== -1) {
-        registros[idx] = enriquecerRegistro(payload.new);
-        changed = true;
-      } else {
-        registros.push(enriquecerRegistro(payload.new));
-        changed = true;
-      }
-    } else if (payload.eventType === 'DELETE') {
-      const oldLen = registros.length;
-      registros = registros.filter(r => r.id !== payload.old.id);
-      if (registros.length < oldLen) changed = true;
-    }
-    
-    if (changed) {
-      // Shield 1: Check if the user is editing the exact same row in the Modal
-      const isModalOpen = $('#modal').classList.contains('open');
-      if (isModalOpen && editando?.id === payload.new?.id) {
-        toast('⚠️ Atenção: O registro que você está editando acabou de ser modificado por outro usuário.', 'warning');
-      }
-
-      // Shield 2: Check if there is an active inline edit (prevent UI destruction)
-      const isInlineEditing = !!document.querySelector('.inline-edit-input');
-      
-      clearTimeout(window._realtimeDebounce);
-      window._realtimeDebounce = setTimeout(() => {
-        if (isInlineEditing) {
-          $('#appStatus').innerHTML = `<span class="dot-online" style="background:var(--warning)"></span> ${registros.length} registros (Atualização pendente)`;
-          toast('Mudanças de outros usuários recebidas. Termine de editar para atualizar a tela.', 'info');
-        } else {
-          $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros`;
-          refresh();
-          toast('Tabela sincronizada (tempo real)', 'success');
-        }
-      }, 400); // Shield 3: Debounce to prevent UI freezing on massive bulk updates
-    }
-  });
   setDrilldownEditHandler((id) => abrirModal(id));
   setDrilldownPhotoHandler(async (id, dataUrl) => {
     const r = registros.find((x) => x.id === id);
@@ -681,7 +566,18 @@ async function init() {
   });
 
   document.querySelectorAll('nav.tabs button, [data-tab].nav-item').forEach((btn) => {
-    btn.addEventListener('click', () => showView(btn.dataset.tab));
+    btn.addEventListener('click', () => {
+      if (btn.dataset.tab === 'controle-preventiva') {
+        const container = btn.nextElementSibling;
+        const arrow = btn.querySelector('.sub-tab-arrow');
+        if (container && container.classList.contains('sub-tabs-container')) {
+          const isClosed = container.style.display === 'none';
+          container.style.display = isClosed ? 'flex' : 'none';
+          if (arrow) arrow.style.transform = isClosed ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+      }
+      showView(btn.dataset.tab);
+    });
   });
 
   const onFilter = () => {
@@ -731,26 +627,7 @@ async function init() {
 
   $('#btnNovo').addEventListener('click', () => abrirModal(null));
   $('#btnExport').addEventListener('click', () => exportarExcel(getFiltrados(), viewAtual));
-  
-  // Exportação em PDF com templates profissionais
-  $('#btnExportDashboardPdf')?.addEventListener('click', () => {
-    import('./pdf_report.js?v=' + Date.now()).then(m => {
-      m.gerarRelatorioExecutivoPDF(registros).catch(e => alert('Erro interno Executivo: ' + e.message));
-    }).catch(err => {
-      console.error('Erro ao carregar módulo PDF:', err);
-      alert('Erro de Importação PDF: ' + err.message + '\\n' + err.stack);
-    });
-  });
-
-  $('#btnExportSlaPdf')?.addEventListener('click', () => {
-    import('./pdf_report.js?v=' + Date.now()).then(m => {
-      m.gerarRelatorioSLAPDF(registros).catch(e => alert('Erro interno SLA: ' + e.message));
-    }).catch(err => {
-      console.error('Erro ao carregar módulo PDF:', err);
-      alert('Erro de Importação SLA: ' + err.message + '\\n' + err.stack);
-    });
-  });
-
+  $('#btnExportPreventiva')?.addEventListener('click', () => exportarExcel(aplicarFiltrosPreventiva(), 'preventiva'));
   $('#btnLimparFiltros').addEventListener('click', () => {
     filtros = { natureza: 'TODOS', status: 'TODOS', criticidade: 'TODOS', linha: 'TODOS', maquina: 'TODOS', fornecedor: 'TODOS', busca: '' };
     document.querySelectorAll('.filters select, .filters input').forEach((el) => {
@@ -760,7 +637,6 @@ async function init() {
     refresh();
   });
   $('#btnFecharModal').addEventListener('click', () => $('#modal').classList.remove('open'));
-  $('#btnCancelarModal')?.addEventListener('click', () => $('#modal').classList.remove('open'));
   $('#btnExcluirModal').addEventListener('click', async () => {
     if (editando?.id) {
       $('#modal').classList.remove('open');
@@ -776,62 +652,12 @@ async function init() {
   $('#drillFechar').addEventListener('click', fecharDrilldown);
   $('#drillOverlay').addEventListener('click', fecharDrilldown);
 
-  // Foto listeners no CRUD modal
-  $('#inputFoto')?.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Imagem muito grande. Máximo 2 MB.');
-      e.target.value = '';
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      fotoUrlAtual = reader.result;
-      const preview = $('#fotoPreview');
-      preview.src = fotoUrlAtual;
-      preview.style.display = 'block';
-      $('#fotoPlaceholder').style.display = 'none';
-      $('#btnRemoverFoto').style.display = 'inline-flex';
-      $('#fotoPreviewWrap').style.cursor = 'pointer';
-    };
-    reader.readAsDataURL(file);
+  // ===== PDF Report Buttons =====
+  $('#btnExportDashboardPdf')?.addEventListener('click', () => {
+    gerarRelatorioExecutivoPDF(registros);
   });
-
-  $('#btnRemoverFoto')?.addEventListener('click', () => {
-    fotoUrlAtual = null;
-    const preview = $('#fotoPreview');
-    preview.src = '';
-    preview.style.display = 'none';
-    $('#fotoPlaceholder').style.display = 'block';
-    $('#btnRemoverFoto').style.display = 'none';
-    $('#inputFoto').value = '';
-    $('#fotoPreviewWrap').style.cursor = 'default';
-  });
-
-  // Lightbox genérico (expansão de imagem)
-  const openLightbox = (src) => {
-    if (!src) return;
-    const lb = $('#lightboxOverlay');
-    const lbImg = $('#lightboxImg');
-    if (lb && lbImg) {
-      lbImg.src = src;
-      lb.classList.add('open');
-    }
-  };
-  
-  $('#fotoPreviewWrap')?.addEventListener('click', () => openLightbox(fotoUrlAtual));
-
-  // Ocultar lightbox
-  $('#lightboxOverlay')?.addEventListener('click', (e) => {
-    $('#lightboxOverlay').classList.remove('open');
-    $('#lightboxImg').src = '';
-  });
-
-  document.addEventListener('click', (e) => {
-    if (e.target.classList.contains('drill-foto-img')) {
-      openLightbox(e.target.src);
-    }
+  $('#btnExportSlaPdf')?.addEventListener('click', () => {
+    gerarRelatorioSLAPDF(registros);
   });
 
   atualizarBotaoEdicao();
@@ -839,66 +665,17 @@ async function init() {
 }
 
 // ========== Login / Auth handlers ==========
-// Helpers de Login Visual
-function showLoginAlert(msg, type = 'error') {
-  const alertEl = document.getElementById('loginAlert');
-  if (!alertEl) {
-    toast(msg, type); // Fallback
-    return;
-  }
-
-  // Reseta a classe (retira ao estado oculto via CSS transition)
-  alertEl.className = 'login-alert';
-  alertEl.textContent = msg;
-
-  // Um frame depois aplica o tipo para disparar a transição CSS
-  requestAnimationFrame(() => {
-    alertEl.className = 'login-alert ' + type;
-  });
-
-  if (type === 'error') {
-    const wrapper = document.querySelector('.login-wrapper');
-    if (wrapper) {
-      wrapper.classList.remove('shake');
-      void wrapper.offsetWidth;
-      wrapper.classList.add('shake');
-    }
-  }
-}
-
-function translateAuthError(err) {
-  const msg = (err?.message || '').toLowerCase();
-  if (msg.includes('invalid login credentials')) return 'E-mail ou senha incorretos.';
-  if (msg.includes('user already registered')) return 'Este e-mail já está em uso.';
-  if (msg.includes('password should be at least')) return 'A senha deve ter no mínimo 6 caracteres.';
-  if (msg.includes('rate limit')) return 'Muitas tentativas. Aguarde um momento.';
-  if (msg.includes('email not confirmed')) return 'Por favor, confirme seu e-mail antes de entrar.';
-  return 'Falha na autenticação. Verifique os dados.';
-}
-
 document.getElementById('formLogin')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const emailInput = document.getElementById('loginEmail');
-  const senhaInput = document.getElementById('loginSenha');
-  
-  emailInput.classList.remove('input-error');
-  senhaInput.classList.remove('input-error');
-  const alertEl = document.getElementById('loginAlert');
-  if (alertEl) alertEl.className = 'login-alert'; // esconde o alert
-  
-  const email = emailInput.value.trim();
-  const senha = senhaInput.value;
+  const email = document.getElementById('loginEmail').value.trim();
+  const senha = document.getElementById('loginSenha').value;
   const btn = e.target.querySelector('button[type="submit"]');
-  
   btn.disabled = true;
-  btn.textContent = 'Autenticando...';
-  
+  btn.textContent = 'Entrando...';
   try {
     await signIn(email, senha);
   } catch (err) {
-    showLoginAlert(translateAuthError(err), 'error');
-    emailInput.classList.add('input-error');
-    senhaInput.classList.add('input-error');
+    toast('Credenciais inválidas: ' + err.message, 'error');
     btn.disabled = false;
     btn.textContent = 'Entrar na Conta';
   }
@@ -907,53 +684,23 @@ document.getElementById('formLogin')?.addEventListener('submit', async (e) => {
 document.getElementById('formCadastro')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const nome = document.getElementById('cadNome')?.value.trim();
-  const emailInput = document.getElementById('cadEmail');
-  const senhaInput = document.getElementById('cadSenha');
-  const btn = e.target.querySelector('button[type="submit"]');
-  
-  emailInput.classList.remove('input-error');
-  senhaInput.classList.remove('input-error');
-  const alertEl = document.getElementById('loginAlert');
-  if (alertEl) alertEl.className = 'login-alert';
-
-  btn.disabled = true;
-  btn.textContent = 'Registrando...';
-
+  const email = document.getElementById('cadEmail')?.value.trim();
+  const senha = document.getElementById('cadSenha')?.value;
   try {
-    const res = await signUp(emailInput.value.trim(), senhaInput.value, nome);
-    
-    // Se o Supabase exigir confirmação de e-mail (session null), avisa o usuário.
-    if (res && res.user && !res.user.confirmed_at && !res.session) {
-      showLoginAlert('Conta criada! Verifique seu e-mail para validar o acesso.', 'success');
-    } else {
-      showLoginAlert('Conta criada com sucesso! Faça login abaixo.', 'success');
-    }
-    
+    await signUp(email, senha, nome);
+    toast('Conta criada com sucesso! Faça login para acessar.', 'success');
     document.getElementById('cadEmail').value = '';
     document.getElementById('cadSenha').value = '';
     if (document.getElementById('cadNome')) document.getElementById('cadNome').value = '';
-    document.getElementById('loginEmail').value = emailInput.value.trim();
-    
-    // Switch to login form smoothly
-    setTimeout(() => {
-      const fCad = document.getElementById('formCadastro');
-      const fLog = document.getElementById('formLogin');
-      const p = document.querySelector('.login-footer p');
-      const btnToggle = document.getElementById('btnToggleCadastro');
-      
+    document.getElementById('loginEmail').value = email;
+    const fCad = document.getElementById('formCadastro');
+    const fLog = document.getElementById('formLogin');
+    if (fCad.style.display !== 'none') {
       fCad.style.display = 'none';
       fLog.style.display = 'flex';
-      if (btnToggle) btnToggle.textContent = 'Criar nova conta agora';
-      if (p) p.textContent = 'Ainda não possui acesso?';
-    }, 2000);
-
+    }
   } catch (err) {
-    showLoginAlert(translateAuthError(err), 'error');
-    emailInput.classList.add('input-error');
-    senhaInput.classList.add('input-error');
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Registrar Acesso';
+    toast('Erro no cadastro: ' + err.message, 'error');
   }
 });
 
@@ -1086,74 +833,360 @@ function renderFornecedoresSLA() {
 // Initialize Excel Import feature
 initExcelImport(getClient(), toast, async () => {
   registros = await carregarRegistros();
-  window.location.reload();
+  renderFiltros();
+  refresh();
 });
 
-window.addEventListener('DOMContentLoaded', async () => {
-  // Se veio do inicializador (.bat), forçamos o deslogue (tela de login garantida ao executar)
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('login') === 'force') {
-    try {
-      await signOut();
-    } catch(e) {}
-    // Remove o parâmetro da URL sem recarregar a página para que o F5 não deslogue
-    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-    window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+// ==========================================
+// LOGICA PREVENTIVA
+// ==========================================
+let editandoPreventiva = null;
+let filtrosPreventiva = {
+  busca: '',
+  status: 'TODOS',
+  plano: 'TODOS',
+  mes: ''
+};
+
+function renderFiltrosPreventiva() {
+  const selectStatus = $('#filtroStatusPreventiva');
+  if (selectStatus) {
+    const statuses = [...new Set(registrosPreventiva.map(r => r.status_auditoria).filter(Boolean))].sort();
+    selectStatus.innerHTML = '<option value="TODOS">TODOS</option>' + statuses.map(s => `<option value="${s}">${s}</option>`).join('');
+    selectStatus.value = filtrosPreventiva.status;
+  }
+}
+
+function aplicarFiltrosPreventiva() {
+  return registrosPreventiva.filter(r => {
+    if (filtrosPreventiva.plano !== 'TODOS' && r.plano_padrao !== filtrosPreventiva.plano) return false;
+    if (filtrosPreventiva.status !== 'TODOS' && r.status_auditoria !== filtrosPreventiva.status) return false;
+    if (filtrosPreventiva.mes) {
+      const rMes = r.mes || 'MARÇO';
+      if (rMes !== filtrosPreventiva.mes) return false;
+    }
+    if (filtrosPreventiva.busca) {
+      const q = filtrosPreventiva.busca.toLowerCase();
+      const mach = String(r.maquina || '').toLowerCase();
+      const iden = String(r.identificador || '').toLowerCase();
+      if (!mach.includes(q) && !iden.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+$('#filtroBuscaPreventiva')?.addEventListener('input', (e) => {
+  filtrosPreventiva.busca = e.target.value;
+  renderTabelaPreventiva();
+});
+
+$('#filtroStatusPreventiva')?.addEventListener('change', (e) => {
+  filtrosPreventiva.status = e.target.value;
+  renderTabelaPreventiva();
+});
+
+$('#filtroPlanoPreventiva')?.addEventListener('change', (e) => {
+  filtrosPreventiva.plano = e.target.value;
+  renderTabelaPreventiva();
+});
+
+$('#btnLimparFiltrosPreventiva')?.addEventListener('click', () => {
+  filtrosPreventiva = { busca: '', status: 'TODOS', plano: 'TODOS' };
+  $('#filtroBuscaPreventiva').value = '';
+  $('#filtroStatusPreventiva').value = 'TODOS';
+  $('#filtroPlanoPreventiva').value = 'TODOS';
+  renderTabelaPreventiva();
+});
+
+function renderTabelaPreventiva() {
+  const tbody = $('#tabelaPreventiva');
+  if (!tbody) return;
+
+  const filtrados = aplicarFiltrosPreventiva();
+
+  if (!filtrados || filtrados.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">Nenhum registro de preventiva encontrado</td></tr>';
+    return;
   }
 
-  onAuthStateChange((user) => {
-    if (user) {
-      document.getElementById('login-container').style.display = 'none';
-      document.getElementById('app-container').style.display = 'flex';
+  tbody.innerHTML = filtrados.map(r => `
+    <tr>
+      <td><strong>${r.identificador || '—'}</strong></td>
+      <td>${r.maquina || '—'}</td>
+      <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
+      <td>${r.hh_mec != null && r.hh_mec !== 0 ? r.hh_mec : '—'}</td>
+      <td>${r.hh_eletrico != null && r.hh_eletrico !== 0 ? r.hh_eletrico : '—'}</td>
+      <td><span class="badge ${r.status_auditoria === 'FINALIZADO' ? 'badge-success' : r.status_auditoria ? 'badge-warning' : ''}">${r.status_auditoria || '—'}</span></td>
+      <td>${Number(r.previsao_custos || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+      <td>
+        <button type="button" class="btn btn-ghost btn-sm" onclick="window.abrirFormularioPreventiva('${r.id}')">Editar</button>
+      </td>
+    </tr>
+  `).join('');
+}
 
-      // ── Painel de usuário ──────────────────────────────────────
-      const rawName = user.user_metadata?.username
-                   || user.user_metadata?.name
-                   || user.email?.split('@')[0]
-                   || 'Usuário';
+window.abrirFormularioPreventiva = function(id) {
+  editandoPreventiva = id ? registrosPreventiva.find(r => r.id === id) : {
+    identificador: '', maquina: '', material: '', plano_padrao: 'S', duracao_horas: 0, hh_mec: 0, hh_eletrico: 0,
+    resp_fabrica: '', resp_manutencao: '', status_auditoria: '', previsao_custos: 0, atividades_descricoes: [], programacao: []
+  };
 
-      // Formata nome: capitaliza cada palavra
-      const displayName = rawName
-        .split(/[\s._]+/)
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-        .join(' ');
+  if (!editandoPreventiva) return;
 
-      // Saudação por hora
-      const hora = new Date().getHours();
-      const greeting = hora < 12 ? 'Bom dia' : hora < 18 ? 'Boa tarde' : 'Boa noite';
+  const f = $('#formRegistroPreventiva');
+  f.id.value = editandoPreventiva.id || '';
+  f.identificador.value = editandoPreventiva.identificador || '';
+  f.maquina.value = editandoPreventiva.maquina || '';
+  f.material.value = editandoPreventiva.material || '';
+  f.plano_padrao.value = editandoPreventiva.plano_padrao || 'S';
+  f.duracao_horas.value = editandoPreventiva.duracao_horas || '';
+  f.hh_mec.value = editandoPreventiva.hh_mec || '';
+  f.hh_eletrico.value = editandoPreventiva.hh_eletrico || '';
+  f.resp_fabrica.value = editandoPreventiva.resp_fabrica || '';
+  f.resp_manutencao.value = editandoPreventiva.resp_manutencao || '';
+  f.status_auditoria.value = editandoPreventiva.status_auditoria || '';
+  f.previsao_custos.value = editandoPreventiva.previsao_custos || '';
 
-      // Inicial do avatar (primeira letra do primeiro nome)
-      const initial = displayName.charAt(0).toUpperCase();
+  renderDescricoesPreventiva();
+  renderProgramacaoPreventiva();
 
-      // Sidebar
-      const elAvatar   = document.getElementById('userAvatar');
-      const elGreeting = document.getElementById('userGreeting');
-      const elName     = document.getElementById('userName');
-      if (elAvatar)   elAvatar.textContent   = initial;
-      if (elGreeting) elGreeting.textContent = greeting;
-      if (elName)     elName.textContent     = displayName;
+  $('#btnExcluirPreventivaModal').style.display = editandoPreventiva.id ? 'inline-flex' : 'none';
+  $('#formTituloPreventiva').textContent = id ? 'Editar Preventiva' : 'Nova Preventiva';
+  showView('form-preventiva');
+};
 
-      // Topbar badge
-      const elTopbarBadge = document.getElementById('topbarUserBadge');
-      const elTopbarName  = document.getElementById('topbarUserName');
-      if (elTopbarName)  elTopbarName.textContent  = `${greeting}, ${displayName.split(' ')[0]}`;
-      if (elTopbarBadge) elTopbarBadge.style.display = 'flex';
-      // ──────────────────────────────────────────────────────────
+function renderDescricoesPreventiva() {
+  const lista = $('#listaDescricoesPreventiva');
+  if (!editandoPreventiva.atividades_descricoes?.length) {
+    lista.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0.25rem 0;">Nenhuma descrição. Clique em "+ Adicionar" abaixo.</p>';
+    return;
+  }
+  lista.innerHTML = editandoPreventiva.atividades_descricoes.map((desc, idx) => `
+    <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+      <textarea class="desc-input" data-idx="${idx}" rows="3" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem 0.75rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;line-height:1.5;">${desc}</textarea>
+      <button type="button" class="btn-icon" onclick="window.removerDescricaoPreventiva(${idx})" title="Remover" style="margin-top:0.25rem;opacity:0.7;">✕</button>
+    </div>
+  `).join('');
+  
+  lista.querySelectorAll('.desc-input').forEach(el => {
+    el.addEventListener('input', (e) => {
+      editandoPreventiva.atividades_descricoes[e.target.dataset.idx] = e.target.value;
+    });
+  });
+}
 
-      if (!isAppInitialized) {
-        isAppInitialized = true;
-        init().then(() => {
-          initCalendario(registros);
-        });
-      }
-    } else {
-      isAppInitialized = false;
-      document.getElementById('login-container').style.display = 'flex';
-      document.getElementById('app-container').style.display = 'none';
+window.removerDescricaoPreventiva = function(idx) {
+  editandoPreventiva.atividades_descricoes.splice(idx, 1);
+  renderDescricoesPreventiva();
+};
 
-      // Limpa painel
-      const elTopbarBadge = document.getElementById('topbarUserBadge');
-      if (elTopbarBadge) elTopbarBadge.style.display = 'none';
+$('#btnNovaDescricaoPreventiva')?.addEventListener('click', () => {
+  if (!editandoPreventiva.atividades_descricoes) editandoPreventiva.atividades_descricoes = [];
+  editandoPreventiva.atividades_descricoes.push('');
+  renderDescricoesPreventiva();
+});
+
+function renderProgramacaoPreventiva() {
+  const lista = $('#listaProgramacao');
+  if (!Array.isArray(editandoPreventiva.programacao)) {
+    editandoPreventiva.programacao = [];
+  }
+  if (!editandoPreventiva.programacao.length) {
+    lista.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0.25rem 0;">Nenhum dia programado. Clique em "+ Adicionar Dia/Turno" abaixo.</p>';
+    return;
+  }
+  const inputStyle = 'background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.4rem 0.6rem;font-family:\'DM Sans\',sans-serif;font-size:0.875rem;';
+  lista.innerHTML = editandoPreventiva.programacao.map((prog, idx) => `
+    <div style="display:flex;gap:0.5rem;align-items:center;background:rgba(255,255,255,0.04);padding:0.5rem 0.75rem;border-radius:8px;border:1px solid rgba(255,255,255,0.07);">
+      <span style="font-size:0.75rem;color:var(--muted);min-width:28px;">#${idx+1}</span>
+      <input type="text" class="prog-data" data-idx="${idx}" placeholder="Ex: 23/03" value="${prog.data || ''}" style="width:90px;${inputStyle}" />
+      <select class="prog-turno" data-idx="${idx}" style="${inputStyle}">
+        <option value="DIA" ${prog.turno === 'DIA' ? 'selected' : ''}>☀ DIA</option>
+        <option value="NOITE" ${prog.turno === 'NOITE' ? 'selected' : ''}>🌙 NOITE</option>
+      </select>
+      <button type="button" class="btn-icon" onclick="window.removerProgramacaoPreventiva(${idx})" title="Remover" style="opacity:0.6;margin-left:auto;">✕</button>
+    </div>
+  `).join('');
+  
+  lista.querySelectorAll('.prog-data, .prog-turno').forEach(el => {
+    el.addEventListener('change', (e) => {
+      const idx = e.target.dataset.idx;
+      if (e.target.classList.contains('prog-data')) editandoPreventiva.programacao[idx].data = e.target.value;
+      if (e.target.classList.contains('prog-turno')) editandoPreventiva.programacao[idx].turno = e.target.value;
+    });
+  });
+}
+
+window.removerProgramacaoPreventiva = function(idx) {
+  editandoPreventiva.programacao.splice(idx, 1);
+  renderProgramacaoPreventiva();
+};
+
+$('#btnNovaProgramacao')?.addEventListener('click', () => {
+  if (!editandoPreventiva.programacao) editandoPreventiva.programacao = [];
+  editandoPreventiva.programacao.push({ data: '', turno: 'DIA' });
+  renderProgramacaoPreventiva();
+});
+
+$('#formRegistroPreventiva')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const f = $('#formRegistroPreventiva');
+  const payload = {
+    ...editandoPreventiva,
+    identificador: f.identificador.value,
+    maquina: f.maquina.value,
+    material: f.material.value,
+    plano_padrao: f.plano_padrao.value,
+    duracao_horas: parseFloat(f.duracao_horas.value) || 0,
+    hh_mec: parseFloat(f.hh_mec.value) || 0,
+    hh_eletrico: parseFloat(f.hh_eletrico.value) || 0,
+    resp_fabrica: f.resp_fabrica.value,
+    resp_manutencao: f.resp_manutencao.value,
+    status_auditoria: f.status_auditoria.value,
+    previsao_custos: parseFloat(f.previsao_custos.value) || 0,
+  };
+  
+  try {
+    await salvarPreventiva(payload);
+    registrosPreventiva = await carregarPreventiva();
+    showView(viewAtual === 'form-preventiva' ? 'preventiva-l06-backend' : viewAtual);
+    toast('Preventiva salva com sucesso.', 'success');
+    renderTabelaPreventiva();
+  } catch (err) {
+    toast('Erro ao salvar preventiva: ' + err.message, 'error');
+  }
+});
+
+$('#btnFecharFormPreventiva')?.addEventListener('click', () => showView(viewAtual === 'form-preventiva' ? 'preventiva-l06-backend' : viewAtual));
+$('#btnCancelarFormPreventiva')?.addEventListener('click', () => showView(viewAtual === 'form-preventiva' ? 'preventiva-l06-backend' : viewAtual));
+$('#btnNovaPreventiva')?.addEventListener('click', () => window.abrirFormularioPreventiva(null));
+$('#btnNovaLinhaLanding')?.addEventListener('click', () => window.cadastrarNovaPreventiva());
+$('#btnExcluirPreventivaModal')?.addEventListener('click', async () => {
+  if (editandoPreventiva?.id && confirm('Excluir esta preventiva permanentemente?')) {
+    try {
+      await excluirPreventiva(editandoPreventiva.id);
+      registrosPreventiva = await carregarPreventiva();
+      showView(viewAtual === 'form-preventiva' ? 'preventiva-l06-backend' : viewAtual);
+      toast('Preventiva excluída.', 'success');
+      renderTabelaPreventiva();
+    } catch (err) {
+      toast('Erro: ' + err.message, 'error');
+    }
+  }
+});
+
+// Intercept clicks on view toggles to update preventiva table
+const originalShowView = showView;
+showView = function(name) {
+  originalShowView(name);
+  if (name === 'preventiva-l06-backend') {
+    renderFiltrosPreventiva();
+    renderTabelaPreventiva();
+  } else if (name === 'controle-preventiva' || name === 'preventiva-l06') {
+    renderControlePreventiva();
+  }
+};
+window.showView = showView;
+
+window.showPreventivaMes = function(viewName, mes) {
+  filtrosPreventiva.mes = mes;
+
+  const titleMap = {
+    'preventiva-l06-backend': `Controle Preventiva L(06) - ${mes}`,
+    'preventiva-l06-frontend': `Controle Preventiva L(06) Front-End - ${mes}`
+  };
+  
+  if (viewName === 'preventiva-l06-backend') {
+    const el = document.querySelector('#view-preventiva-l06-backend .crud-title');
+    if (el) el.textContent = titleMap[viewName];
+  } else if (viewName === 'preventiva-l06-frontend') {
+    const el = document.querySelector('#view-preventiva-l06-frontend .crud-title');
+    if (el) el.textContent = titleMap[viewName];
+  }
+  
+  showView(viewName);
+};
+
+function renderControlePreventiva() {
+  const el = document.getElementById('contagemPrevL06');
+  if (el) el.textContent = `${registrosPreventiva.length} atividade${registrosPreventiva.length !== 1 ? 's' : ''}`;
+}
+
+window.cadastrarNovaPreventiva = function() {
+  Swal.fire({
+    title: 'Nova Linha Preventiva',
+    html: `<p style="color:#94a3b8;font-size:0.88rem;margin-bottom:0.75rem;">Informe o número ou nome da linha para criar uma nova sub-aba.</p>
+           <input id="swalLinhaName" class="swal2-input" placeholder="Ex: 07" maxlength="10" style="text-align:center;" />`,
+    showCancelButton: true,
+    confirmButtonText: 'Criar Linha',
+    cancelButtonText: 'Cancelar',
+    background: '#161f33',
+    color: '#f1f5f9',
+    confirmButtonColor: '#d4af37',
+    cancelButtonColor: '#0f1624',
+    preConfirm: () => {
+      const val = document.getElementById('swalLinhaName')?.value.trim();
+      if (!val) { Swal.showValidationMessage('Informe o identificador da linha'); return false; }
+      return val;
+    }
+  }).then(result => {
+    if (result.isConfirmed) {
+      toast(`Sub-aba "Preventiva L(${result.value})" cadastrada! Em breve disponível no menu lateral.`, 'info');
     }
   });
+};
+
+// Initialize Preventiva Import
+initExcelImportPreventiva(getClient(), toast, async () => {
+  registrosPreventiva = await carregarPreventiva();
+  if (viewAtual === 'preventiva-l06-backend') { renderFiltrosPreventiva(); renderTabelaPreventiva(); }
+  if (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06') renderControlePreventiva();
+});
+
+onAuthStateChange((user) => {
+  if (user) {
+    document.getElementById('login-container').style.display = 'none';
+    document.getElementById('app-container').style.display = 'flex';
+    if (!isAppInitialized) {
+      isAppInitialized = true;
+      init().then(() => {
+        initCalendario(registros);
+      });
+    }
+  } else {
+    isAppInitialized = false;
+    document.getElementById('login-container').style.display = 'flex';
+    document.getElementById('app-container').style.display = 'none';
+  }
+});
+
+// Lightbox genérico (expansão de imagem)
+const openLightbox = (src) => {
+  if (!src) return;
+  const lb = document.getElementById('lightboxOverlay');
+  const lbImg = document.getElementById('lightboxImg');
+  if (lb && lbImg) {
+    lbImg.src = src;
+    lb.classList.add('open');
+  }
+};
+
+document.getElementById('fotoPreviewWrap')?.addEventListener('click', () => {
+  const preview = document.getElementById('fotoPreview');
+  if (preview && preview.src && preview.src !== window.location.href) {
+    openLightbox(preview.src);
+  }
+});
+
+document.getElementById('lightboxOverlay')?.addEventListener('click', () => {
+  const lb = document.getElementById('lightboxOverlay');
+  const lbImg = document.getElementById('lightboxImg');
+  if (lb) lb.classList.remove('open');
+  if (lbImg) lbImg.src = '';
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target.classList.contains('drill-foto-img')) {
+    openLightbox(e.target.src);
+  }
 });
