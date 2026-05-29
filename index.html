@@ -93,7 +93,6 @@
           <button type="button" data-tab="rc" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Controle Global</button>
           <button type="button" data-tab="consertos" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Consertos</button>
           <button type="button" data-tab="compras" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Compras</button>
-          <button type="button" data-tab="fabricacao" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Fabricação</button>
         </div>
 
         <div>
@@ -126,7 +125,8 @@
     <!-- MAIN CONTENT AREA -->
     <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg);">
       
-      <header class="topbar" style="padding: 1.25rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface);">
+      <!-- Topbar (fixo) -->
+      <header class="topbar" style="padding: 1.25rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;">
         <div>
           <h2 id="topbarTitle" style="font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1.25rem; color: var(--text); margin: 0;">Visão Geral</h2>
         </div>
@@ -137,7 +137,8 @@
         </div>
       </header>
 
-      <main class="main-layout" style="flex: 1; overflow-y: auto;">
+      <!-- KPIs + Filtros: faixa FIXA, fora do scroll -->
+      <div id="painel-fixo" style="flex-shrink: 0; background: var(--bg); padding: 1.5rem 4rem 0; max-width: 1680px; width: 100%; margin: 0 auto; align-self: center; box-sizing: border-box;">
         <section class="kpi-grid">
           <div class="kpi-card">
             <div class="label">Registros</div>
@@ -172,7 +173,7 @@
           </div>
         </section>
 
-        <section class="filters panel">
+        <section class="filters panel" style="position: static; margin-bottom: 0;">
           <label class="search-field">
             <span>Busca</span>
             <input type="search" id="filtroBusca" placeholder="Item, RC, PO, solicitante…" />
@@ -185,6 +186,10 @@
           <label><span>Fornecedor</span><select id="filtroFornecedor"><option value="TODOS">TODOS</option></select></label>
           <button type="button" class="btn btn-ghost" id="btnLimparFiltros">Limpar filtros</button>
         </section>
+      </div>
+
+      <!-- Área scrollável: só as views -->
+      <main class="main-layout" style="flex: 1; overflow-y: auto; padding-top: 1rem;">
 
     <div id="view-dashboard" class="view active">
       <div id="secaoDashboard">
@@ -227,7 +232,6 @@
     <div id="view-rc" class="view"></div>
     <div id="view-consertos" class="view"></div>
     <div id="view-compras" class="view"></div>
-    <div id="view-fabricacao" class="view"></div>
     
     <div id="view-controle-preventiva" class="view">
       <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; align-items: center; justify-content: center; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
