@@ -147,50 +147,29 @@ export async function duplicarRegistro(id) {
 
 /* AUTENTICAÇÃO */
 export async function signUp(email, password, username) {
-  if (USE_LOCAL_DATA) {
-    const u = { user: { email, user_metadata: { username: username || 'Modo Local' } } };
-    if (window._localAuthCallback) window._localAuthCallback(u.user);
-    return u;
-  }
   const client = getClient();
-  if (!client) throw new Error('Supabase não carregado');
+  if (!client) throw new Error('Supabase no carregado');
   const { data, error } = await client.auth.signUp({ email, password, options: { data: { username } } });
   if (error) throw error;
   return data;
 }
 
 export async function signIn(email, password) {
-  if (USE_LOCAL_DATA) {
-    const u = { user: { email, user_metadata: { username: 'Modo Local' } } };
-    if (window._localAuthCallback) window._localAuthCallback(u.user);
-    return u;
-  }
   const client = getClient();
-  if (!client) throw new Error('Supabase não carregado');
+  if (!client) throw new Error('Supabase no carregado');
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
 
 export async function signOut() {
-  if (USE_LOCAL_DATA) {
-    if (window._localAuthCallback) window._localAuthCallback(null);
-    return;
-  }
   const client = getClient();
-  if (!client) throw new Error('Supabase não carregado');
+  if (!client) throw new Error('Supabase no carregado');
   const { error } = await client.auth.signOut();
   if (error) throw error;
 }
 
 export async function getCurrentUser() {
-  if (USE_LOCAL_DATA) {
-    return {
-      id: 'local-user',
-      email: 'local@controle.rc',
-      user_metadata: { username: 'Modo Local' },
-    };
-  }
   const client = getClient();
   if (!client) return null;
   const { data: { user } } = await client.auth.getUser();
@@ -198,11 +177,6 @@ export async function getCurrentUser() {
 }
 
 export async function onAuthStateChange(callback) {
-  if (USE_LOCAL_DATA) {
-    window._localAuthCallback = callback;
-    callback(null);
-    return null;
-  }
   const client = getClient();
   if (!client) return null;
   const { data: { session } } = await client.auth.getSession();
@@ -212,18 +186,111 @@ export async function onAuthStateChange(callback) {
   });
 }
 
-export function subscribeToRealtime(callback) {
-  if (USE_LOCAL_DATA) return null;
+// ==========================================
+// PREVENTIVA METHODS
+// ==========================================
+
+export async function carregarPreventiva() {
   const client = getClient();
-  if (!client) return null;
+  if (!client) throw new Error('Supabase não carregado');
 
-  const channel = client.channel('public:rc_registros')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'rc_registros' }, payload => {
-      callback(payload);
-    })
-    .subscribe();
-
-  return channel;
+  const { data, error } = await client.from('preventiva_registros').select('*').order('created_at');
+  if (error) throw error;
+  return data || [];
 }
 
+export async function salvarPreventiva(registro) {
+  const payload = {
+    identificador: registro.identificador,
+    maquina: registro.maquina,
+    material: registro.material,
+    plano_padrao: registro.plano_padrao,
+    duracao_horas: registro.duracao_horas,
+    hh_mec: registro.hh_mec,
+    hh_eletrico: registro.hh_eletrico,
+    resp_fabrica: registro.resp_fabrica,
+    resp_manutencao: registro.resp_manutencao,
+    status_auditoria: registro.status_auditoria,
+    previsao_custos: registro.previsao_custos,
+    atividades_descricoes: registro.atividades_descricoes || [],
+    programacao: registro.programacao || {}
+  };
 
+  const user = await getCurrentUser();
+  if (user && user.user_metadata && user.user_metadata.username) {
+    payload.last_modified_by = user.user_metadata.username;
+  }
+
+  const client = getClient();
+  if (registro.id) {
+    const { data, error } = await client.from('preventiva_registros').update(payload).eq('id', registro.id).select().single();
+    if (error) throw error;
+    return data;
+  }
+  const { data, error } = await client.from('preventiva_registros').insert(payload).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function excluirPreventiva(id) {
+  const client = getClient();
+  const { error } = await client.from('preventiva_registros').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// =============================
+// MACHINE CRUD FUNCTIONS
+// =============================
+
+/** Get list of machines */
+export async function getMachines() {
+  const client = getClient();
+  const { data, error } = await client.from('machines').select('*').order('nome');
+  if (error) throw error;
+  return data;
+}
+
+/** Create a new machine */
+export async function createMachine(machine) {
+  const client = getClient();
+  const { data, error } = await client.from('machines').insert(machine).single();
+  if (error) throw error;
+  return data;
+}
+
+/** Update existing machine */
+export async function updateMachine(id, updates) {
+  const client = getClient();
+  const { data, error } = await client.from('machines').update(updates).eq('id', id).single();
+  if (error) throw error;
+  return data;
+}
+
+/** Delete a machine */
+export async function deleteMachine(id) {
+  const client = getClient();
+  const { data, error } = await client.from('machines').delete().eq('id', id);
+  if (error) throw error;
+  return data;
+}
+
+// =============================
+// MACHINE ACTIVITY FUNCTIONS
+// =============================
+
+/** Get activities for a machine */
+export async function getMachineActivities(machineId) {
+  const client = getClient();
+  const { data, error } = await client.from('machine_activities').select('*').eq('machine_id', machineId).order('ordem');
+  if (error) throw error;
+  return data;
+}
+
+/** Create new activity for a machine */
+export async function createMachineActivity(machineId, activity) {
+  const client = getClient();
+  const payload = { machine_id: machineId, ...activity };
+  const { data, error } = await client.from('machine_activities').insert(payload).single();
+  if (error) throw error;
+  return data;
+}

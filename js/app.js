@@ -14,7 +14,7 @@ import {
   agregarFornecedores,
 } from './logic.js';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
-import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva } from './db.js';
+import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, createMachineActivity } from './db.js';
 import { renderDashboardCharts } from './charts.js?v=4';
 import {
   COLUNAS_TABELA,
@@ -47,6 +47,8 @@ let linhaSelecionadaId = null;
 let fotoUrlAtual = null;
 let isInlineEditMode = false;
 let isAppInitialized = false;
+let machines = [];
+let selectedMachineId = null;
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -128,6 +130,205 @@ function renderFiltros() {
   setSelect('#filtroLinha', 'linha');
   setSelect('#filtroMaquina', 'maquina');
   setSelect('#filtroFornecedor', 'fornecedor');
+}
+
+// ---------- Por Máquina view helpers ----------
+function renderMachineList() {
+  getMachines().then(list => {
+    machines = list;
+    const ul = $('#machineList');
+    if (!ul) return;
+    ul.innerHTML = list.map(m => `
+      <li data-id="${m.id}" style="cursor:pointer; padding:0.25rem 0;">${m.nome || m.id}
+      </li>`).join('');
+    ul.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => {
+        selectedMachineId = li.dataset.id;
+        $('#machineTitle').textContent = `Atividades da máquina: ${li.textContent}`;
+        $('#btnAddActivity').style.display = 'inline-block';
+        renderMachineActivities();
+        // highlight selection
+        ul.querySelectorAll('li').forEach(x => x.style.fontWeight = 'normal');
+        li.style.fontWeight = 'bold';
+      });
+    });
+  }).catch(err => {
+    console.error('Erro ao carregar máquinas', err);
+    toast('Erro ao carregar máquinas', 'error');
+  });
+}
+
+function renderMachineActivities() {
+  if (!selectedMachineId) return;
+  getMachineActivities(selectedMachineId).then(acts => {
+    const table = $('#machineActivitiesTable');
+    if (!table) return;
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    // Define simple columns
+    const cols = [
+      { key: 'ordem', label: 'Ordem' },
+      { key: 'descricao', label: 'Descrição' },
+      { key: 'duracao_horas', label: 'Duração (h)' },
+      { key: 'hh_mec', label: 'HH Mec' },
+      { key: 'hh_eletrico', label: 'HH Elétrico' },
+      { key: 'status_auditoria', label: 'Status' }
+    ];
+    thead.innerHTML = `<tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+    tbody.innerHTML = acts.map(a => `<tr data-id="${a.id}">${cols.map(c => `<td>${a[c.key] ?? ''}</td>`).join('')}</tr>`).join('');
+    // allow edit on double click (simple prompt)
+    tbody.querySelectorAll('tr').forEach(row => {
+      row.addEventListener('dblclick', async () => {
+        const id = row.dataset.id;
+        const activity = acts.find(x => x.id === id);
+        const novaDesc = prompt('Nova descrição', activity.descricao || '');
+        if (novaDesc !== null) {
+          const updated = { ...activity, descricao: novaDesc };
+          // reuse createMachineActivity for upsert (Supabase will update if id present)
+          await createMachineActivity(selectedMachineId, updated);
+          renderMachineActivities();
+        }
+      });
+    });
+  }).catch(err => {
+    console.error('Erro ao carregar atividades', err);
+    toast('Erro ao carregar atividades', 'error');
+  });
+}
+
+function setupPorMaquinaUI() {
+  // Button handlers
+  $('#btnAddMachine')?.addEventListener('click', async () => {
+    const nome = prompt('Nome da nova máquina');
+    if (!nome) return;
+    try {
+      await createMachine({ nome });
+      renderMachineList();
+      toast('Máquina criada', 'success');
+    } catch (e) {
+      toast('Erro ao criar máquina: ' + e.message, 'error');
+    }
+  });
+  $('#btnAddActivity')?.addEventListener('click', async () => {
+    if (!selectedMachineId) {
+      toast('Selecione uma máquina primeiro.', 'info');
+      return;
+    }
+    const descricao = prompt('Descrição da atividade');
+    if (!descricao) return;
+    const ordem = parseInt(prompt('Ordem (número)') || '0', 10);
+    const duracao = parseFloat(prompt('Duração em horas') || '0');
+    const hhMec = parseFloat(prompt('HH Mec') || '0');
+    const hhEle = parseFloat(prompt('HH Elétrico') || '0');
+    const status = prompt('Status (ex.: PENDENTE, CONCLUIDO)', 'PENDENTE');
+    const activity = { ordem, descricao, duracao_horas: duracao, hh_mec: hhMec, hh_eletrico: hhEle, status_auditoria: status };
+    try {
+      await createMachineActivity(selectedMachineId, activity);
+      renderMachineActivities();
+      toast('Atividade adicionada', 'success');
+    } catch (e) {
+      toast('Erro ao criar atividade: ' + e.message, 'error');
+    }
+  });
+}
+
+function setupPlanoPreventivaUI() {
+  const machineSelect = $('#planoMachineSelect');
+  const monthSelect = $('#planoMesSelect');
+  const lineSelect = $('#planoLinhaSelect');
+  const btnAplicar = $('#btnAplicarPlano');
+  let currentActivities = [];
+
+  // Carregar máquinas ao abrir a view
+  const loadPlanoMachines = () => {
+    getMachines().then(list => {
+      if (!machineSelect) return;
+      // Manter a primeira option
+      machineSelect.innerHTML = '<option value="">Selecione a máquina...</option>' + 
+        list.map(m => `<option value="${m.id}">${m.nome || m.id}</option>`).join('');
+    }).catch(e => console.error(e));
+  };
+  loadPlanoMachines();
+
+  machineSelect?.addEventListener('change', async (e) => {
+    const id = e.target.value;
+    const tbody = $('#planoActivitiesTable tbody');
+    if (!id) {
+      if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted);">Selecione uma máquina para visualizar as atividades padrão.</td></tr>';
+      currentActivities = [];
+      return;
+    }
+    try {
+      currentActivities = await getMachineActivities(id);
+      if(!tbody) return;
+      if(currentActivities.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted);">Nenhuma atividade cadastrada para esta máquina.</td></tr>';
+      } else {
+        tbody.innerHTML = currentActivities.map(a => `
+          <tr>
+            <td>${a.ordem || ''}</td>
+            <td>${a.descricao || ''}</td>
+            <td>${a.duracao_horas || ''}</td>
+            <td>${a.hh_mec || ''}</td>
+            <td>${a.hh_eletrico || ''}</td>
+            <td><span class="badge ${a.status_auditoria ? 'badge-warning' : ''}">${a.status_auditoria || 'PENDENTE'}</span></td>
+          </tr>
+        `).join('');
+      }
+    } catch(err) {
+      toast('Erro ao carregar atividades: ' + err.message, 'error');
+    }
+  });
+
+  btnAplicar?.addEventListener('click', async () => {
+    const machineId = machineSelect.value;
+    const mes = monthSelect.value;
+    const linha = lineSelect.value; // Por enquanto sempre L06
+
+    if(!machineId || !mes || !linha) {
+      toast('Por favor, selecione a máquina, o mês e a linha.', 'warning');
+      return;
+    }
+    if(currentActivities.length === 0) {
+      toast('A máquina selecionada não possui atividades padrão.', 'warning');
+      return;
+    }
+
+    try {
+      btnAplicar.disabled = true;
+      btnAplicar.textContent = 'Aplicando...';
+      const mName = machineSelect.options[machineSelect.selectedIndex].text;
+      
+      let count = 0;
+      for (const act of currentActivities) {
+        const payload = {
+          identificador: `P-${mes.substring(0,3)}-${Date.now().toString().slice(-4)}${count++}`,
+          maquina: mName,
+          material: '',
+          plano_padrao: 'S',
+          mes: mes,
+          linha: linha,
+          duracao_horas: act.duracao_horas || 0,
+          hh_mec: act.hh_mec || 0,
+          hh_eletrico: act.hh_eletrico || 0,
+          resp_fabrica: '',
+          resp_manutencao: '',
+          status_auditoria: act.status_auditoria || 'PENDENTE',
+          previsao_custos: 0,
+          atividades_descricoes: act.descricao ? [act.descricao] : [],
+          programacao: []
+        };
+        await salvarPreventiva(payload);
+      }
+      toast('Plano aplicado com sucesso à Preventiva no mês selecionado!', 'success');
+      try { registrosPreventiva = await carregarPreventiva(); } catch(e){}
+    } catch(err) {
+      toast('Erro ao aplicar plano: ' + err.message, 'error');
+    } finally {
+      btnAplicar.disabled = false;
+      btnAplicar.textContent = 'Aplicar Plano à Preventiva';
+    }
+  });
 }
 
 function atualizarBarraLinha() {
@@ -330,14 +531,13 @@ function showView(name) {
 
   const crud = ['rc', 'consertos', 'compras', 'fabricacao', 'preventiva-l06-backend'].includes(name);
   const isDash = name === 'dashboard';
-  const isSpecial = ['fornecedores', 'calendario', 'controle-preventiva', 'preventiva-l06', 'preventiva-l06-backend', 'preventiva-l06-frontend'].includes(name);
+  const isSpecial = ['fornecedores', 'calendario', 'controle-preventiva', 'preventiva-l06', 'preventiva-l06-backend', 'preventiva-l06-frontend', 'por-maquina', 'plano-preventiva'].includes(name);
 
   // Seção tabela (toolbar + tabela de RCs) - Hide for preventiva since it has its own
   $('#secaoTabela')?.classList.toggle('hidden', !['rc', 'consertos', 'compras', 'fabricacao'].includes(name));
 
-  // KPIs e filtros — ocultos nas views especiais
-  document.querySelector('.kpi-grid')?.classList.toggle('hidden', isSpecial);
-  document.querySelector('main > section.filters.panel')?.classList.toggle('hidden', isSpecial);
+  // KPIs e filtros — ocultos nas views especiais (ambos estão dentro do painel-fixo)
+  $('#painel-fixo')?.classList.toggle('hidden', isSpecial);
 
 
   // Dashboard e alertas
@@ -364,6 +564,8 @@ function showView(name) {
     'preventiva-l06': 'Hub Preventiva L(06)',
     'preventiva-l06-backend': 'Preventiva L(06) - Back-End',
     'preventiva-l06-frontend': 'Preventiva L(06) - Front-End',
+    'por-maquina': 'Por Máquina',
+    'plano-preventiva': 'Plano de Preventiva',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
@@ -659,6 +861,9 @@ async function init() {
   $('#btnExportSlaPdf')?.addEventListener('click', () => {
     gerarRelatorioSLAPDF(registros);
   });
+
+  setupPorMaquinaUI();
+  setupPlanoPreventivaUI();
 
   atualizarBotaoEdicao();
   showView('dashboard');

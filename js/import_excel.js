@@ -3,7 +3,9 @@ export async function initExcelImport(supabase, toast, atualizarDadosGlobais) {
   const fileInput = document.getElementById('fileImportExcel');
   if (!btn || !fileInput) return;
 
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', (e) => {
+    if (document.querySelector('.view.active')?.id === 'view-preventiva') return;
+    
     // Show SweetAlert warning before proceeding
     Swal.fire({
       title: 'Atenção!',
@@ -142,9 +144,10 @@ function processExcelData(json) {
     let natureza = 'PENDENTE';
     if (nat) {
       nat = String(nat).toUpperCase();
-      if (nat.includes('SERVI')) natureza = 'SERVICO';
+      if (nat.includes('FABRICA')) natureza = 'FABRICACAO';
+      else if (nat.includes('SERVI')) natureza = 'SERVICO';
       else if (nat.includes('CONSERTO')) natureza = 'CONSERTO';
-      else if (nat.includes('COMPRA') || nat.includes('C')) natureza = 'COMPRA';
+      else if (nat.includes('COMPRA')) natureza = 'COMPRA';
     }
 
     let titulo = r['ID'] ? r['ITEM'] : (r['TÍTULO'] || r['TITULO'] || 'Sem Título');
