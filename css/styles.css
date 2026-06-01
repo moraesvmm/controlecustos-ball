@@ -1437,6 +1437,7 @@ body.view-crud .main-layout {
   gap: 1.5rem;
   width: 100%;
   max-width: 1000px;
+  margin: 0 auto;
 }
 .month-card {
   background: rgba(30, 41, 59, 0.4);
