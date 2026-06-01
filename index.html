@@ -99,7 +99,7 @@
           <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Planos de Manutenção</div>
           <button type="button" data-tab="planos-manutencao" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Navegador Geral</button>
           <button type="button" data-tab="por-maquina" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Máquinas & Templates</button>
-          <button type="button" data-tab="plano-preventiva" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-top: 0.25rem;">Gerador de Planos</button>
+          <button type="button" data-tab="plano-preventiva" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-top: 0.25rem;">Gerador de Planos Automático</button>
         </div>
 
         <div>
@@ -418,19 +418,29 @@
     </div>
 
     <div id="view-plano-preventiva" class="view">
-      <div class="panel" style="padding: 2rem; max-width: 900px; margin: 2rem auto;">
-        <h3>Gerador de Planos de Preventiva</h3>
-        <p class="section-hint" style="margin-bottom:1.5rem;">Selecione a máquina, o mês e a linha para <strong>substituir</strong> os registros da máquina naquela linha/mês. Os dados de outras máquinas e outros meses não são afetados.</p>
-        <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:flex-end;">
-          <label style="flex:1;">
-            <span>Máquina</span>
-            <select id="planoMachineSelect" style="width:100%; padding:0.5rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px;">
+      <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
+        
+        <!-- Cabeçalho com seleção de contexto -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+          <div>
+            <h3 style="margin:0 0 0.25rem 0;">Gerador de Planos Automático</h3>
+            <p class="section-hint" style="margin:0;">Selecione máquina, mês e linha. Clique em <strong>Editar</strong> para abrir o modal (como no Controle RC), ajuste as tarefas e aplique somente ao contexto selecionado.</p>
+            <p id="planoContextoLabel" style="margin:0.5rem 0 0; font-size:0.85rem; color:var(--primary); display:none;"></p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btnAplicarPlano" style="white-space:nowrap;" disabled title="Selecione máquina, mês e linha">✅ Aplicar Plano à Preventiva</button>
+        </div>
+
+        <!-- Seletores -->
+        <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:flex-end; background:var(--surface); padding:1.25rem; border-radius:10px; border:1px solid var(--border);">
+          <label style="flex:1; min-width:160px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Máquina</span>
+            <select id="planoMachineSelect" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="">Selecione a máquina...</option>
             </select>
           </label>
-          <label style="flex:1;">
-            <span>Mês</span>
-            <select id="planoMesSelect" style="width:100%; padding:0.5rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px;">
+          <label style="flex:1; min-width:160px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Mês</span>
+            <select id="planoMesSelect" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="">Selecione o mês...</option>
               <option value="JANEIRO">JANEIRO</option>
               <option value="FEVEREIRO">FEVEREIRO</option>
@@ -446,9 +456,9 @@
               <option value="DEZEMBRO">DEZEMBRO</option>
             </select>
           </label>
-          <label style="flex:1;">
-            <span>Linha</span>
-            <select id="planoLinhaSelect" style="width:100%; padding:0.5rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px;">
+          <label style="flex:1; min-width:120px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Linha</span>
+            <select id="planoLinhaSelect" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="L04">L04</option>
               <option value="L05">L05</option>
               <option value="L06" selected>L06</option>
@@ -458,20 +468,133 @@
             </select>
           </label>
         </div>
-        <div style="margin-bottom: 1.5rem;">
-          <h4 style="margin-bottom: 0.5rem;">Atividades do Plano Base</h4>
-          <div class="table-scroll-main" style="max-height: 300px;">
+
+        <!-- Tabela de atividades editáveis -->
+        <div style="margin-bottom:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <h4 style="margin:0;" id="planoAtividadesLabel">Atividades do Plano</h4>
+            <span id="planoAtividadesCount" style="font-size:0.8rem; color:var(--muted);"></span>
+          </div>
+          <div class="table-scroll-main" style="max-height:420px;">
             <div class="table-scroll-inner">
               <table class="data-table" id="planoActivitiesTable">
-                <thead><tr><th>Ordem</th><th>Descrição</th><th>Duração (h)</th><th>HH Mec</th><th>HH Ele</th><th>Status Padrão</th></tr></thead>
-                <tbody><tr><td colspan="6" style="text-align:center; color:var(--muted);">Selecione uma máquina para visualizar as atividades padrão.</td></tr></tbody>
+                <thead>
+                  <tr>
+                    <th>Identificador</th>
+                    <th>Descrição</th>
+                    <th>Material</th>
+                    <th>Plano Padrão</th>
+                    <th>Duração (h)</th>
+                    <th>HH Mec</th>
+                    <th>HH Elétrico</th>
+                    <th>Resp. Fábrica</th>
+                    <th>Resp. Manutenção</th>
+                    <th>Status</th>
+                    <th>Prev. Custos</th>
+                    <th style="width:80px;">Editar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="12" style="text-align:center; color:var(--muted); padding:2rem;">Selecione uma máquina para carregar as atividades.</td></tr>
+                </tbody>
               </table>
             </div>
           </div>
         </div>
-        <div style="display:flex; justify-content:flex-end; gap:1rem;">
-          <button type="button" class="btn btn-primary" id="btnAplicarPlano">Aplicar Plano à Preventiva</button>
-        </div>
+
+      </div>
+    </div>
+
+    <!-- Modal de Edição de Atividade do Plano (estilo RC) -->
+    <div class="modal-overlay" id="modalEditarAtividade">
+      <div class="modal modal-lg" style="max-width:780px; width:95%; max-height:90vh; overflow-y:auto;">
+        <header class="modal-header">
+          <h2 id="modalAtivTitulo">Editar Atividade</h2>
+          <button type="button" class="btn-icon" id="btnFecharModalAtividade" aria-label="Fechar">✕</button>
+        </header>
+        <form id="formEditarAtividade">
+          <input type="hidden" id="editAtivId" />
+          
+          <div class="form-section">
+            <h3>Identificação</h3>
+            <div class="form-grid">
+              <label>
+                <span>Identificador</span>
+                <input type="text" id="editAtivIdentificador" placeholder="Ex: Atv. 3.2" />
+              </label>
+              <label>
+                <span>Máquina</span>
+                <input type="text" id="editAtivMaquina" readonly style="opacity:0.6;" />
+              </label>
+              <label class="full">
+                <span>Descrição</span>
+                <textarea id="editAtivDescricao" rows="4" placeholder="Descreva as etapas da atividade..."></textarea>
+              </label>
+              <label class="full">
+                <span>Material</span>
+                <textarea id="editAtivMaterial" rows="3" placeholder="Liste os materiais necessários..."></textarea>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Parâmetros</h3>
+            <div class="form-grid">
+              <label>
+                <span>Duração (horas)</span>
+                <input type="number" id="editAtivDuracao" step="0.5" min="0" placeholder="0" />
+              </label>
+              <label>
+                <span>HH Mecânico</span>
+                <input type="number" id="editAtivHhMec" step="0.5" min="0" placeholder="0" />
+              </label>
+              <label>
+                <span>HH Elétrico</span>
+                <input type="number" id="editAtivHhEle" step="0.5" min="0" placeholder="0" />
+              </label>
+              <label>
+                <span>Previsão de Custos (R$)</span>
+                <input type="number" id="editAtivCustos" step="0.01" min="0" placeholder="0,00" />
+              </label>
+              <label>
+                <span>Plano Padrão</span>
+                <select id="editAtivPlanoPadrao">
+                  <option value="S">Sim (S)</option>
+                  <option value="N">Não (N)</option>
+                </select>
+              </label>
+              <label>
+                <span>Status / Auditoria</span>
+                <select id="editAtivStatus">
+                  <option value="">-- Sem status --</option>
+                  <option value="PENDENTE">PENDENTE</option>
+                  <option value="EM ANDAMENTO">EM ANDAMENTO</option>
+                  <option value="FINALIZADO">FINALIZADO</option>
+                  <option value="CANCELADO">CANCELADO</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Responsáveis</h3>
+            <div class="form-grid">
+              <label>
+                <span>Resp. Fábrica</span>
+                <input type="text" id="editAtivRespFabrica" placeholder="Nome do responsável" />
+              </label>
+              <label>
+                <span>Resp. Manutenção</span>
+                <input type="text" id="editAtivRespManut" placeholder="Nome do responsável" />
+              </label>
+            </div>
+          </div>
+
+          <footer class="modal-header" style="justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); border-bottom:none; padding:1rem 1.5rem;">
+            <button type="button" class="btn btn-ghost" id="btnCancelarModalAtividade">Cancelar</button>
+            <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+          </footer>
+        </form>
       </div>
     </div>
 

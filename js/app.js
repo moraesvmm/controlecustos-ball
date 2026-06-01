@@ -255,9 +255,13 @@ function setupPlanoPreventivaUI() {
   const monthSelect = $('#planoMesSelect');
   const lineSelect = $('#planoLinhaSelect');
   const btnAplicar = $('#btnAplicarPlano');
+  const contextoLabel = $('#planoContextoLabel');
+  const countLabel = $('#planoAtividadesCount');
+  const modalAtiv = $('#modalEditarAtividade');
   let currentActivities = [];
+  let planoFonte = 'vazio';
+  let editandoPlanoIdx = null;
 
-  // Colunas completas da planilha
   const planoCols = [
     { key: 'identificador', label: 'Identificador' },
     { key: 'descricao_resumo', label: 'Descrição' },
@@ -270,84 +274,280 @@ function setupPlanoPreventivaUI() {
     { key: 'resp_manutencao', label: 'Resp. Manutenção' },
     { key: 'status_auditoria', label: 'Status' },
     { key: 'previsao_custos', label: 'Prev. Custos' },
+    { key: 'acoes', label: 'Editar' },
   ];
 
-  // Atualizar o thead do planoActivitiesTable com todas as colunas
   const planoThead = $('#planoActivitiesTable thead');
   if (planoThead) {
-    planoThead.innerHTML = `<tr>${planoCols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+    planoThead.innerHTML = `<tr>${planoCols.map((c) => `<th>${c.label}</th>`).join('')}</tr>`;
   }
 
-  // Carregar máquinas ao abrir a view (baseado em registrosPreventiva)
-  const loadPlanoMachines = () => {
-    let maquinasPrev = [...new Set(registrosPreventiva.map(r => r.maquina).filter(Boolean))].sort();
-    if (maquinasPrev.length === 0) {
-      maquinasPrev = ['ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO'];
-    }
-    if (!machineSelect) return;
-    machineSelect.innerHTML = '<option value="">Selecione a máquina...</option>' + maquinasPrev.map(m => `<option value="${m}">${m}</option>`).join('');
-  };
-  loadPlanoMachines();
+  const getPlanoContexto = () => ({
+    maquina: machineSelect?.value?.trim() || '',
+    mes: monthSelect?.value?.trim() || '',
+    linha: lineSelect?.value?.trim() || '',
+  });
 
-  machineSelect?.addEventListener('change', (e) => {
-    const maquinaNome = e.target.value;
+  const contextoCompleto = () => {
+    const ctx = getPlanoContexto();
+    return ctx.maquina && ctx.mes && ctx.linha;
+  };
+
+  const descricaoLinhas = (a) => {
+    if (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0) {
+      return a.atividades_descricoes.filter(Boolean);
+    }
+    return a.descricao ? [a.descricao] : [];
+  };
+
+  const cloneAtividadePlano = (a, ctx) => {
+    const copy = JSON.parse(JSON.stringify(a));
+    delete copy.id;
+    delete copy.created_at;
+    delete copy.updated_at;
+    copy.maquina = ctx.maquina;
+    copy.mes = ctx.mes;
+    copy.linha = ctx.linha;
+    return copy;
+  };
+
+  const atualizarContextoUI = () => {
+    const ctx = getPlanoContexto();
+    const ok = contextoCompleto();
+    if (btnAplicar) {
+      btnAplicar.disabled = !ok || currentActivities.length === 0;
+      btnAplicar.title = ok
+        ? `Substituir somente ${ctx.maquina} · ${ctx.mes} · ${ctx.linha}`
+        : 'Selecione máquina, mês e linha';
+    }
+    if (contextoLabel) {
+      if (ok) {
+        const fonteTxt =
+          planoFonte === 'aplicado'
+            ? 'Plano já aplicado neste contexto (editável antes de reaplicar)'
+            : planoFonte === 'template'
+              ? 'Template da máquina — edite e aplique somente a este mês/linha'
+              : '';
+        contextoLabel.style.display = 'block';
+        contextoLabel.textContent = `Contexto: ${ctx.maquina} · ${ctx.mes} · ${ctx.linha}${fonteTxt ? ' — ' + fonteTxt : ''}`;
+      } else {
+        contextoLabel.style.display = 'none';
+        contextoLabel.textContent = '';
+      }
+    }
+    if (countLabel) {
+      countLabel.textContent = currentActivities.length
+        ? `${currentActivities.length} atividade(s) no plano`
+        : '';
+    }
+  };
+
+  const renderPlanoActivitiesTable = () => {
     const tbody = $('#planoActivitiesTable tbody');
-    if (!maquinaNome) {
-      if(tbody) tbody.innerHTML = `<tr><td colspan="${planoCols.length}" style="text-align:center; color:var(--muted);">Selecione uma máquina para visualizar as atividades.</td></tr>`;
-      currentActivities = [];
+    if (!tbody) return;
+    const colSpan = planoCols.length;
+    const ctx = getPlanoContexto();
+
+    if (!ctx.maquina) {
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color:var(--muted); padding:2rem;">Selecione a máquina, o mês e a linha para carregar as atividades.</td></tr>`;
+      atualizarContextoUI();
       return;
     }
-    // Filtra diretamente de registrosPreventiva
-    currentActivities = registrosPreventiva.filter(r => r.maquina && r.maquina.toUpperCase() === maquinaNome.toUpperCase());
-    if(!tbody) return;
-    if(currentActivities.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="${planoCols.length}" style="text-align:center; color:var(--muted);">Nenhuma atividade encontrada. Importe a planilha primeiro.</td></tr>`;
-    } else {
-      tbody.innerHTML = currentActivities.map(a => {
-        const descLines = (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0)
-          ? a.atividades_descricoes
-          : (a.descricao ? [a.descricao] : []);
-        const descResumo = descLines[0] ? descLines[0].substring(0, 60) + (descLines[0].length > 60 || descLines.length > 1 ? '...' : '') : '-';
+    if (!ctx.mes || !ctx.linha) {
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color:var(--muted); padding:2rem;">Selecione o mês e a linha para definir o contexto do plano.</td></tr>`;
+      atualizarContextoUI();
+      return;
+    }
+    if (currentActivities.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; color:var(--muted); padding:2rem;">Nenhuma atividade encontrada. Importe a planilha no Navegador Geral.</td></tr>`;
+      atualizarContextoUI();
+      return;
+    }
+
+    tbody.innerHTML = currentActivities
+      .map((a, idx) => {
+        const descLines = descricaoLinhas(a);
+        const descFull = descLines.join(' | ').replace(/"/g, '&quot;');
+        const descResumo = descLines[0]
+          ? descLines[0].substring(0, 60) + (descLines[0].length > 60 || descLines.length > 1 ? '...' : '')
+          : '-';
+        const mat = (a.material || '').replace(/"/g, '&quot;');
         return `<tr>
           <td><strong>${a.identificador || '-'}</strong></td>
-          <td title="${(descLines.join(' | ')).replace(/"/g, '&quot;')}">${descResumo}</td>
-          <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${(a.material || '').replace(/"/g, '&quot;')}">${a.material ? a.material.split('\n')[0].substring(0,40)+'...' : '-'}</td>
+          <td title="${descFull}">${descResumo}</td>
+          <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${mat}">${a.material ? a.material.split('\n')[0].substring(0, 40) + (a.material.length > 40 ? '...' : '') : '-'}</td>
           <td>${a.plano_padrao || '-'}</td>
-          <td>${a.duracao_horas || '-'}</td>
-          <td>${a.hh_mec || '-'}</td>
-          <td>${a.hh_eletrico || '-'}</td>
+          <td>${a.duracao_horas ?? '-'}</td>
+          <td>${a.hh_mec ?? '-'}</td>
+          <td>${a.hh_eletrico ?? '-'}</td>
           <td>${a.resp_fabrica || '-'}</td>
           <td>${a.resp_manutencao || '-'}</td>
           <td>${a.status_auditoria || '-'}</td>
-          <td>${Number(a.previsao_custos||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+          <td>${Number(a.previsao_custos || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
+          <td><button type="button" class="btn btn-ghost btn-sm btn-editar-plano-atividade" data-idx="${idx}" title="Editar atividade">✏️ Editar</button></td>
         </tr>`;
-      }).join('');
+      })
+      .join('');
+
+    tbody.querySelectorAll('.btn-editar-plano-atividade').forEach((btn) => {
+      btn.addEventListener('click', () => abrirModalAtividadePlano(Number(btn.dataset.idx)));
+    });
+    atualizarContextoUI();
+  };
+
+  const carregarAtividadesPlano = () => {
+    const ctx = getPlanoContexto();
+    currentActivities = [];
+    planoFonte = 'vazio';
+
+    if (!ctx.maquina) {
+      renderPlanoActivitiesTable();
+      return;
     }
+    if (!ctx.mes || !ctx.linha) {
+      renderPlanoActivitiesTable();
+      return;
+    }
+
+    const norm = (s) => String(s || '').toUpperCase();
+    const noContexto = registrosPreventiva.filter(
+      (r) =>
+        norm(r.maquina) === norm(ctx.maquina) &&
+        String(r.mes || '') === ctx.mes &&
+        String(r.linha || '') === ctx.linha
+    );
+
+    if (noContexto.length > 0) {
+      currentActivities = noContexto.map((a) => cloneAtividadePlano(a, ctx));
+      planoFonte = 'aplicado';
+    } else {
+      const template = registrosPreventiva.filter((r) => norm(r.maquina) === norm(ctx.maquina));
+      currentActivities = template.map((a) => cloneAtividadePlano(a, ctx));
+      planoFonte = template.length > 0 ? 'template' : 'vazio';
+    }
+
+    renderPlanoActivitiesTable();
+  };
+
+  window.abrirModalAtividadePlano = function (idx) {
+    if (!contextoCompleto()) {
+      toast('Selecione máquina, mês e linha antes de editar.', 'warning');
+      return;
+    }
+    const a = currentActivities[idx];
+    if (!a) return;
+
+    editandoPlanoIdx = idx;
+    const ctx = getPlanoContexto();
+    $('#modalAtivTitulo').textContent = `Editar — ${a.identificador || 'Atividade'}`;
+    $('#editAtivId').value = String(idx);
+    $('#editAtivIdentificador').value = a.identificador || '';
+    $('#editAtivMaquina').value = ctx.maquina;
+    $('#editAtivDescricao').value = descricaoLinhas(a).join('\n');
+    $('#editAtivMaterial').value = a.material || '';
+    $('#editAtivDuracao').value = a.duracao_horas ?? '';
+    $('#editAtivHhMec').value = a.hh_mec ?? '';
+    $('#editAtivHhEle').value = a.hh_eletrico ?? '';
+    $('#editAtivCustos').value = a.previsao_custos ?? '';
+    $('#editAtivPlanoPadrao').value = a.plano_padrao || 'S';
+    $('#editAtivStatus').value = a.status_auditoria || '';
+    $('#editAtivRespFabrica').value = a.resp_fabrica || '';
+    $('#editAtivRespManut').value = a.resp_manutencao || '';
+    modalAtiv?.classList.add('open');
+  };
+
+  const fecharModalAtividadePlano = () => {
+    editandoPlanoIdx = null;
+    modalAtiv?.classList.remove('open');
+  };
+
+  const salvarModalAtividadePlano = (e) => {
+    e.preventDefault();
+    if (editandoPlanoIdx == null || !currentActivities[editandoPlanoIdx]) return;
+
+    const ctx = getPlanoContexto();
+    const descText = $('#editAtivDescricao').value.trim();
+    const descricoes = descText ? descText.split('\n').map((l) => l.trim()).filter(Boolean) : [];
+
+    const atualizado = {
+      ...currentActivities[editandoPlanoIdx],
+      identificador: $('#editAtivIdentificador').value.trim(),
+      maquina: ctx.maquina,
+      mes: ctx.mes,
+      linha: ctx.linha,
+      material: $('#editAtivMaterial').value.trim(),
+      duracao_horas: parseFloat($('#editAtivDuracao').value) || 0,
+      hh_mec: parseFloat($('#editAtivHhMec').value) || 0,
+      hh_eletrico: parseFloat($('#editAtivHhEle').value) || 0,
+      previsao_custos: parseFloat($('#editAtivCustos').value) || 0,
+      plano_padrao: $('#editAtivPlanoPadrao').value || 'S',
+      status_auditoria: $('#editAtivStatus').value || '',
+      resp_fabrica: $('#editAtivRespFabrica').value.trim(),
+      resp_manutencao: $('#editAtivRespManut').value.trim(),
+      descricao: descricoes[0] || '',
+      atividades_descricoes: descricoes,
+    };
+
+    currentActivities[editandoPlanoIdx] = atualizado;
+    fecharModalAtividadePlano();
+    renderPlanoActivitiesTable();
+    toast('Atividade atualizada no plano. Clique em "Aplicar" para gravar na preventiva.', 'success');
+  };
+
+  const loadPlanoMachines = () => {
+    let maquinasPrev = [...new Set(registrosPreventiva.map((r) => r.maquina).filter(Boolean))].sort();
+    if (maquinasPrev.length === 0) {
+      maquinasPrev = [
+        'ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA',
+        'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO',
+      ];
+    }
+    if (!machineSelect) return;
+    machineSelect.innerHTML =
+      '<option value="">Selecione a máquina...</option>' +
+      maquinasPrev.map((m) => `<option value="${m}">${m}</option>`).join('');
+  };
+  loadPlanoMachines();
+
+  [machineSelect, monthSelect, lineSelect].forEach((el) => {
+    el?.addEventListener('change', carregarAtividadesPlano);
+  });
+
+  $('#btnFecharModalAtividade')?.addEventListener('click', fecharModalAtividadePlano);
+  $('#btnCancelarModalAtividade')?.addEventListener('click', fecharModalAtividadePlano);
+  $('#formEditarAtividade')?.addEventListener('submit', salvarModalAtividadePlano);
+  modalAtiv?.addEventListener('click', (e) => {
+    if (e.target === modalAtiv) fecharModalAtividadePlano();
   });
 
   btnAplicar?.addEventListener('click', async () => {
-    const maquinaNome = machineSelect.value;
-    const mes = monthSelect.value;
-    const linha = lineSelect.value;
+    const ctx = getPlanoContexto();
 
-    if(!maquinaNome || !mes || !linha) {
-      toast('Por favor, selecione a máquina, o mês e a linha.', 'warning');
+    if (!contextoCompleto()) {
+      toast('Selecione máquina, mês e linha antes de aplicar.', 'warning');
       return;
     }
-    if(currentActivities.length === 0) {
-      toast('Nenhuma atividade para esta máquina. Importe a planilha antes.', 'warning');
+    if (currentActivities.length === 0) {
+      toast('Nenhuma atividade no plano. Importe a planilha ou selecione outra máquina.', 'warning');
       return;
     }
 
     const confirm = await Swal.fire({
-      title: 'Aplicar Plano',
-      html: `Isso irá <strong>substituir</strong> todos os registros de <strong>${maquinaNome}</strong> no mês <strong>${mes} - ${linha}</strong>.<br><br>Os dados de outras máquinas e outros meses NÃO serão afetados.`,
+      title: 'Aplicar Plano à Preventiva',
+      html: `<p>Serão <strong>substituídos</strong> apenas os registros de:</p>
+        <ul style="text-align:left; margin:1rem 0; padding-left:1.25rem; line-height:1.6;">
+          <li><strong>Máquina:</strong> ${ctx.maquina}</li>
+          <li><strong>Mês:</strong> ${ctx.mes}</li>
+          <li><strong>Linha:</strong> ${ctx.linha}</li>
+        </ul>
+        <p style="font-size:0.9rem; color:#94a3b8;">Outras máquinas, meses e linhas <strong>não serão alterados</strong>.</p>
+        <p><strong>${currentActivities.length}</strong> atividade(s) serão gravadas.</p>`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Sim, substituir',
+      confirmButtonText: 'Sim, aplicar neste contexto',
       cancelButtonText: 'Cancelar',
       background: '#161f33',
-      color: '#e2e8f0'
+      color: '#e2e8f0',
     });
     if (!confirm.isConfirmed) return;
 
@@ -356,24 +556,22 @@ function setupPlanoPreventivaUI() {
       btnAplicar.textContent = 'Aplicando...';
 
       const client = getClient();
-      // Delete ONLY this machine + line + month
       const { error: delErr } = await client
         .from('preventiva_registros')
         .delete()
-        .eq('maquina', maquinaNome)
-        .eq('mes', mes)
-        .eq('linha', linha);
+        .eq('maquina', ctx.maquina)
+        .eq('mes', ctx.mes)
+        .eq('linha', ctx.linha);
       if (delErr) throw delErr;
 
-      // Insert the activities for this machine/line/month
-      const records = currentActivities.map(a => ({
+      const records = currentActivities.map((a) => ({
         identificador: a.identificador || '',
-        maquina: maquinaNome,
-        descricao: a.descricao || '',
+        maquina: ctx.maquina,
+        descricao: a.descricao || descricaoLinhas(a)[0] || '',
         material: a.material || '',
         plano_padrao: a.plano_padrao || 'S',
-        mes: mes,
-        linha: linha,
+        mes: ctx.mes,
+        linha: ctx.linha,
         duracao_horas: a.duracao_horas || 0,
         hh_mec: a.hh_mec || 0,
         hh_eletrico: a.hh_eletrico || 0,
@@ -381,22 +579,33 @@ function setupPlanoPreventivaUI() {
         resp_manutencao: a.resp_manutencao || '',
         status_auditoria: a.status_auditoria || '',
         previsao_custos: a.previsao_custos || 0,
-        atividades_descricoes: a.atividades_descricoes || [],
-        programacao: a.programacao || []
+        atividades_descricoes: a.atividades_descricoes || descricaoLinhas(a),
+        programacao: a.programacao || {},
       }));
 
       const { error: insErr } = await client.from('preventiva_registros').insert(records);
       if (insErr) throw insErr;
 
-      toast(`✅ ${records.length} atividades de ${maquinaNome} aplicadas para ${mes} - ${linha}!`, 'success');
-      try { registrosPreventiva = await carregarPreventiva(); } catch(e){}
-    } catch(err) {
+      toast(`✅ ${records.length} atividades aplicadas em ${ctx.mes} · ${ctx.linha} · ${ctx.maquina}`, 'success');
+      try {
+        registrosPreventiva = await carregarPreventiva();
+      } catch (_e) { /* noop */ }
+      planoFonte = 'aplicado';
+      carregarAtividadesPlano();
+    } catch (err) {
       toast('Erro ao aplicar plano: ' + err.message, 'error');
     } finally {
-      btnAplicar.disabled = false;
-      btnAplicar.textContent = 'Aplicar Plano à Preventiva';
+      btnAplicar.disabled = !contextoCompleto() || currentActivities.length === 0;
+      btnAplicar.textContent = '✅ Aplicar Plano à Preventiva';
     }
   });
+
+  renderPlanoActivitiesTable();
+
+  window._refreshPlanoPreventiva = () => {
+    loadPlanoMachines();
+    carregarAtividadesPlano();
+  };
 }
 
 function atualizarBarraLinha() {
@@ -620,6 +829,8 @@ function showView(name) {
     updateCalendario(registros);
   } else if (name === 'por-maquina') {
     renderMachineList();
+  } else if (name === 'plano-preventiva') {
+    window._refreshPlanoPreventiva?.();
   }
 
   const titles = {
@@ -633,7 +844,7 @@ function showView(name) {
     calendario: 'Calendário',
     'planos-manutencao': 'Planos de Manutenção',
     'por-maquina': 'Máquinas & Templates',
-    'plano-preventiva': 'Gerador de Planos',
+    'plano-preventiva': 'Gerador de Planos Automático',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];

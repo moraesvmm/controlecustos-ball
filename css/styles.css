@@ -701,6 +701,35 @@ body.view-crud .main-layout {
   border: 1px solid rgba(248, 113, 113, 0.4);
 }
 
+/* Primary action button (used in drilldown and other places) */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  background: linear-gradient(180deg, var(--gold), rgba(180,145,30,1));
+  color: #0f172a;
+  border: 1px solid rgba(var(--gold-rgb), 0.6);
+  padding: 0.6rem 0.9rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s, box-shadow 0.12s;
+}
+
+.btn-primary:hover {
+  /* manter a mesma aparência no hover */
+  background: linear-gradient(180deg, var(--gold), rgba(180,145,30,1));
+  border-color: rgba(var(--gold-rgb), 0.6);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(var(--gold-rgb), 0.06);
+}
+
+/* Drilldown specific adjustments */
+.drill-item-actions { display: flex; gap: 0.5rem; }
+.drill-item-actions .btn-primary { width: 100%; box-shadow: none; }
+
 /* Modal */
 .modal-overlay {
   display: none;
@@ -796,6 +825,22 @@ body.view-crud .main-layout {
   padding: 0.5rem 0.65rem;
   border-radius: 8px;
   font-family: inherit;
+}
+
+/* Garantir que botões de ação nas tabelas (coluna de ações) fiquem visíveis */
+#planoActivitiesTable td:last-child,
+#tabelaPreventiva td:last-child,
+.data-table td:last-child {
+  white-space: nowrap;
+  width: 1%;
+  max-width: 160px;
+  overflow: visible;
+}
+
+/* Forçar botão de editar do plano a ficar acima em z-index quando necessário */
+.btn-editar-plano-atividade {
+  position: relative;
+  z-index: 5;
 }
 
 .calc-preview {
