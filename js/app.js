@@ -1536,3 +1536,50 @@ document.addEventListener('click', (e) => {
     openLightbox(e.target.src);
   }
 });
+
+// Função auxiliar temporária para o usuário migrar do Excel para o Supabase
+window.migrarPlanilhaParaSupabase = async function() {
+  const db = await import('./db.js');
+  let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+  maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
+  const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
+  
+  if (maquinasArray.length === 0) {
+    console.error('Planilha ainda não carregada! Por favor, aguarde o carregamento ou importe o Excel primeiro.');
+    return;
+  }
+  
+  console.log('Iniciando migração de ' + maquinasArray.length + ' máquinas...');
+  for (const m of maquinasArray) {
+    try {
+      await db.createMachine({ id: m, nome: m });
+      console.log(`Máquina ${m} criada.`);
+    } catch(e) {
+      console.log(`Máquina ${m} já existe ou erro:`, e.message);
+    }
+    
+    const activities = registrosPreventiva.filter(r => r.maquina === m);
+    const seen = new Set();
+    let index = 1;
+    for (const a of activities) {
+      const desc = a.descricao?.trim();
+      if (desc && !seen.has(desc)) {
+        seen.add(desc);
+        try {
+          await db.createMachineActivity(m, {
+            ordem: index++,
+            descricao: desc,
+            duracao_horas: parseFloat(a.duracao_horas) || 0,
+            hh_mec: parseFloat(a.hh_mec) || 0,
+            hh_eletrico: parseFloat(a.hh_eletrico) || 0,
+            status_auditoria: 'PADRÃO',
+            material: a.material || ''
+          });
+        } catch(e) {
+          console.error(`Erro na atividade da máquina ${m}:`, e.message);
+        }
+      }
+    }
+  }
+  console.log('MIGRAÇÃO FINALIZADA COM SUCESSO! Você já pode dar F5 na página e usar a tela normalmente.');
+};
