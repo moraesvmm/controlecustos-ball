@@ -167,101 +167,87 @@ function renderMachineList() {
 
 function renderMachineActivities() {
   if (!selectedMachineId) return;
-  getMachineActivities(selectedMachineId).then(acts => {
-    const table = $('#machineActivitiesTable');
-    if (!table) return;
-    const thead = table.querySelector('thead');
-    const tbody = table.querySelector('tbody');
-    // Define simple columns
-    const cols = [
-      { key: 'ordem', label: 'Ordem' },
-      { key: 'identificador', label: 'ID' },
-      { key: 'descricao', label: 'Descrição' },
-      { key: 'plano_padrao', label: 'Plano Padrão' },
-      { key: 'duracao_horas', label: 'Duração (h)' },
-      { key: 'hh_mec', label: 'HH Mec' },
-      { key: 'hh_eletrico', label: 'HH Elétrico' },
-      { key: 'resp_fabrica', label: 'Resp Fábrica' },
-      { key: 'resp_manutencao', label: 'Resp Manut.' },
-      { key: 'previsao_custos', label: 'Prev. Custos' },
-      { key: 'status_auditoria', label: 'Status' }
-    ];
-    thead.innerHTML = `<tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
-    tbody.innerHTML = acts.map(a => `<tr data-id="${a.id}">${cols.map(c => `<td>${a[c.key] ?? ''}</td>`).join('')}</tr>`).join('');
-    // allow edit on double click (simple prompt)
-    tbody.querySelectorAll('tr').forEach(row => {
-      row.addEventListener('dblclick', async () => {
-        const id = row.dataset.id;
-        const activity = acts.find(x => x.id === id);
-        const novaDesc = prompt('Nova descrição', activity.descricao || '');
-        if (novaDesc !== null) {
-          const updated = { ...activity, descricao: novaDesc };
-          // reuse createMachineActivity for upsert (Supabase will update if id present)
-          await createMachineActivity(selectedMachineId, updated);
-          renderMachineActivities();
-        }
-      });
-    });
-  }).catch(err => {
-    console.error('Erro ao carregar atividades', err);
-    toast('Erro ao carregar atividades', 'error');
-  });
+  // Busca direto em registrosPreventiva (fonte de verdade = planilha importada)
+  const acts = registrosPreventiva.filter(r => r.maquina && r.maquina.toUpperCase() === selectedMachineId.toUpperCase());
+  const table = $('#machineActivitiesTable');
+  if (!table) return;
+  const thead = table.querySelector('thead');
+  const tbody = table.querySelector('tbody');
+
+  const cols = [
+    { key: 'identificador', label: 'Identificador' },
+    { key: 'descricao_resumo', label: 'Descrição' },
+    { key: 'material', label: 'Material' },
+    { key: 'plano_padrao', label: 'Plano Padrão' },
+    { key: 'duracao_horas', label: 'Duração (h)' },
+    { key: 'hh_mec', label: 'HH Mec' },
+    { key: 'hh_eletrico', label: 'HH Elétrico' },
+    { key: 'resp_fabrica', label: 'Resp. Fábrica' },
+    { key: 'resp_manutencao', label: 'Resp. Manutenção' },
+    { key: 'status_auditoria', label: 'Status' },
+    { key: 'previsao_custos', label: 'Prev. Custos' },
+    { key: 'acoes', label: '' },
+  ];
+
+  thead.innerHTML = `<tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+
+  if (acts.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center; color:var(--muted);">Nenhuma atividade encontrada para esta máquina. Importe a planilha no Navegador Geral.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = acts.map(a => {
+    // Descrição resumida (primeira linha)
+    const descLines = (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0)
+      ? a.atividades_descricoes
+      : (a.descricao ? [a.descricao] : []);
+    const descResumo = descLines[0] ? descLines[0].substring(0, 80) + (descLines[0].length > 80 || descLines.length > 1 ? '...' : '') : '-';
+    
+    return `<tr data-id="${a.id}" style="cursor:pointer;" onclick="abrirDetalhePreventivaPanel('${a.id}')">
+      <td><strong>${a.identificador || '-'}</strong></td>
+      <td title="${(descLines.join(' | ')).replace(/"/g, '&quot;')}">${descResumo}</td>
+      <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${(a.material || '').replace(/"/g, '&quot;')}">${a.material ? a.material.split('\n')[0].substring(0,50) + (a.material.length > 50 ? '...' : '') : '-'}</td>
+      <td><span class="badge ${a.plano_padrao === 'S' ? 'badge-success' : 'badge-warning'}">${a.plano_padrao || '-'}</span></td>
+      <td>${a.duracao_horas || '-'}</td>
+      <td>${a.hh_mec || '-'}</td>
+      <td>${a.hh_eletrico || '-'}</td>
+      <td>${a.resp_fabrica || '-'}</td>
+      <td>${a.resp_manutencao || '-'}</td>
+      <td><span class="badge ${a.status_auditoria === 'FINALIZADO' ? 'badge-success' : a.status_auditoria ? 'badge-warning' : ''}">${a.status_auditoria || '-'}</span></td>
+      <td>${Number(a.previsao_custos || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
+      <td><button type="button" class="btn-icon" onclick="event.stopPropagation(); abrirDetalhePreventivaPanel('${a.id}')" title="Ver Detalhes" style="background:var(--primary);color:white;padding:0.3rem 0.6rem;border-radius:6px;font-size:0.75rem;white-space:nowrap;">Ver</button></td>
+    </tr>`;
+  }).join('');
 }
 
 function setupPorMaquinaUI() {
-  // Button handlers
-  $('#btnAddMachine')?.addEventListener('click', async () => {
-    const nome = prompt('Nome da nova máquina');
-    if (!nome) return;
-    try {
-      await createMachine({ nome });
-      renderMachineList();
-      toast('Máquina criada', 'success');
-    } catch (e) {
-      toast('Erro ao criar máquina: ' + e.message, 'error');
-    }
-  });
-  $('#btnAddActivity')?.addEventListener('click', async () => {
-    if (!selectedMachineId) {
-      toast('Selecione uma máquina primeiro.', 'info');
+  // Renderiza lista de máquinas a partir de registrosPreventiva
+  const renderMaquinasSidebar = () => {
+    const ul = $('#machineList');
+    if (!ul) return;
+    const maquinas = [...new Set(registrosPreventiva.map(r => r.maquina).filter(Boolean))].sort();
+    if (maquinas.length === 0) {
+      ul.innerHTML = '<li style="color:var(--muted); font-size:0.85rem;">Nenhuma máquina encontrada. Importe a planilha.</li>';
       return;
     }
-    const descricao = prompt('Descrição da atividade');
-    if (!descricao) return;
-    const ordem = parseInt(prompt('Ordem (número)') || '0', 10);
-    const duracao = parseFloat(prompt('Duração em horas') || '0');
-    const hhMec = parseFloat(prompt('HH Mec') || '0');
-    const hhEle = parseFloat(prompt('HH Elétrico') || '0');
-    const status = prompt('Status (ex.: PENDENTE, CONCLUIDO)', 'PENDENTE');
-    
-    // Novas colunas (simplificado para criação manual)
-    const identificador = prompt('Identificador (ex: Atv. 1)');
-    const planoPadrao = prompt('Plano Padrão? (S/N)', 'S');
-    const respFabrica = prompt('Resp. Fábrica');
-    const respManut = prompt('Resp. Manutenção');
-    const custos = parseFloat(prompt('Previsão de Custos') || '0');
-
-    const activity = { 
-      ordem, 
-      identificador: identificador || '',
-      descricao, 
-      plano_padrao: planoPadrao || 'S',
-      duracao_horas: duracao, 
-      hh_mec: hhMec, 
-      hh_eletrico: hhEle, 
-      resp_fabrica: respFabrica || '',
-      resp_manutencao: respManut || '',
-      previsao_custos: custos,
-      status_auditoria: status 
-    };
-    try {
-      await createMachineActivity(selectedMachineId, activity);
-      renderMachineActivities();
-      toast('Atividade adicionada', 'success');
-    } catch (e) {
-      toast('Erro ao criar atividade: ' + e.message, 'error');
-    }
-  });
+    ul.innerHTML = maquinas.map(m => `
+      <li data-id="${m}" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s;" 
+          onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
+          onmouseout="this.style.background=selectedMachineId===this.dataset.id?'rgba(212,175,55,0.15)':''">${m}</li>
+    `).join('');
+    ul.querySelectorAll('li').forEach(li => {
+      li.addEventListener('click', () => {
+        selectedMachineId = li.dataset.id;
+        $('#machineTitle').textContent = `Atividades: ${li.dataset.id}`;
+        renderMachineActivities();
+        ul.querySelectorAll('li').forEach(x => { x.style.fontWeight = 'normal'; x.style.background = ''; x.style.color = 'var(--text)'; });
+        li.style.fontWeight = 'bold';
+        li.style.background = 'rgba(212,175,55,0.15)';
+        li.style.color = 'var(--primary)';
+      });
+    });
+  };
+  renderMaquinasSidebar();
 }
 
 function setupPlanoPreventivaUI() {
@@ -271,94 +257,138 @@ function setupPlanoPreventivaUI() {
   const btnAplicar = $('#btnAplicarPlano');
   let currentActivities = [];
 
-  // Carregar máquinas ao abrir a view
+  // Colunas completas da planilha
+  const planoCols = [
+    { key: 'identificador', label: 'Identificador' },
+    { key: 'descricao_resumo', label: 'Descrição' },
+    { key: 'material', label: 'Material' },
+    { key: 'plano_padrao', label: 'Plano Padrão' },
+    { key: 'duracao_horas', label: 'Duração (h)' },
+    { key: 'hh_mec', label: 'HH Mec' },
+    { key: 'hh_eletrico', label: 'HH Elétrico' },
+    { key: 'resp_fabrica', label: 'Resp. Fábrica' },
+    { key: 'resp_manutencao', label: 'Resp. Manutenção' },
+    { key: 'status_auditoria', label: 'Status' },
+    { key: 'previsao_custos', label: 'Prev. Custos' },
+  ];
+
+  // Atualizar o thead do planoActivitiesTable com todas as colunas
+  const planoThead = $('#planoActivitiesTable thead');
+  if (planoThead) {
+    planoThead.innerHTML = `<tr>${planoCols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+  }
+
+  // Carregar máquinas ao abrir a view (baseado em registrosPreventiva)
   const loadPlanoMachines = () => {
-    let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
-    maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
-    const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
-    
-    if (maquinasArray.length === 0) {
-      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
-      maquinasArray.sort();
+    let maquinasPrev = [...new Set(registrosPreventiva.map(r => r.maquina).filter(Boolean))].sort();
+    if (maquinasPrev.length === 0) {
+      maquinasPrev = ['ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO'];
     }
-    
-    const list = maquinasArray.map(m => ({ id: m, nome: m }));
     if (!machineSelect) return;
-    machineSelect.innerHTML = '<option value="">Selecione a máquina...</option>' + list.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
+    machineSelect.innerHTML = '<option value="">Selecione a máquina...</option>' + maquinasPrev.map(m => `<option value="${m}">${m}</option>`).join('');
   };
   loadPlanoMachines();
 
-  machineSelect?.addEventListener('change', async (e) => {
-    const id = e.target.value;
+  machineSelect?.addEventListener('change', (e) => {
+    const maquinaNome = e.target.value;
     const tbody = $('#planoActivitiesTable tbody');
-    if (!id) {
-      if(tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted);">Selecione uma máquina para visualizar as atividades padrão.</td></tr>';
+    if (!maquinaNome) {
+      if(tbody) tbody.innerHTML = `<tr><td colspan="${planoCols.length}" style="text-align:center; color:var(--muted);">Selecione uma máquina para visualizar as atividades.</td></tr>`;
       currentActivities = [];
       return;
     }
-    try {
-      currentActivities = await getMachineActivities(id);
-      if(!tbody) return;
-      if(currentActivities.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--muted);">Nenhuma atividade cadastrada para esta máquina.</td></tr>';
-      } else {
-        tbody.innerHTML = currentActivities.map(a => `
-          <tr>
-            <td>${a.ordem || ''}</td>
-            <td>${a.descricao || ''}</td>
-            <td>${a.duracao_horas || ''}</td>
-            <td>${a.hh_mec || ''}</td>
-            <td>${a.hh_eletrico || ''}</td>
-            <td><span class="badge ${a.status_auditoria ? 'badge-warning' : ''}">${a.status_auditoria || 'PENDENTE'}</span></td>
-          </tr>
-        `).join('');
-      }
-    } catch(err) {
-      toast('Erro ao carregar atividades: ' + err.message, 'error');
+    // Filtra diretamente de registrosPreventiva
+    currentActivities = registrosPreventiva.filter(r => r.maquina && r.maquina.toUpperCase() === maquinaNome.toUpperCase());
+    if(!tbody) return;
+    if(currentActivities.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${planoCols.length}" style="text-align:center; color:var(--muted);">Nenhuma atividade encontrada. Importe a planilha primeiro.</td></tr>`;
+    } else {
+      tbody.innerHTML = currentActivities.map(a => {
+        const descLines = (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0)
+          ? a.atividades_descricoes
+          : (a.descricao ? [a.descricao] : []);
+        const descResumo = descLines[0] ? descLines[0].substring(0, 60) + (descLines[0].length > 60 || descLines.length > 1 ? '...' : '') : '-';
+        return `<tr>
+          <td><strong>${a.identificador || '-'}</strong></td>
+          <td title="${(descLines.join(' | ')).replace(/"/g, '&quot;')}">${descResumo}</td>
+          <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${(a.material || '').replace(/"/g, '&quot;')}">${a.material ? a.material.split('\n')[0].substring(0,40)+'...' : '-'}</td>
+          <td>${a.plano_padrao || '-'}</td>
+          <td>${a.duracao_horas || '-'}</td>
+          <td>${a.hh_mec || '-'}</td>
+          <td>${a.hh_eletrico || '-'}</td>
+          <td>${a.resp_fabrica || '-'}</td>
+          <td>${a.resp_manutencao || '-'}</td>
+          <td>${a.status_auditoria || '-'}</td>
+          <td>${Number(a.previsao_custos||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}</td>
+        </tr>`;
+      }).join('');
     }
   });
 
   btnAplicar?.addEventListener('click', async () => {
-    const machineId = machineSelect.value;
+    const maquinaNome = machineSelect.value;
     const mes = monthSelect.value;
-    const linha = lineSelect.value; // Por enquanto sempre L06
+    const linha = lineSelect.value;
 
-    if(!machineId || !mes || !linha) {
+    if(!maquinaNome || !mes || !linha) {
       toast('Por favor, selecione a máquina, o mês e a linha.', 'warning');
       return;
     }
     if(currentActivities.length === 0) {
-      toast('A máquina selecionada não possui atividades padrão.', 'warning');
+      toast('Nenhuma atividade para esta máquina. Importe a planilha antes.', 'warning');
       return;
     }
+
+    const confirm = await Swal.fire({
+      title: 'Aplicar Plano',
+      html: `Isso irá <strong>substituir</strong> todos os registros de <strong>${maquinaNome}</strong> no mês <strong>${mes} - ${linha}</strong>.<br><br>Os dados de outras máquinas e outros meses NÃO serão afetados.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sim, substituir',
+      cancelButtonText: 'Cancelar',
+      background: '#161f33',
+      color: '#e2e8f0'
+    });
+    if (!confirm.isConfirmed) return;
 
     try {
       btnAplicar.disabled = true;
       btnAplicar.textContent = 'Aplicando...';
-      const mName = machineSelect.options[machineSelect.selectedIndex].text;
-      
-      let count = 0;
-      for (const act of currentActivities) {
-        const payload = {
-          identificador: `P-${mes.substring(0,3)}-${Date.now().toString().slice(-4)}${count++}`,
-          maquina: mName,
-          material: '',
-          plano_padrao: 'S',
-          mes: mes,
-          linha: linha,
-          duracao_horas: act.duracao_horas || 0,
-          hh_mec: act.hh_mec || 0,
-          hh_eletrico: act.hh_eletrico || 0,
-          resp_fabrica: '',
-          resp_manutencao: '',
-          status_auditoria: act.status_auditoria || 'PENDENTE',
-          previsao_custos: 0,
-          atividades_descricoes: act.descricao ? [act.descricao] : [],
-          programacao: []
-        };
-        await salvarPreventiva(payload);
-      }
-      toast('Plano aplicado com sucesso à Preventiva no mês selecionado!', 'success');
+
+      const client = getClient();
+      // Delete ONLY this machine + line + month
+      const { error: delErr } = await client
+        .from('preventiva_registros')
+        .delete()
+        .eq('maquina', maquinaNome)
+        .eq('mes', mes)
+        .eq('linha', linha);
+      if (delErr) throw delErr;
+
+      // Insert the activities for this machine/line/month
+      const records = currentActivities.map(a => ({
+        identificador: a.identificador || '',
+        maquina: maquinaNome,
+        descricao: a.descricao || '',
+        material: a.material || '',
+        plano_padrao: a.plano_padrao || 'S',
+        mes: mes,
+        linha: linha,
+        duracao_horas: a.duracao_horas || 0,
+        hh_mec: a.hh_mec || 0,
+        hh_eletrico: a.hh_eletrico || 0,
+        resp_fabrica: a.resp_fabrica || '',
+        resp_manutencao: a.resp_manutencao || '',
+        status_auditoria: a.status_auditoria || '',
+        previsao_custos: a.previsao_custos || 0,
+        atividades_descricoes: a.atividades_descricoes || [],
+        programacao: a.programacao || []
+      }));
+
+      const { error: insErr } = await client.from('preventiva_registros').insert(records);
+      if (insErr) throw insErr;
+
+      toast(`✅ ${records.length} atividades de ${maquinaNome} aplicadas para ${mes} - ${linha}!`, 'success');
       try { registrosPreventiva = await carregarPreventiva(); } catch(e){}
     } catch(err) {
       toast('Erro ao aplicar plano: ' + err.message, 'error');

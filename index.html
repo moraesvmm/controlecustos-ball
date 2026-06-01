@@ -400,12 +400,10 @@
           <ul id="machineList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.5rem;">
             <!-- populated by JS -->
           </ul>
-          <button id="btnAddMachine" class="btn btn-outline" style="margin-top:1.5rem; width:100%;">+ Nova Máquina</button>
         </aside>
         <section style="flex:1;">
           <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3 id="machineTitle" style="margin:0;">Selecione uma máquina</h3>
-            <button id="btnAddActivity" class="btn btn-primary" style="display:none;">+ Nova Atividade</button>
           </header>
           <div class="table-scroll-main" style="max-height: 400px; border-radius: 6px; border: 1px solid var(--border);">
             <div class="table-scroll-inner">
@@ -421,8 +419,8 @@
 
     <div id="view-plano-preventiva" class="view">
       <div class="panel" style="padding: 2rem; max-width: 900px; margin: 2rem auto;">
-        <h3>Plano de Preventiva – Gerador</h3>
-        <p class="section-hint" style="margin-bottom:1.5rem;">Selecione a máquina e os dados de destino para aplicar as atividades padrão como uma nova preventiva.</p>
+        <h3>Gerador de Planos de Preventiva</h3>
+        <p class="section-hint" style="margin-bottom:1.5rem;">Selecione a máquina, o mês e a linha para <strong>substituir</strong> os registros da máquina naquela linha/mês. Os dados de outras máquinas e outros meses não são afetados.</p>
         <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:flex-end;">
           <label style="flex:1;">
             <span>Máquina</span>
