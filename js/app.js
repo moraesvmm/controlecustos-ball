@@ -563,6 +563,8 @@ function showView(name) {
     renderFornecedoresSLA();
   } else if (name === 'calendario') {
     updateCalendario(registros);
+  } else if (name === 'por-maquina') {
+    renderMachineList();
   }
 
   const titles = {
