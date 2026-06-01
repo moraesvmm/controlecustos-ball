@@ -126,6 +126,11 @@ export async function initExcelImportPreventiva(supabase, toast, atualizarDadosG
               parsedRecordsMap[identificador].programacao.push(p);
             }
           }
+          if (material && (!parsedRecordsMap[identificador].material || parsedRecordsMap[identificador].material === 'undefined')) {
+            parsedRecordsMap[identificador].material = String(material).trim();
+          } else if (material && !parsedRecordsMap[identificador].material.includes(String(material).trim())) {
+            parsedRecordsMap[identificador].material += '\\n' + String(material).trim();
+          }
         }
 
         if (descricao) {
