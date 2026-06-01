@@ -175,10 +175,15 @@ function renderMachineActivities() {
     // Define simple columns
     const cols = [
       { key: 'ordem', label: 'Ordem' },
+      { key: 'identificador', label: 'ID' },
       { key: 'descricao', label: 'Descrição' },
+      { key: 'plano_padrao', label: 'Plano Padrão' },
       { key: 'duracao_horas', label: 'Duração (h)' },
       { key: 'hh_mec', label: 'HH Mec' },
       { key: 'hh_eletrico', label: 'HH Elétrico' },
+      { key: 'resp_fabrica', label: 'Resp Fábrica' },
+      { key: 'resp_manutencao', label: 'Resp Manut.' },
+      { key: 'previsao_custos', label: 'Prev. Custos' },
       { key: 'status_auditoria', label: 'Status' }
     ];
     thead.innerHTML = `<tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
@@ -228,7 +233,27 @@ function setupPorMaquinaUI() {
     const hhMec = parseFloat(prompt('HH Mec') || '0');
     const hhEle = parseFloat(prompt('HH Elétrico') || '0');
     const status = prompt('Status (ex.: PENDENTE, CONCLUIDO)', 'PENDENTE');
-    const activity = { ordem, descricao, duracao_horas: duracao, hh_mec: hhMec, hh_eletrico: hhEle, status_auditoria: status };
+    
+    // Novas colunas (simplificado para criação manual)
+    const identificador = prompt('Identificador (ex: Atv. 1)');
+    const planoPadrao = prompt('Plano Padrão? (S/N)', 'S');
+    const respFabrica = prompt('Resp. Fábrica');
+    const respManut = prompt('Resp. Manutenção');
+    const custos = parseFloat(prompt('Previsão de Custos') || '0');
+
+    const activity = { 
+      ordem, 
+      identificador: identificador || '',
+      descricao, 
+      plano_padrao: planoPadrao || 'S',
+      duracao_horas: duracao, 
+      hh_mec: hhMec, 
+      hh_eletrico: hhEle, 
+      resp_fabrica: respFabrica || '',
+      resp_manutencao: respManut || '',
+      previsao_custos: custos,
+      status_auditoria: status 
+    };
     try {
       await createMachineActivity(selectedMachineId, activity);
       renderMachineActivities();
@@ -1558,16 +1583,24 @@ window.migrarPlanilhaParaSupabase = async function() {
       const descText = (a.atividades_descricoes && a.atividades_descricoes.length > 0) 
           ? a.atividades_descricoes.join('\\n').trim() 
           : '';
-      if (descText && !seen.has(descText)) {
-        seen.add(descText);
+      const ident = a.identificador || `Atv-${index}`;
+      const uniqueKey = ident + '_' + descText;
+      
+      if (descText && !seen.has(uniqueKey)) {
+        seen.add(uniqueKey);
         try {
           await db.createMachineActivity(m, {
             ordem: index++,
+            identificador: ident,
             descricao: descText,
+            plano_padrao: a.plano_padrao || 'S',
             duracao_horas: parseFloat(a.duracao_horas) || 0,
             hh_mec: parseFloat(a.hh_mec) || 0,
             hh_eletrico: parseFloat(a.hh_eletrico) || 0,
-            status_auditoria: 'PADRÃO',
+            resp_fabrica: a.resp_fabrica || '',
+            resp_manutencao: a.resp_manutencao || '',
+            previsao_custos: parseFloat(a.previsao_custos) || 0,
+            status_auditoria: a.status_auditoria || 'PADRÃO',
             material: a.material || ''
           });
         } catch(e) {
