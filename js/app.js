@@ -134,11 +134,12 @@ function renderFiltros() {
 
 // ---------- Por Máquina view helpers ----------
 function renderMachineList() {
-  const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+  let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+  maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
   const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
   
   if (maquinasArray.length === 0) {
-    maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'FRONTEND', 'GERAL', 'IMPRESSORA', 'LAVADORA', 'MAQUINA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
+    maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
     maquinasArray.sort();
   }
   
@@ -247,11 +248,12 @@ function setupPlanoPreventivaUI() {
 
   // Carregar máquinas ao abrir a view
   const loadPlanoMachines = () => {
-    const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+    let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+    maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
     const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
     
     if (maquinasArray.length === 0) {
-      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'FRONTEND', 'GERAL', 'IMPRESSORA', 'LAVADORA', 'MAQUINA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
+      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
       maquinasArray.sort();
     }
     
@@ -1383,12 +1385,13 @@ window.selecionarLinhaPlanos = async function(linha) {
   $('#kpi-linha-custo').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCusto);
   // Buscar máquinas para exibir no grid (Apenas do plano de preventiva)
   try {
-    const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+    let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+    maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
     const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
     
     // Fallback: usar a lista da planilha original
     if (maquinasArray.length === 0) {
-      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'FRONTEND', 'GERAL', 'IMPRESSORA', 'LAVADORA', 'MAQUINA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
+      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
       maquinasArray.sort();
     }
 
