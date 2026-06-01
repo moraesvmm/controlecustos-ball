@@ -1500,7 +1500,7 @@ window.abrirDetalhePreventivaPanel = function(id) {
   lista.innerHTML = `
       <article class="drill-item" style="padding: 1.5rem;">
         <h4 style="margin-top:0; color:var(--text); margin-bottom: 0.5rem; font-size: 1.05rem;">Descrição da Atividade</h4>
-        <p style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">${r.descricao || 'Sem descrição'}</p>
+        <p style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">${(r.atividades_descricoes && r.atividades_descricoes.length > 0) ? r.atividades_descricoes.join('\n') : (r.descricao || 'Sem descrição')}</p>
         
         <h4 style="margin-top: 1.5rem; color:var(--text); margin-bottom: 0.5rem; font-size: 1.05rem;">Materiais Necessários</h4>
         <p style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">${r.material || 'Nenhum material especificado'}</p>
