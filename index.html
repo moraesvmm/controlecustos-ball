@@ -125,7 +125,6 @@
         </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
           <input type="file" id="fileImportExcel" accept=".xlsx, .xls" style="display: none;" />
-          <input type="file" id="fileImportExcelPreventiva" accept=".xlsx, .xls" style="display: none;" />
           <button type="button" class="btn btn-outline" id="btnImportarExcel" style="font-size: 0.85rem;">Importar Base de Dados</button>
         </div>
       </header>
@@ -335,6 +334,13 @@
               <h4 style="margin-bottom: 1rem;">Selecione a Máquina</h4>
               <div id="maquinas-grid-planos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
               </div>
+
+              <!-- Botão de Importação da Linha -->
+              <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+                <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.75rem;">Atualizar dados desta linha com planilha Excel:</p>
+                <input type="file" id="fileImportExcelPreventiva" accept=".xlsx, .xls" style="display: none;" />
+                <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly" style="width: 100%; font-size: 0.85rem;">📥 Importar Planilha da Linha</button>
+              </div>
             </section>
           </div>
         </div>
@@ -350,7 +356,6 @@
               </div>
             </div>
             <div class="toolbar-actions">
-              <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly">Importar Excel</button>
               <button type="button" class="btn btn-ghost" id="btnExportPreventiva">Exportar Excel</button>
               <button type="button" class="btn" id="btnNovaPreventiva">+ Novo registro</button>
             </div>

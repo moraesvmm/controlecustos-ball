@@ -1477,11 +1477,14 @@ window.abrirDetalhePreventivaPanel = function(id) {
   document.getElementById('drillSubtitulo').textContent = r.maquina || '';
 
   const stats = [
+    { label: 'Plano Padrão', value: r.plano_padrao || '-' },
     { label: 'Duração', value: r.duracao_horas ? r.duracao_horas + 'h' : '-' },
     { label: 'HH Mecânico', value: r.hh_mec || '-' },
     { label: 'HH Elétrico', value: r.hh_eletrico || '-' },
-    { label: 'Status', value: r.status_auditoria || '-' },
-    { label: 'Custo', value: Number(r.previsao_custos || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+    { label: 'Resp. Fábrica', value: r.resp_fabrica || '-' },
+    { label: 'Resp. Manutenção', value: r.resp_manutencao || '-' },
+    { label: 'Status/Auditoria', value: r.status_auditoria || '-' },
+    { label: 'Custo Previsto', value: Number(r.previsao_custos || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
   ];
 
   document.getElementById('drillStats').innerHTML = stats
@@ -1497,12 +1500,12 @@ window.abrirDetalhePreventivaPanel = function(id) {
   document.getElementById('drillInsight').style.display = 'none';
 
   const formatCards = (text) => {
-    if (!text || text.trim() === '' || text === 'Sem descrição' || text === 'Nenhum material especificado') {
-      return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">${text || 'Vazio'}</p>`;
+    if (!text || text.trim() === '' || text === 'Sem descrição' || text === 'Nenhum material especificado' || text === 'undefined') {
+      return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">Não informado</p>`;
     }
-    // Removemos hífens soltos (bullet points do excel) e quebramos por enter ou ponto final (seguido de espaço ou fim)
-    const steps = text.split(/\\n|\\.(?=\\s|$)/)
-                      .map(s => s.trim().replace(/^-/, '').trim())
+    // Quebra por \n real (não literal)
+    const steps = text.split(/\n/)
+                      .map(s => s.trim().replace(/^[-–]/, '').trim())
                       .filter(s => s.length > 1);
     
     if (steps.length === 0) return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">${text}</p>`;
@@ -1510,14 +1513,44 @@ window.abrirDetalhePreventivaPanel = function(id) {
     return steps.map((step, idx) => `
       <div style="background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
         <span style="background: rgba(212, 175, 55, 0.15); color: var(--primary); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; flex-shrink: 0; border: 1px solid rgba(212, 175, 55, 0.3);">${idx + 1}</span>
-        <span style="font-size: 0.95rem; line-height: 1.5; color: var(--text); padding-top: 2px;">${step}${step.endsWith('.') ? '' : '.'}</span>
+        <span style="font-size: 0.95rem; line-height: 1.5; color: var(--text); padding-top: 2px;">${step}</span>
       </div>
     `).join('');
   };
 
-  const rawDesc = (r.atividades_descricoes && r.atividades_descricoes.length > 0) ? r.atividades_descricoes.join('\\n') : (r.descricao || 'Sem descrição');
+  // Descrição: usa atividades_descricoes (array do importador) ou descricao (campo texto)
+  let rawDesc;
+  if (r.atividades_descricoes && Array.isArray(r.atividades_descricoes) && r.atividades_descricoes.length > 0) {
+    rawDesc = r.atividades_descricoes.join('\n');
+  } else if (r.descricao) {
+    rawDesc = r.descricao;
+  } else {
+    rawDesc = 'Não informado';
+  }
+
+  // Material: pode vir como string com \n reais
+  let rawMat;
+  if (r.material && r.material !== 'undefined' && r.material.trim() !== '') {
+    rawMat = r.material;
+  } else {
+    rawMat = 'Não informado';
+  }
+
   const descHTML = formatCards(rawDesc);
-  const matHTML = formatCards(r.material || 'Nenhum material especificado');
+  const matHTML = formatCards(rawMat);
+
+  // Programação (datas/turnos) se existir
+  let progHTML = '';
+  if (r.programacao && Array.isArray(r.programacao) && r.programacao.length > 0) {
+    progHTML = `
+      <h4 style="margin-top: 2rem; color:var(--text); margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+        Programação
+      </h4>
+      <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        ${r.programacao.map(p => `<span style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">${p.data} ${p.turno}</span>`).join('')}
+      </div>`;
+  }
 
   const lista = document.getElementById('drillLista');
   lista.innerHTML = `
@@ -1533,6 +1566,7 @@ window.abrirDetalhePreventivaPanel = function(id) {
           Materiais Necessários
         </h4>
         ${matHTML}
+        ${progHTML}
         
         <div class="drill-item-actions" style="margin-top: 2rem;">
           <button type="button" class="btn-primary" onclick="abrirFormularioPreventiva('${r.id}'); fecharDrilldown();" style="width: 100%;">✏️ Editar Atividade</button>
