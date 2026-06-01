@@ -529,9 +529,9 @@ function showView(name) {
   $(`#view-${name}`)?.classList.add('active');
   document.querySelectorAll(`[data-tab="${name}"]`).forEach((el) => el.classList.add('active'));
 
-  const crud = ['rc', 'consertos', 'compras', 'fabricacao', 'preventiva-l06-backend'].includes(name);
+  const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
-  const isSpecial = ['fornecedores', 'calendario', 'controle-preventiva', 'preventiva-l06', 'preventiva-l06-backend', 'preventiva-l06-frontend', 'por-maquina', 'plano-preventiva'].includes(name);
+  const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva'].includes(name);
 
   // Seção tabela (toolbar + tabela de RCs) - Hide for preventiva since it has its own
   $('#secaoTabela')?.classList.toggle('hidden', !['rc', 'consertos', 'compras', 'fabricacao'].includes(name));
@@ -554,18 +554,16 @@ function showView(name) {
 
   const titles = {
     dashboard: 'Visão Geral',
+    dashboard: 'Visão Geral',
     rc: 'Controle Global',
     consertos: 'Consertos',
     compras: 'Compras',
     fabricacao: 'Fabricação',
     fornecedores: 'SLA Fornecedores',
     calendario: 'Calendário',
-    'controle-preventiva': 'Controle Preventiva',
-    'preventiva-l06': 'Hub Preventiva L(06)',
-    'preventiva-l06-backend': 'Preventiva L(06) - Back-End',
-    'preventiva-l06-frontend': 'Preventiva L(06) - Front-End',
-    'por-maquina': 'Por Máquina',
-    'plano-preventiva': 'Plano de Preventiva',
+    'planos-manutencao': 'Planos de Manutenção',
+    'por-maquina': 'Máquinas & Templates',
+    'plano-preventiva': 'Gerador de Planos',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
@@ -1284,61 +1282,130 @@ $('#btnExcluirPreventivaModal')?.addEventListener('click', async () => {
 const originalShowView = showView;
 showView = function(name) {
   originalShowView(name);
-  if (name === 'preventiva-l06-backend') {
-    renderFiltrosPreventiva();
-    renderTabelaPreventiva();
-  } else if (name === 'controle-preventiva' || name === 'preventiva-l06') {
-    renderControlePreventiva();
+  if (name === 'planos-manutencao') {
+    // Quando abre o navegador geral, reseta para o passo do mês se não estiver definido
+    if (!estadoPlanos.mes) {
+      planosGoToStep('mes');
+    }
   }
 };
 window.showView = showView;
 
-window.showPreventivaMes = function(viewName, mes) {
-  filtrosPreventiva.mes = mes;
-
-  const titleMap = {
-    'preventiva-l06-backend': `Controle Preventiva L(06) - ${mes}`,
-    'preventiva-l06-frontend': `Controle Preventiva L(06) Front-End - ${mes}`
-  };
-  
-  if (viewName === 'preventiva-l06-backend') {
-    const el = document.querySelector('#view-preventiva-l06-backend .crud-title');
-    if (el) el.textContent = titleMap[viewName];
-  } else if (viewName === 'preventiva-l06-frontend') {
-    const el = document.querySelector('#view-preventiva-l06-frontend .crud-title');
-    if (el) el.textContent = titleMap[viewName];
-  }
-  
-  showView(viewName);
+// ==========================================
+// DRILL-DOWN: Planos de Manutenção
+// ==========================================
+const estadoPlanos = {
+  mes: null,
+  linha: null,
+  maquina: null
 };
 
-function renderControlePreventiva() {
-  const el = document.getElementById('contagemPrevL06');
-  if (el) el.textContent = `${registrosPreventiva.length} atividade${registrosPreventiva.length !== 1 ? 's' : ''}`;
-}
+window.planosGoToStep = function(stepName) {
+  if (stepName === 'mes') {
+    estadoPlanos.mes = null;
+    estadoPlanos.linha = null;
+    estadoPlanos.maquina = null;
+    $('#bc-sep-1').style.display = 'none';
+    $('#bc-linha').style.display = 'none';
+    $('#bc-sep-2').style.display = 'none';
+    $('#bc-maquina').style.display = 'none';
+    $('#bc-mes').style.color = 'var(--text)';
+    
+    $('#step-mes').style.display = 'block';
+    $('#step-linha').style.display = 'none';
+    $('#step-atividades').style.display = 'none';
+  } else if (stepName === 'linha') {
+    estadoPlanos.linha = null;
+    estadoPlanos.maquina = null;
+    $('#bc-sep-2').style.display = 'none';
+    $('#bc-maquina').style.display = 'none';
+    $('#bc-linha').style.color = 'var(--text)';
+    
+    $('#step-mes').style.display = 'none';
+    $('#step-linha').style.display = 'block';
+    $('#step-maquina-section').style.display = 'none';
+    $('#step-atividades').style.display = 'none';
+  }
+};
 
-window.cadastrarNovaPreventiva = function() {
-  Swal.fire({
-    title: 'Nova Linha Preventiva',
-    html: `<p style="color:#94a3b8;font-size:0.88rem;margin-bottom:0.75rem;">Informe o número ou nome da linha para criar uma nova sub-aba.</p>
-           <input id="swalLinhaName" class="swal2-input" placeholder="Ex: 07" maxlength="10" style="text-align:center;" />`,
-    showCancelButton: true,
-    confirmButtonText: 'Criar Linha',
-    cancelButtonText: 'Cancelar',
-    background: '#161f33',
-    color: '#f1f5f9',
-    confirmButtonColor: '#d4af37',
-    cancelButtonColor: '#0f1624',
-    preConfirm: () => {
-      const val = document.getElementById('swalLinhaName')?.value.trim();
-      if (!val) { Swal.showValidationMessage('Informe o identificador da linha'); return false; }
-      return val;
-    }
-  }).then(result => {
-    if (result.isConfirmed) {
-      toast(`Sub-aba "Preventiva L(${result.value})" cadastrada! Em breve disponível no menu lateral.`, 'info');
-    }
+window.selecionarMesPlanos = function(mes) {
+  estadoPlanos.mes = mes;
+  $('#bc-sep-1').style.display = 'block';
+  $('#bc-linha').style.display = 'block';
+  $('#bc-linha').textContent = 'Linha';
+  $('#bc-mes').style.color = 'var(--muted)';
+  $('#bc-linha').style.color = 'var(--text)';
+  
+  $('#step-linha-mes-label').textContent = mes;
+  
+  // Render linhas
+  const linhas = ['L04', 'L05', 'L06', 'L07', 'L08', 'L09'];
+  const html = linhas.map(l => `
+    <button class="btn btn-outline" style="text-align: left; justify-content: flex-start;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
+  `).join('');
+  $('#linhas-list').innerHTML = html;
+  
+  $('#step-mes').style.display = 'none';
+  $('#step-linha').style.display = 'block';
+  $('#step-maquina-section').style.display = 'none';
+  $('#step-atividades').style.display = 'none';
+};
+
+window.selecionarLinhaPlanos = async function(linha) {
+  estadoPlanos.linha = linha;
+  $('#bc-linha').textContent = `Linha ${linha.replace('L','')}`;
+  $('#linha-dashboard-title').textContent = `Dashboard - Linha ${linha.replace('L','')}`;
+  
+  $('#step-maquina-section').style.display = 'block';
+  
+  // Atualizar KPIs da linha usando os registros
+  const regs = state.preventivaRegistros.filter(r => r.linha === linha || r.mes === estadoPlanos.mes); // Nota: o DB precisa ter mes e linha no registro. Se não tiver, usar lógica apropriada.
+  $('#kpi-linha-atividades').textContent = regs.length || 0;
+  
+  let totalHH = 0;
+  let totalCusto = 0;
+  regs.forEach(r => {
+    totalHH += (parseFloat(r.hh_mec) || 0) + (parseFloat(r.hh_eletrico) || 0);
+    totalCusto += parseFloat(r.previsao_custos) || 0;
   });
+  $('#kpi-linha-hh').textContent = totalHH.toFixed(1) + 'h';
+  $('#kpi-linha-custo').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCusto);
+  
+  // Buscar máquinas para exibir no grid
+  try {
+    const db = await import('./db.js');
+    const maquinas = await db.getMachines();
+    const html = maquinas.map(m => `
+      <div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanos('${m.id}', '${m.nome}')" style="cursor:pointer; padding: 1rem; border-color: rgba(255,255,255,0.05); transition: background 0.2s;">
+        <div style="font-weight: 500; font-size: 0.95rem;">${m.nome}</div>
+      </div>
+    `).join('');
+    $('#maquinas-grid-planos').innerHTML = html;
+  } catch (err) {
+    console.error(err);
+    toast('Erro ao carregar máquinas.', 'error');
+  }
+};
+
+window.selecionarMaquinaPlanos = function(maquinaId, maquinaNome) {
+  estadoPlanos.maquina = maquinaNome;
+  
+  $('#bc-sep-2').style.display = 'block';
+  $('#bc-maquina').style.display = 'block';
+  $('#bc-maquina').textContent = maquinaNome;
+  $('#bc-linha').style.color = 'var(--muted)';
+  
+  $('#atividades-maquina-title').textContent = maquinaNome;
+  $('#atividades-maquina-subtitle').textContent = `Linha ${estadoPlanos.linha.replace('L','')} - ${estadoPlanos.mes}`;
+  
+  $('#step-linha').style.display = 'none';
+  $('#step-atividades').style.display = 'block';
+  
+  // Set filters for the renderTabelaPreventiva
+  filtrosPreventiva.busca = maquinaNome; // Using busca to filter by machine for now
+  
+  renderFiltrosPreventiva();
+  renderTabelaPreventiva();
 };
 
 // Initialize Preventiva Import

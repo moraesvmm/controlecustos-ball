@@ -96,19 +96,10 @@
         </div>
 
         <div>
-          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo Preventiva</div>
-          <button type="button" data-tab="controle-preventiva" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center;">Controle <span class="sub-tab-arrow" style="font-size: 0.6rem; opacity: 0.5; transition: transform 0.2s;">▼</span></button>
-          <div class="sub-tabs-container" style="display: none; flex-direction: column; margin-top: 0.25rem;">
-            <div class="sub-tab-wrapper" style="position: relative;">
-              <button type="button" data-tab="preventiva-l06" class="nav-item sub-tab" style="width: 100%; text-align: left; padding: 0.5rem 1rem 0.5rem 3rem; background: transparent; border: none; color: var(--muted); font-size: 0.85rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; position: relative;">Preventiva L(06) <span style="float:right; font-size: 0.6rem; opacity: 0.5;">▶</span></button>
-              <button type="button" data-tab="por-maquina" class="nav-item sub-tab" style="width: 100%; text-align: left; padding: 0.5rem 1rem 0.5rem 3rem; background: transparent; border: none; color: var(--muted); font-size: 0.85rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Por Máquina</button>
-              <div class="flyout-menu">
-                <button type="button" data-tab="preventiva-l06-backend" class="nav-item">Back-End</button>
-                <button type="button" data-tab="preventiva-l06-frontend" class="nav-item">Front-End</button>
-              </div>
-            </div>
-          </div>
-          <button type="button" data-tab="plano-preventiva" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-top: 0.25rem;">Plano de Preventiva</button>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Planos de Manutenção</div>
+          <button type="button" data-tab="planos-manutencao" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Navegador Geral</button>
+          <button type="button" data-tab="por-maquina" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Máquinas & Templates</button>
+          <button type="button" data-tab="plano-preventiva" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-top: 0.25rem;">Gerador de Planos</button>
         </div>
 
         <div>
@@ -235,21 +226,157 @@
     <div id="view-consertos" class="view"></div>
     <div id="view-compras" class="view"></div>
     
-    <div id="view-controle-preventiva" class="view">
-      <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; align-items: center; justify-content: center; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
-        <div style="background: rgba(56,189,248,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;">
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 9.36l-7.1 7.1a2.12 2.12 0 0 1-3-3l7.1-7.1a6 6 0 0 1 9.36-7.94z"></path></svg>
+    <!-- NAVEGADOR GERAL DE PLANOS DE MANUTENÇÃO (Drill-Down) -->
+    <div id="view-planos-manutencao" class="view">
+      <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
+        
+        <!-- Breadcrumbs Navigation -->
+        <nav aria-label="breadcrumb" style="margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+          <ol style="list-style: none; display: flex; gap: 0.5rem; padding: 0; margin: 0; font-size: 1rem; color: var(--muted); align-items: center;">
+            <li id="bc-mes" style="cursor: pointer; transition: color 0.2s;" onclick="planosGoToStep('mes')">Selecione o Mês</li>
+            <li id="bc-sep-1" style="display:none;">/</li>
+            <li id="bc-linha" style="cursor: pointer; transition: color 0.2s; display:none;" onclick="planosGoToStep('linha')">Linha</li>
+            <li id="bc-sep-2" style="display:none;">/</li>
+            <li id="bc-maquina" style="color: var(--text); font-weight: 500; display:none;">Máquina</li>
+          </ol>
+        </nav>
+
+        <!-- STEP 1: Seleção de Mês -->
+        <div id="step-mes">
+          <header style="text-align: center; margin-bottom: 2rem;">
+            <div style="background: rgba(16,185,129,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text); margin: 0;">Navegador de Planos</h2>
+            <p style="color: var(--muted); max-width: 600px; margin: 0.5rem auto 0; font-size: 1.1rem; line-height: 1.6;">Selecione o mês para visualizar a programação de manutenção.</p>
+          </header>
+
+          <div class="months-grid">
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('JANEIRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JANEIRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('FEVEREIRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">FEVEREIRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('MARÇO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">MARÇO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('ABRIL')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">ABRIL</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('MAIO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">MAIO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('JUNHO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JUNHO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('JULHO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JULHO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('AGOSTO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">AGOSTO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('SETEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">SETEMBRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('OUTUBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">OUTUBRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('NOVEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">NOVEMBRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('DEZEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">DEZEMBRO</div>
+            </div>
+          </div>
         </div>
-        <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text); margin: 0;">HUB PREVENTIVA</h2>
-        <p style="color: var(--muted); max-width: 600px; text-align: center; font-size: 1.1rem; line-height: 1.6; margin: 0;">Gerencie suas paradas programadas e atividades de manutenção. Acesse as sub-abas na lateral para visualizar as tabelas por linha, ou crie um novo registro agora mesmo.</p>
-        <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-           <button type="button" class="btn btn-primary" id="btnNovaLinhaLanding" style="padding: 0.8rem 1.5rem; font-size: 1.05rem;">+ Nova Linha</button>
+
+        <!-- STEP 2: Seleção de Linha & Dashboard da Linha -->
+        <div id="step-linha" style="display: none; width: 100%;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem;">
+            <div>
+              <h2 style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 300; margin: 0; color: var(--text);">Linhas de Produção</h2>
+              <p style="color: var(--muted); margin: 0.25rem 0 0 0;">Mês de Referência: <strong id="step-linha-mes-label" style="color: var(--text);">JANEIRO</strong></p>
+            </div>
+          </header>
+
+          <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+            <!-- Menu Lateral de Linhas -->
+            <aside style="width: 250px; flex-shrink: 0;">
+              <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Selecione a Linha</h3>
+              <div id="linhas-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+              </div>
+            </aside>
+
+            <!-- Dashboard e Seleção de Máquina -->
+            <section id="step-maquina-section" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
+              <h3 id="linha-dashboard-title" style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
+              
+              <!-- Gráficos/KPIs -->
+              <div class="kpi-grid" style="margin-bottom: 2rem;">
+                <div class="kpi-card" style="background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.2);">
+                  <div class="label" style="color: #38bdf8;">Atividades Previstas</div>
+                  <div class="value" id="kpi-linha-atividades">0</div>
+                </div>
+                <div class="kpi-card" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2);">
+                  <div class="label" style="color: #10b981;">HH Total Estimado</div>
+                  <div class="value" id="kpi-linha-hh">0h</div>
+                </div>
+                <div class="kpi-card" style="background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2);">
+                  <div class="label" style="color: #f59e0b;">Custo Previsto</div>
+                  <div class="value" id="kpi-linha-custo">R$ 0,00</div>
+                </div>
+              </div>
+
+              <!-- Seleção de Máquina -->
+              <h4 style="margin-bottom: 1rem;">Selecione a Máquina</h4>
+              <div id="maquinas-grid-planos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+              </div>
+            </section>
+          </div>
         </div>
-        <div class="kpi-grid" style="margin-top: 3rem; width: 100%; max-width: 400px;">
-          <div class="kpi-card kpi-preventiva-hub" style="text-align: center; justify-content: center; background: linear-gradient(135deg, rgba(56,189,248,0.15) 0%, rgba(14,165,233,0.05) 100%); border-color: rgba(56,189,248,0.3); padding: 2rem;">
-            <div style="margin-bottom: 0.5rem;"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg></div>
-            <div class="label" style="justify-content: center; color: #38bdf8; font-size: 0.9rem; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 0.5rem;">ATIVIDADES L(06)</div>
-            <div class="value" id="contagemPrevL06" style="justify-content: center; font-size: 2.5rem; color: #f8fafc; font-family: 'Outfit', sans-serif;">0</div>
+
+        <!-- STEP 3: Tabela de Atividades da Máquina -->
+        <div id="step-atividades" style="display: none; width: 100%;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+              <h2 class="crud-title" id="atividades-maquina-title">Atividades Programadas</h2>
+              <p style="color: var(--muted); margin: 0.25rem 0 0 0;" id="atividades-maquina-subtitle">Linha 06 - Janeiro</p>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly">Importar Excel</button>
+              <button type="button" class="btn btn-ghost" id="btnExportPreventiva">Exportar Excel</button>
+              <button type="button" class="btn" id="btnNovaPreventiva">+ Novo registro</button>
+            </div>
+          </header>
+
+          <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface);">
+            <label class="search-field">
+              <span>Busca</span>
+              <input type="search" id="filtroBuscaPreventiva" placeholder="Identificador, Descrição..." />
+            </label>
+            <label><span>Status/Auditoria</span><select id="filtroStatusPreventiva"><option value="TODOS">TODOS</option></select></label>
+            <button type="button" class="btn btn-ghost" id="btnLimparFiltrosPreventiva">Limpar filtros</button>
+          </section>
+          
+          <div class="table-scroll-main">
+            <div class="table-scroll-inner">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Identificador</th>
+                    <th>Máquina</th>
+                    <th>Duração (h)</th>
+                    <th>HH Mec</th>
+                    <th>HH Elétrico</th>
+                    <th>Status</th>
+                    <th>Custo Previsto</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaPreventiva"></tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>
@@ -313,7 +440,12 @@
           <label style="flex:1;">
             <span>Linha</span>
             <select id="planoLinhaSelect" style="width:100%; padding:0.5rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:4px;">
-              <option value="L06">L06</option>
+              <option value="L04">L04</option>
+              <option value="L05">L05</option>
+              <option value="L06" selected>L06</option>
+              <option value="L07">L07</option>
+              <option value="L08">L08</option>
+              <option value="L09">L09</option>
             </select>
           </label>
         </div>
@@ -330,169 +462,6 @@
         </div>
         <div style="display:flex; justify-content:flex-end; gap:1rem;">
           <button type="button" class="btn btn-primary" id="btnAplicarPlano">Aplicar Plano à Preventiva</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- HUB Preventiva L06 -->
-    <div id="view-preventiva-l06" class="view">
-      <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; align-items: center; justify-content: flex-start; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
-        
-        <header style="text-align: center; margin-bottom: 2rem;">
-          <div style="background: rgba(16,185,129,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-          </div>
-          <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text); margin: 0;">PREVENTIVA L(06)</h2>
-          <p style="color: var(--muted); max-width: 600px; margin: 0.5rem auto 0; font-size: 1.1rem; line-height: 1.6;">Selecione o mês desejado para abrir os controles de manutenção (Back-End ou Front-End).</p>
-        </header>
-
-        <div class="months-grid">
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">JANEIRO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'JANEIRO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'JANEIRO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">FEVEREIRO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'FEVEREIRO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'FEVEREIRO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">MARÇO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'MARÇO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'MARÇO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">ABRIL</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'ABRIL')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'ABRIL')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">MAIO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'MAIO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'MAIO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">JUNHO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'JUNHO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'JUNHO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">JULHO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'JULHO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'JULHO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">AGOSTO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'AGOSTO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'AGOSTO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">SETEMBRO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'SETEMBRO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'SETEMBRO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">OUTUBRO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'OUTUBRO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'OUTUBRO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">NOVEMBRO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'NOVEMBRO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'NOVEMBRO')">Front-End</button>
-            </div>
-          </div>
-          <div class="month-card" tabindex="0">
-            <div class="month-card-header">DEZEMBRO</div>
-            <div class="month-card-actions">
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-backend', 'DEZEMBRO')">Back-End</button>
-              <button type="button" class="btn btn-outline btn-sm" onclick="showPreventivaMes('preventiva-l06-frontend', 'DEZEMBRO')">Front-End</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabela Back-End L06 -->
-    <div id="view-preventiva-l06-backend" class="view">
-      <div class="panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-        <header style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 class="crud-title">Controle Preventiva</h2>
-          <div class="toolbar-actions">
-            <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly">Importar Excel (Preventiva)</button>
-            <button type="button" class="btn btn-ghost" id="btnExportPreventiva">Exportar Excel</button>
-            <button type="button" class="btn" id="btnNovaPreventiva">+ Novo registro</button>
-          </div>
-        </header>
-
-        <section class="filters panel" style="margin-top: 1rem; border-color: rgba(255,255,255,0.05); background: transparent;">
-          <label class="search-field">
-            <span>Busca</span>
-            <input type="search" id="filtroBuscaPreventiva" placeholder="Identificador, Máquina..." />
-          </label>
-          <label><span>Status/Auditoria</span><select id="filtroStatusPreventiva"><option value="TODOS">TODOS</option></select></label>
-          <label><span>Plano Padrão</span>
-            <select id="filtroPlanoPreventiva">
-              <option value="TODOS">TODOS</option>
-              <option value="S">S</option>
-              <option value="N">N</option>
-            </select>
-          </label>
-          <button type="button" class="btn btn-ghost" id="btnLimparFiltrosPreventiva">Limpar filtros</button>
-        </section>
-        <div class="table-scroll-main">
-          <div class="table-scroll-inner">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Identificador</th>
-                  <th>Máquina</th>
-                  <th>Duração (h)</th>
-                  <th>HH Mec</th>
-                  <th>HH Elétrico</th>
-                  <th>Status</th>
-                  <th>Custo Previsto</th>
-                  <th>Ações</th>
-                </tr>
-              </thead>
-              <tbody id="tabelaPreventiva"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabela Front-End L06 (Vazia) -->
-    <div id="view-preventiva-l06-frontend" class="view">
-      <div class="panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
-        <header style="display: flex; justify-content: space-between; align-items: center;">
-          <h2 class="crud-title">Controle Preventiva L(06) - Front-End</h2>
-        </header>
-        <div style="text-align: center; padding: 4rem; color: var(--muted);">
-          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.5; margin-bottom: 1rem;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
-          <p>Área de Front-End em construção ou vazia no momento.</p>
         </div>
       </div>
     </div>
