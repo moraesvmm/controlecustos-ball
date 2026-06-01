@@ -1359,7 +1359,7 @@ window.selecionarLinhaPlanos = async function(linha) {
   $('#step-maquina-section').style.display = 'block';
   
   // Atualizar KPIs da linha usando os registros
-  const regs = state.preventivaRegistros.filter(r => r.linha === linha || r.mes === estadoPlanos.mes); // Nota: o DB precisa ter mes e linha no registro. Se não tiver, usar lógica apropriada.
+  const regs = registrosPreventiva.filter(r => r.linha === linha || r.mes === estadoPlanos.mes); // Nota: o DB precisa ter mes e linha no registro. Se não tiver, usar lógica apropriada.
   $('#kpi-linha-atividades').textContent = regs.length || 0;
   
   let totalHH = 0;
@@ -1373,8 +1373,7 @@ window.selecionarLinhaPlanos = async function(linha) {
   
   // Buscar máquinas para exibir no grid
   try {
-    const db = await import('./db.js');
-    const maquinas = await db.getMachines();
+    const maquinas = await getMachines();
     const html = maquinas.map(m => `
       <div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanos('${m.id}', '${m.nome}')" style="cursor:pointer; padding: 1rem; border-color: rgba(255,255,255,0.05); transition: background 0.2s;">
         <div style="font-weight: 500; font-size: 0.95rem;">${m.nome}</div>
