@@ -134,12 +134,12 @@ function renderFiltros() {
 
 // ---------- Por Máquina view helpers ----------
 function renderMachineList() {
-  const maquinasRC = opcoesUnicas(registros, 'maquina');
   const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
-  const maquinasArray = Array.from(new Set([...maquinasRC, ...maquinasPrev])).sort();
+  const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
   
   if (maquinasArray.length === 0) {
-    maquinasArray.push('Bodymaker', 'Necker', 'Decorator', 'LMS', 'Palletizer', 'Washer', 'Oven', 'Inside Spray');
+    maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'FRONTEND', 'GERAL', 'IMPRESSORA', 'LAVADORA', 'MAQUINA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
+    maquinasArray.sort();
   }
   
   const list = maquinasArray.map(m => ({ id: m, nome: m }));
@@ -247,12 +247,12 @@ function setupPlanoPreventivaUI() {
 
   // Carregar máquinas ao abrir a view
   const loadPlanoMachines = () => {
-    const maquinasRC = opcoesUnicas(registros, 'maquina');
     const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
-    const maquinasArray = Array.from(new Set([...maquinasRC, ...maquinasPrev])).sort();
+    const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
     
     if (maquinasArray.length === 0) {
-      maquinasArray.push('Bodymaker', 'Necker', 'Decorator', 'LMS', 'Palletizer', 'Washer', 'Oven', 'Inside Spray');
+      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'FRONTEND', 'GERAL', 'IMPRESSORA', 'LAVADORA', 'MAQUINA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
+      maquinasArray.sort();
     }
     
     const list = maquinasArray.map(m => ({ id: m, nome: m }));
@@ -1381,15 +1381,15 @@ window.selecionarLinhaPlanos = async function(linha) {
   });
   $('#kpi-linha-hh').textContent = totalHH.toFixed(1) + 'h';
   $('#kpi-linha-custo').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCusto);
-  // Buscar máquinas para exibir no grid (Fallback para usar registros em memória se a tabela falhar/não existir)
+  // Buscar máquinas para exibir no grid (Apenas do plano de preventiva)
   try {
-    const maquinasRC = opcoesUnicas(registros, 'maquina');
     const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
-    const maquinasArray = Array.from(new Set([...maquinasRC, ...maquinasPrev])).sort();
+    const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
     
-    // Fallback: se não houver máquinas em nenhum dos dois, insere nomes padrão da planta Ball
+    // Fallback: usar a lista da planilha original
     if (maquinasArray.length === 0) {
-      maquinasArray.push('Bodymaker', 'Necker', 'Decorator', 'LMS', 'Palletizer', 'Washer', 'Oven', 'Inside Spray');
+      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'FRONTEND', 'GERAL', 'IMPRESSORA', 'LAVADORA', 'MAQUINA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
+      maquinasArray.sort();
     }
 
     const html = maquinasArray.map(m => `
