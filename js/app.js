@@ -1135,7 +1135,8 @@ function renderTabelaPreventiva() {
       <td><span class="badge ${r.status_auditoria === 'FINALIZADO' ? 'badge-success' : r.status_auditoria ? 'badge-warning' : ''}">${r.status_auditoria || '—'}</span></td>
       <td>${Number(r.previsao_custos || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td>
       <td>
-        <button type="button" class="btn btn-ghost btn-sm" onclick="window.abrirFormularioPreventiva('${r.id}')">Editar</button>
+        <button type="button" class="btn-icon" onclick="abrirDetalhePreventivaPanel('${r.id}')" title="Ver Detalhes" style="margin-right: 0.5rem; background: var(--primary); color: white; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; width: auto; font-family: inherit;">Ver Detalhes</button>
+        <button type="button" class="btn-icon" onclick="abrirFormularioPreventiva('${r.id}')" title="Editar">✏️</button>
       </td>
     </tr>
   `).join('');
@@ -1434,6 +1435,55 @@ initExcelImportPreventiva(getClient(), toast, async () => {
   if (viewAtual === 'preventiva-l06-backend') { renderFiltrosPreventiva(); renderTabelaPreventiva(); }
   if (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06') renderControlePreventiva();
 });
+
+// View Detalhes Panel para Preventiva
+window.abrirDetalhePreventivaPanel = function(id) {
+  const r = registrosPreventiva.find((x) => x.id === id);
+  if (!r) return;
+  const panel = document.getElementById('drillPanel');
+  const overlay = document.getElementById('drillOverlay');
+  if (!panel) return;
+
+  document.getElementById('drillTitulo').textContent = r.identificador || 'Detalhes da Atividade';
+  document.getElementById('drillSubtitulo').textContent = r.maquina || '';
+
+  const stats = [
+    { label: 'Duração', value: r.duracao_horas ? r.duracao_horas + 'h' : '-' },
+    { label: 'HH Mecânico', value: r.hh_mec || '-' },
+    { label: 'HH Elétrico', value: r.hh_eletrico || '-' },
+    { label: 'Status', value: r.status_auditoria || '-' },
+    { label: 'Custo', value: Number(r.previsao_custos || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
+  ];
+
+  document.getElementById('drillStats').innerHTML = stats
+    .map(
+      (s) => `
+    <div class="drill-stat">
+      <span>${s.label}</span>
+      <strong>${s.value}</strong>
+    </div>`
+    )
+    .join('');
+
+  document.getElementById('drillInsight').style.display = 'none';
+
+  const lista = document.getElementById('drillLista');
+  lista.innerHTML = `
+      <article class="drill-item" style="padding: 1.5rem;">
+        <h4 style="margin-top:0; color:var(--text); margin-bottom: 0.5rem; font-size: 1.05rem;">Descrição da Atividade</h4>
+        <p style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">${r.descricao || 'Sem descrição'}</p>
+        
+        <h4 style="margin-top: 1.5rem; color:var(--text); margin-bottom: 0.5rem; font-size: 1.05rem;">Materiais Necessários</h4>
+        <p style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6; color: var(--muted); background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">${r.material || 'Nenhum material especificado'}</p>
+        
+        <div class="drill-item-actions" style="margin-top: 2rem;">
+          <button type="button" class="btn-primary" onclick="abrirFormularioPreventiva('${r.id}'); fecharDrilldown();" style="width: 100%;">✏️ Editar Atividade</button>
+        </div>
+      </article>`;
+
+  panel.classList.add('open');
+  overlay.classList.add('open');
+};
 
 onAuthStateChange((user) => {
   if (user) {
