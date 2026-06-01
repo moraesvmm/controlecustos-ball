@@ -1555,13 +1555,15 @@ window.migrarPlanilhaParaSupabase = async function() {
     const seen = new Set();
     let index = 1;
     for (const a of activities) {
-      const desc = a.descricao?.trim();
-      if (desc && !seen.has(desc)) {
-        seen.add(desc);
+      const descText = (a.atividades_descricoes && a.atividades_descricoes.length > 0) 
+          ? a.atividades_descricoes.join('\\n').trim() 
+          : '';
+      if (descText && !seen.has(descText)) {
+        seen.add(descText);
         try {
           await db.createMachineActivity(m, {
             ordem: index++,
-            descricao: desc,
+            descricao: descText,
             duracao_horas: parseFloat(a.duracao_horas) || 0,
             hh_mec: parseFloat(a.hh_mec) || 0,
             hh_eletrico: parseFloat(a.hh_eletrico) || 0,
