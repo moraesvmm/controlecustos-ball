@@ -1324,6 +1324,7 @@ window.planosGoToStep = function(stepName) {
     $('#bc-sep-2').style.display = 'none';
     $('#bc-maquina').style.display = 'none';
     $('#bc-mes').style.color = 'var(--text)';
+    $('#bc-mes').textContent = 'Selecione o Mês';
     
     $('#step-mes').style.display = 'block';
     $('#step-linha').style.display = 'none';
@@ -1348,6 +1349,7 @@ window.selecionarMesPlanos = function(mes) {
   $('#bc-linha').style.display = 'block';
   $('#bc-linha').textContent = 'Linha';
   $('#bc-mes').style.color = 'var(--muted)';
+  $('#bc-mes').textContent = mes;
   $('#bc-linha').style.color = 'var(--text)';
   
   $('#step-linha-mes-label').textContent = mes;
