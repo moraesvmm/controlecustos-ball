@@ -1539,3 +1539,96 @@ body.view-crud .main-layout {
   width: 100%;
 }
 
+/* ===== SIDEBAR ACCORDIONS (Planos de Manutenção) ===== */
+.nav-accordion { width: 100%; }
+
+.nav-accordion-trigger {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem 0.6rem 2rem;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  cursor: pointer;
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  transition: all 0.2s;
+}
+.nav-accordion-trigger:hover { color: var(--text); background: rgba(255,255,255,0.04); }
+.nav-accordion-trigger.active { color: var(--primary); background: rgba(212,175,55,0.08); }
+
+.nav-accordion-arrow {
+  font-size: 0.7rem;
+  transition: transform 0.25s ease;
+  display: inline-block;
+  flex-shrink: 0;
+  margin-left: 0.5rem;
+  opacity: 0.6;
+}
+.nav-accordion-trigger.accordion-open .nav-accordion-arrow {
+  transform: rotate(180deg);
+}
+
+.nav-sub-menu {
+  display: none;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-left: 0.75rem;
+  overflow: hidden;
+}
+.nav-sub-menu.accordion-open { display: flex; }
+
+.sidebar-nav .nav-sub-item {
+  padding: 0.45rem 1rem 0.45rem 2.5rem !important;
+  font-size: 0.82rem !important;
+  color: var(--muted) !important;
+  background: transparent !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  font-family: 'DM Sans', sans-serif !important;
+  opacity: 0.8;
+  border: none !important;
+  border-left: 2px solid transparent !important;
+  border-radius: 0 6px 6px 0 !important;
+  transition: all 0.15s !important;
+}
+.sidebar-nav .nav-sub-item:hover {
+  opacity: 1 !important;
+  color: var(--text) !important;
+  background: rgba(255,255,255,0.02) !important;
+  border-left: 2px solid rgba(255,255,255,0.15) !important;
+}
+.sidebar-nav .nav-sub-item.active {
+  opacity: 1 !important;
+  color: var(--primary) !important;
+  border-left: 2px solid var(--primary) !important;
+  border-right: none !important;
+  background: rgba(212,175,55,0.08) !important;
+}
+
+/* Badge indicador de setor */
+.setor-badge {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+.setor-badge-backend {
+  background: rgba(56,189,248,0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56,189,248,0.25);
+}
+.setor-badge-frontend {
+  background: rgba(167,243,208,0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(167,243,208,0.25);
+}

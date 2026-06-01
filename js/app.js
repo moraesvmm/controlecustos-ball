@@ -27,7 +27,7 @@ import {
 import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler } from './drilldown.js?v=5';
 import { initExcelImport } from './import_excel.js?v=8';
 
-import { initExcelImportPreventiva } from './import_excel_preventiva.js?v=1';
+import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=2';
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF } from './pdf_report.js';
 
 let registros = [];
@@ -49,6 +49,7 @@ let isInlineEditMode = false;
 let isAppInitialized = false;
 let machines = [];
 let selectedMachineId = null;
+let registrosPreventivaFrontend = []; // Registros com setor = 'frontend'
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -804,13 +805,25 @@ function showView(name) {
 
   viewAtual = name;
   document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
-  document.querySelectorAll('nav.tabs button, .nav-item').forEach((b) => b.classList.remove('active'));
+  document.querySelectorAll('nav.tabs button, .nav-item, .nav-accordion-trigger').forEach((b) => b.classList.remove('active'));
   $(`#view-${name}`)?.classList.add('active');
-  document.querySelectorAll(`[data-tab="${name}"]`).forEach((el) => el.classList.add('active'));
+  document.querySelectorAll(`[data-tab="${name}"]`).forEach((el) => {
+    el.classList.add('active');
+    const subMenu = el.closest('.nav-sub-menu');
+    if (subMenu) {
+      const trigger = subMenu.previousElementSibling;
+      if (trigger && trigger.classList.contains('nav-accordion-trigger')) {
+        trigger.classList.add('active');
+        trigger.classList.add('accordion-open');
+        subMenu.classList.add('accordion-open');
+      }
+    }
+  });
 
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
-  const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva'].includes(name);
+  const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend'].includes(name);
 
   // Seção tabela (toolbar + tabela de RCs) - Hide for preventiva since it has its own
   $('#secaoTabela')?.classList.toggle('hidden', !['rc', 'consertos', 'compras', 'fabricacao'].includes(name));
@@ -833,10 +846,13 @@ function showView(name) {
     renderMachineList();
   } else if (name === 'plano-preventiva') {
     window._refreshPlanoPreventiva?.();
+  } else if (name === 'planos-manutencao-frontend') {
+    if (!estadoPlanosFrontend.mes) planosGoToStepFrontend('mes');
+  } else if (name === 'plano-preventiva-frontend') {
+    window._refreshPlanoPreventivaFrontend?.();
   }
 
   const titles = {
-    dashboard: 'Visão Geral',
     dashboard: 'Visão Geral',
     rc: 'Controle Global',
     consertos: 'Consertos',
@@ -844,9 +860,11 @@ function showView(name) {
     fabricacao: 'Fabricação',
     fornecedores: 'SLA Fornecedores',
     calendario: 'Calendário',
-    'planos-manutencao': 'Planos de Manutenção',
+    'planos-manutencao': 'Planos de Manutenção — Back-end',
+    'planos-manutencao-frontend': 'Planos de Manutenção — Front-end',
     'por-maquina': 'Máquinas & Templates',
-    'plano-preventiva': 'Gerador de Planos Automático',
+    'plano-preventiva': 'Gerador de Planos — Back-end',
+    'plano-preventiva-frontend': 'Gerador de Planos — Front-end',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
@@ -1000,7 +1018,11 @@ function atualizarBotaoEdicao() {
 async function init() {
   try {
     registros = await carregarRegistros();
-    try { registrosPreventiva = await carregarPreventiva(); } catch (e) { console.warn("Preventiva table not ready yet"); }
+    try {
+      const todosPreventiva = await carregarPreventiva();
+      registrosPreventiva = todosPreventiva.filter(r => r.setor !== 'frontend');
+      registrosPreventivaFrontend = todosPreventiva.filter(r => r.setor === 'frontend');
+    } catch (e) { console.warn('Preventiva table not ready yet', e.message); }
   } catch (e) {
     $('#appStatus').textContent = 'Erro: ' + e.message;
     return;
@@ -1145,6 +1167,18 @@ async function init() {
 
   setupPorMaquinaUI();
   setupPlanoPreventivaUI();
+  setupPlanoPreventivaUIFrontend();
+
+  // Accordion handlers para sub-menus da sidebar
+  document.querySelectorAll('.nav-accordion-trigger').forEach(trigger => {
+    trigger.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menuId = trigger.dataset.accordion + '-sub';
+      const menu = document.getElementById(menuId);
+      trigger.classList.toggle('accordion-open');
+      menu?.classList.toggle('accordion-open');
+    });
+  });
 
   atualizarBotaoEdicao();
   showView('dashboard');
@@ -1819,6 +1853,420 @@ window.abrirDetalhePreventivaPanel = function(id) {
   panel.classList.add('open');
   overlay.classList.add('open');
 };
+
+// Initialize Frontend Preventiva Import (isolated — only touches setor='frontend')
+initExcelImportPreventivaFrontend(getClient(), toast, async () => {
+  const todos = await carregarPreventiva();
+  registrosPreventivaFrontend = todos.filter(r => r.setor === 'frontend');
+  registrosPreventiva = todos.filter(r => r.setor !== 'frontend');
+  if (viewAtual === 'planos-manutencao-frontend' || viewAtual === 'plano-preventiva-frontend') {
+    renderTabelaPreventivaFE();
+  }
+});
+
+// ==========================================
+// LÓGICA FRONT-END — NAVEGADOR GERAL
+// ==========================================
+const estadoPlanosFrontend = { mes: null, linha: null, maquina: null };
+let filtrosPreventivaFE = { busca: '', status: 'TODOS' };
+
+window.planosGoToStepFrontend = function(stepName) {
+  if (stepName === 'mes') {
+    estadoPlanosFrontend.mes = null;
+    estadoPlanosFrontend.linha = null;
+    estadoPlanosFrontend.maquina = null;
+    $('#bc-sep-1-fe').style.display = 'none';
+    $('#bc-linha-fe').style.display = 'none';
+    $('#bc-sep-2-fe').style.display = 'none';
+    $('#bc-maquina-fe').style.display = 'none';
+    $('#bc-mes-fe').style.color = 'var(--text)';
+    $('#bc-mes-fe').textContent = 'Selecione o Mês';
+    $('#step-mes-fe').style.display = 'block';
+    $('#step-linha-fe').style.display = 'none';
+    $('#step-atividades-fe').style.display = 'none';
+  } else if (stepName === 'linha') {
+    estadoPlanosFrontend.linha = null;
+    estadoPlanosFrontend.maquina = null;
+    $('#bc-sep-2-fe').style.display = 'none';
+    $('#bc-maquina-fe').style.display = 'none';
+    $('#bc-linha-fe').style.color = 'var(--text)';
+    $('#step-mes-fe').style.display = 'none';
+    $('#step-linha-fe').style.display = 'block';
+    $('#step-maquina-section-fe').style.display = 'none';
+    $('#step-atividades-fe').style.display = 'none';
+  }
+};
+
+window.selecionarMesPlansosFrontend = function(mes) {
+  estadoPlanosFrontend.mes = mes;
+  $('#bc-sep-1-fe').style.display = 'block';
+  $('#bc-linha-fe').style.display = 'block';
+  $('#bc-linha-fe').textContent = 'Linha';
+  $('#bc-mes-fe').style.color = 'var(--muted)';
+  $('#bc-mes-fe').textContent = mes;
+  $('#bc-linha-fe').style.color = 'var(--text)';
+  const label = $('#step-linha-mes-label-fe');
+  if (label) label.textContent = mes;
+  const linhas = ['L04', 'L05', 'L06', 'L07', 'L08', 'L09'];
+  const html = linhas.map(l =>
+    `<button class="btn btn-outline" style="text-align:left; justify-content:flex-start;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L', '')}</button>`
+  ).join('');
+  const el = $('#linhas-list-fe');
+  if (el) el.innerHTML = html;
+  $('#step-mes-fe').style.display = 'none';
+  $('#step-linha-fe').style.display = 'block';
+  $('#step-maquina-section-fe').style.display = 'none';
+  $('#step-atividades-fe').style.display = 'none';
+};
+
+window.selecionarLinhaPlanosFrontend = function(linha) {
+  estadoPlanosFrontend.linha = linha;
+  const linhaLabel = `Linha ${linha.replace('L', '')}`;
+  $('#bc-linha-fe').textContent = linhaLabel;
+  const titleEl = $('#linha-dashboard-title-fe');
+  if (titleEl) titleEl.textContent = `Dashboard — ${linhaLabel} · Front-end`;
+
+  $('#step-maquina-section-fe').style.display = 'block';
+
+  // KPIs
+  const regs = registrosPreventivaFrontend;
+  $('#kpi-linha-atividades-fe').textContent = regs.length || 0;
+  let totalHH = 0;
+  regs.forEach(r => { totalHH += (parseFloat(r.hh_mec) || 0) + (parseFloat(r.hh_eletrico) || 0) + (parseFloat(r.hh_lub) || 0); });
+  $('#kpi-linha-hh-fe').textContent = totalHH.toFixed(1) + 'h';
+  const freqs = regs.map(r => parseFloat(r.frequencia_meses)).filter(v => v > 0);
+  const freqMedia = freqs.length ? (freqs.reduce((a, b) => a + b, 0) / freqs.length).toFixed(1) : '—';
+  const freqEl = $('#kpi-linha-freq-fe');
+  if (freqEl) freqEl.textContent = freqMedia !== '—' ? freqMedia + ' meses' : '—';
+
+  // Grid de máquinas do front-end
+  const maquinasUnicas = [...new Set(regs.map(r => r.maquina).filter(Boolean))].sort();
+  const maquinasDisplay = maquinasUnicas.length > 0
+    ? maquinasUnicas
+    : ['ESMALTADEIRA', 'IMPRESSORA', 'VERNIZ EXTERNO', 'DECORAÇÃO', 'CONIFICADORA', 'EMBALADEIRA'];
+
+  const html = maquinasDisplay.map(m =>
+    `<div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanosFrontend('${m}')" style="cursor:pointer; padding:1rem; border-color:rgba(110,231,183,0.15); transition:background 0.2s;">
+      <div style="font-weight:500; font-size:0.95rem;">${m}</div>
+      <div style="font-size:0.75rem; color:var(--muted); margin-top:0.25rem;">${regs.filter(r => r.maquina === m).length} atividades</div>
+    </div>`
+  ).join('');
+  const grid = $('#maquinas-grid-planos-fe');
+  if (grid) grid.innerHTML = html;
+};
+
+window.selecionarMaquinaPlanosFrontend = function(maquinaNome) {
+  estadoPlanosFrontend.maquina = maquinaNome;
+  $('#bc-sep-2-fe').style.display = 'block';
+  $('#bc-maquina-fe').style.display = 'block';
+  $('#bc-maquina-fe').textContent = maquinaNome;
+  $('#bc-linha-fe').style.color = 'var(--muted)';
+  const titleEl = $('#atividades-maquina-title-fe');
+  if (titleEl) titleEl.textContent = maquinaNome;
+  const subEl = $('#atividades-maquina-subtitle-fe');
+  if (subEl) subEl.textContent = `Linha ${(estadoPlanosFrontend.linha || 'L06').replace('L', '')} — ${estadoPlanosFrontend.mes || ''} · Front-end`;
+  $('#step-linha-fe').style.display = 'none';
+  $('#step-atividades-fe').style.display = 'block';
+  filtrosPreventivaFE.busca = maquinaNome;
+  renderTabelaPreventivaFE();
+};
+
+function aplicarFiltrosFrontend() {
+  return registrosPreventivaFrontend.filter(r => {
+    if (filtrosPreventivaFE.status !== 'TODOS' && r.status_auditoria !== filtrosPreventivaFE.status) return false;
+    if (filtrosPreventivaFE.busca) {
+      const q = filtrosPreventivaFE.busca.toLowerCase();
+      if (!String(r.maquina || '').toLowerCase().includes(q) &&
+          !String(r.identificador || '').toLowerCase().includes(q) &&
+          !String(r.descricao || '').toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function renderTabelaPreventivaFE() {
+  const tbody = $('#tabelaPreventivaFE');
+  if (!tbody) return;
+  const filtrados = aplicarFiltrosFrontend();
+  if (!filtrados.length) {
+    tbody.innerHTML = '<tr><td colspan="11" class="empty">Nenhuma atividade Front-end encontrada</td></tr>';
+    return;
+  }
+  tbody.innerHTML = filtrados.map((r, i) => `
+    <tr>
+      <td><strong>${i + 1}</strong></td>
+      <td>${r.maquina || '—'}</td>
+      <td style="max-width:280px; white-space:normal; line-height:1.4;">${(r.atividades_descricoes?.[0] || r.descricao || '—').slice(0, 100)}${(r.atividades_descricoes?.[0] || r.descricao || '').length > 100 ? '…' : ''}</td>
+      <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
+      <td>${r.hh_mec || '—'}</td>
+      <td>${r.hh_eletrico || '—'}</td>
+      <td>${r.hh_lub || '—'}</td>
+      <td>${r.frequencia_meses ? r.frequencia_meses + ' meses' : '—'}</td>
+      <td>${r.sugestao || r.resp_fabrica || '—'}</td>
+      <td><span class="badge ${r.status_auditoria === 'FINALIZADO' ? 'badge-success' : r.status_auditoria ? 'badge-warning' : ''}">${r.status_auditoria || '—'}</span></td>
+      <td>
+        <button type="button" class="btn-icon" onclick="abrirDetalhePreventivaFEPanel('${r.id}')" title="Ver Detalhes" style="background:var(--primary);color:#000;padding:0.4rem 0.8rem;border-radius:6px;font-size:0.8rem;width:auto;font-family:inherit;">Ver</button>
+        <button type="button" class="btn-icon" onclick="abrirFormularioPreventivaFE('${r.id}')" title="Editar">✏️</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+$('#filtroBuscaPreventivaFE')?.addEventListener('input', (e) => {
+  filtrosPreventivaFE.busca = e.target.value;
+  renderTabelaPreventivaFE();
+});
+$('#filtroStatusPreventivaFE')?.addEventListener('change', (e) => {
+  filtrosPreventivaFE.status = e.target.value;
+  renderTabelaPreventivaFE();
+});
+$('#btnLimparFiltrosPreventivaFE')?.addEventListener('click', () => {
+  filtrosPreventivaFE = { busca: '', status: 'TODOS' };
+  const busca = $('#filtroBuscaPreventivaFE');
+  const status = $('#filtroStatusPreventivaFE');
+  if (busca) busca.value = '';
+  if (status) status.value = 'TODOS';
+  renderTabelaPreventivaFE();
+});
+$('#btnNovaPreventivaFE')?.addEventListener('click', () => abrirFormularioPreventivaFE(null));
+
+// Modal edição Frontend
+let editandoPreventivaFE = null;
+
+window.abrirFormularioPreventivaFE = function(id) {
+  editandoPreventivaFE = id
+    ? registrosPreventivaFrontend.find(r => r.id === id)
+    : { identificador: '', maquina: estadoPlanosFrontend.maquina || '', descricao: '',
+        atividades_descricoes: [], duracao_horas: 0, hh_mec: 0, hh_eletrico: 0, hh_lub: 0,
+        frequencia_meses: null, sugestao: '', status_auditoria: '', setor: 'frontend', area_producao: 'FRONT-END' };
+  if (!editandoPreventivaFE) return;
+  const f = $('#formEditarAtividadeFE');
+  if (!f) return;
+  $('#editAtivIdFE').value = editandoPreventivaFE.id || '';
+  $('#editAtivIdentificadorFE').value = editandoPreventivaFE.identificador || '';
+  $('#editAtivMaquinaFE').value = editandoPreventivaFE.maquina || '';
+  $('#editAtivDescricaoFE').value = (editandoPreventivaFE.atividades_descricoes?.[0] || editandoPreventivaFE.descricao || '');
+  $('#editAtivDuracaoFE').value = editandoPreventivaFE.duracao_horas || '';
+  $('#editAtivHhMecFE').value = editandoPreventivaFE.hh_mec || '';
+  $('#editAtivHhEleFE').value = editandoPreventivaFE.hh_eletrico || '';
+  $('#editAtivHhLubFE').value = editandoPreventivaFE.hh_lub || '';
+  $('#editAtivFreqFE').value = editandoPreventivaFE.frequencia_meses || '';
+  $('#editAtivSugestaoFE').value = editandoPreventivaFE.sugestao || editandoPreventivaFE.resp_fabrica || '';
+  $('#editAtivStatusFE').value = editandoPreventivaFE.status_auditoria || '';
+  $('#modalEditarAtividadeFE').classList.add('open');
+};
+
+const fecharModalFE = () => $('#modalEditarAtividadeFE')?.classList.remove('open');
+$('#btnFecharModalAtividadeFE')?.addEventListener('click', fecharModalFE);
+$('#btnCancelarModalAtividadeFE')?.addEventListener('click', fecharModalFE);
+$('#modalEditarAtividadeFE')?.addEventListener('click', (e) => { if (e.target === $('#modalEditarAtividadeFE')) fecharModalFE(); });
+
+$('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const descricao = $('#editAtivDescricaoFE').value.trim();
+  const payload = {
+    ...editandoPreventivaFE,
+    identificador: $('#editAtivIdentificadorFE').value.trim(),
+    maquina: $('#editAtivMaquinaFE').value.trim(),
+    descricao,
+    atividades_descricoes: descricao ? [descricao] : [],
+    duracao_horas: parseFloat($('#editAtivDuracaoFE').value) || 0,
+    hh_mec: parseFloat($('#editAtivHhMecFE').value) || 0,
+    hh_eletrico: parseFloat($('#editAtivHhEleFE').value) || 0,
+    hh_lub: parseFloat($('#editAtivHhLubFE').value) || 0,
+    frequencia_meses: parseInt($('#editAtivFreqFE').value) || null,
+    sugestao: $('#editAtivSugestaoFE').value.trim(),
+    resp_fabrica: $('#editAtivSugestaoFE').value.trim(),
+    status_auditoria: $('#editAtivStatusFE').value,
+    setor: 'frontend',
+    area_producao: 'FRONT-END',
+  };
+  try {
+    await salvarPreventiva(payload);
+    const todos = await carregarPreventiva();
+    registrosPreventivaFrontend = todos.filter(r => r.setor === 'frontend');
+    registrosPreventiva = todos.filter(r => r.setor !== 'frontend');
+    fecharModalFE();
+    toast('Atividade Front-end salva com sucesso.', 'success');
+    renderTabelaPreventivaFE();
+  } catch (err) {
+    toast('Erro ao salvar: ' + err.message, 'error');
+  }
+});
+
+// Painel de detalhes Frontend
+window.abrirDetalhePreventivaFEPanel = function(id) {
+  const r = registrosPreventivaFrontend.find(x => x.id === id);
+  if (!r) return;
+  const panel = document.getElementById('drillPanel');
+  const overlay = document.getElementById('drillOverlay');
+  if (!panel) return;
+  document.getElementById('drillTitulo').textContent = r.identificador || r.maquina || 'Detalhes';
+  document.getElementById('drillSubtitulo').textContent = `${r.maquina || ''} · Front-end`;
+  const stats = [
+    { label: 'Duração', value: r.duracao_horas ? r.duracao_horas + 'h' : '—' },
+    { label: 'HH Mecânico', value: r.hh_mec || '—' },
+    { label: 'HH Elétrico', value: r.hh_eletrico || '—' },
+    { label: 'HH Lubrificação', value: r.hh_lub || '—' },
+    { label: 'Frequência', value: r.frequencia_meses ? r.frequencia_meses + ' meses' : '—' },
+    { label: 'Sugestão Resp.', value: r.sugestao || r.resp_fabrica || '—' },
+    { label: 'Status', value: r.status_auditoria || '—' },
+  ];
+  document.getElementById('drillStats').innerHTML = stats.map(s =>
+    `<div class="drill-stat"><span>${s.label}</span><strong>${s.value}</strong></div>`
+  ).join('');
+  document.getElementById('drillInsight').style.display = 'none';
+  const desc = r.atividades_descricoes?.[0] || r.descricao || 'Não informado';
+  document.getElementById('drillLista').innerHTML = `
+    <article class="drill-item" style="padding:1.5rem;background:transparent;border:none;">
+      <h4 style="margin-top:0;color:var(--text);margin-bottom:1rem;">Descrição da Atividade</h4>
+      <div style="background:var(--bg);padding:1rem;border-radius:8px;border:1px solid var(--border);line-height:1.6;">${desc}</div>
+      <div class="drill-item-actions" style="margin-top:2rem;">
+        <button type="button" class="btn-primary" onclick="abrirFormularioPreventivaFE('${r.id}');fecharDrilldown();" style="width:100%;">✏️ Editar Atividade</button>
+      </div>
+    </article>`;
+  panel.classList.add('open');
+  overlay.classList.add('open');
+};
+
+// ==========================================
+// GERADOR DE PLANOS — FRONT-END
+// ==========================================
+function setupPlanoPreventivaUIFrontend() {
+  const machineSelect = $('#planoMachineSelectFE');
+  const monthSelect = $('#planoMesSelectFE');
+  const lineSelect = $('#planoLinhaSelectFE');
+  const btnAplicar = $('#btnAplicarPlanoFE');
+  const table = $('#planoActivitiesTableFE');
+  const countEl = $('#planoAtividadesCountFE');
+  const labelEl = $('#planoAtividadesLabelFE');
+
+  if (!machineSelect || !btnAplicar || !table) return;
+
+  let currentActivitiesFE = [];
+
+  const getContextoFE = () => ({
+    maquina: machineSelect.value,
+    mes: monthSelect.value,
+    linha: lineSelect.value,
+  });
+  const contextoCompletoFE = () => {
+    const ctx = getContextoFE();
+    return ctx.maquina && ctx.mes && ctx.linha;
+  };
+
+  const renderPlanoActivitiesTableFE = () => {
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    if (!currentActivitiesFE.length) {
+      tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:2rem;">Selecione uma máquina para carregar as atividades.</td></tr>';
+      if (countEl) countEl.textContent = '';
+      return;
+    }
+    tbody.innerHTML = currentActivitiesFE.map((a, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${a.maquina || '—'}</td>
+        <td style="max-width:260px;white-space:normal;line-height:1.4;">${(a.atividades_descricoes?.[0] || a.descricao || '—').slice(0, 100)}</td>
+        <td>${a.duracao_horas ?? '—'}</td>
+        <td>${a.hh_mec || '—'}</td>
+        <td>${a.hh_eletrico || '—'}</td>
+        <td>${a.hh_lub || '—'}</td>
+        <td>${a.frequencia_meses ? a.frequencia_meses + ' m' : '—'}</td>
+        <td>${a.sugestao || a.resp_fabrica || '—'}</td>
+        <td><span class="badge ${a.status_auditoria === 'FINALIZADO' ? 'badge-success' : a.status_auditoria ? 'badge-warning' : ''}">${a.status_auditoria || '—'}</span></td>
+        <td><button type="button" class="btn-icon" onclick="abrirFormularioPreventivaFE('${a.id}')" title="Editar">✏️</button></td>
+      </tr>
+    `).join('');
+    if (countEl) countEl.textContent = `${currentActivitiesFE.length} atividade(s)`;
+  };
+
+  const carregarAtividadesPlanoFE = () => {
+    const ctx = getContextoFE();
+    if (!ctx.maquina) { currentActivitiesFE = []; renderPlanoActivitiesTableFE(); return; }
+    currentActivitiesFE = registrosPreventivaFrontend.filter(r =>
+      r.maquina === ctx.maquina &&
+      (!ctx.mes || !r.mes || r.mes === ctx.mes) &&
+      (!ctx.linha || !r.linha || r.linha === ctx.linha)
+    );
+    if (!currentActivitiesFE.length) {
+      currentActivitiesFE = registrosPreventivaFrontend.filter(r => r.maquina === ctx.maquina);
+    }
+    renderPlanoActivitiesTableFE();
+    if (btnAplicar) btnAplicar.disabled = !contextoCompletoFE() || currentActivitiesFE.length === 0;
+  };
+
+  const loadPlanoMachinesFE = () => {
+    let maquinas = [...new Set(registrosPreventivaFrontend.map(r => r.maquina).filter(Boolean))].sort();
+    if (!maquinas.length) maquinas = ['ESMALTADEIRA', 'IMPRESSORA', 'VERNIZ EXTERNO', 'DECORAÇÃO', 'CONIFICADORA', 'EMBALADEIRA'];
+    machineSelect.innerHTML = '<option value="">Selecione a máquina...</option>' +
+      maquinas.map(m => `<option value="${m}">${m}</option>`).join('');
+  };
+  loadPlanoMachinesFE();
+
+  [machineSelect, monthSelect, lineSelect].forEach(el => el?.addEventListener('change', carregarAtividadesPlanoFE));
+
+  btnAplicar?.addEventListener('click', async () => {
+    const ctx = getContextoFE();
+    if (!contextoCompletoFE()) { toast('Selecione máquina, mês e linha antes de aplicar.', 'warning'); return; }
+    if (!currentActivitiesFE.length) { toast('Nenhuma atividade no plano Front-end.', 'warning'); return; }
+    const confirm = await Swal.fire({
+      title: 'Aplicar Plano Front-end',
+      html: `<p>Serão <strong>substituídos</strong> os registros Front-end de:</p>
+        <ul style="text-align:left;margin:1rem 0;padding-left:1.25rem;line-height:1.6;">
+          <li><strong>Máquina:</strong> ${ctx.maquina}</li>
+          <li><strong>Mês:</strong> ${ctx.mes}</li>
+          <li><strong>Linha:</strong> ${ctx.linha}</li>
+        </ul>
+        <p><strong>${currentActivitiesFE.length}</strong> atividade(s) serão gravadas com <span style="color:#6ee7b7;">setor = frontend</span>.</p>`,
+      icon: 'warning', showCancelButton: true,
+      confirmButtonText: 'Sim, aplicar Front-end', cancelButtonText: 'Cancelar',
+      background: '#161f33', color: '#e2e8f0',
+    });
+    if (!confirm.isConfirmed) return;
+    try {
+      btnAplicar.disabled = true; btnAplicar.textContent = 'Aplicando...';
+      const client = getClient();
+      const { error: delErr } = await client.from('preventiva_registros').delete()
+        .eq('setor', 'frontend').eq('maquina', ctx.maquina).eq('mes', ctx.mes).eq('linha', ctx.linha);
+      if (delErr) throw delErr;
+      const records = currentActivitiesFE.map(a => ({
+        identificador: a.identificador || '',
+        maquina: ctx.maquina,
+        descricao: a.atividades_descricoes?.[0] || a.descricao || '',
+        atividades_descricoes: a.atividades_descricoes || [],
+        material: '', plano_padrao: 'S',
+        mes: ctx.mes, linha: ctx.linha,
+        duracao_horas: a.duracao_horas || 0,
+        hh_mec: a.hh_mec || 0, hh_eletrico: a.hh_eletrico || 0, hh_lub: a.hh_lub || 0,
+        frequencia_meses: a.frequencia_meses || null,
+        sugestao: a.sugestao || a.resp_fabrica || '',
+        resp_fabrica: a.sugestao || a.resp_fabrica || '',
+        resp_manutencao: '', status_auditoria: '', previsao_custos: 0, programacao: [],
+        setor: 'frontend', area_producao: 'FRONT-END',
+      }));
+      const { error: insErr } = await client.from('preventiva_registros').insert(records);
+      if (insErr) throw insErr;
+      toast(`✅ ${records.length} atividades Front-end aplicadas em ${ctx.mes} · ${ctx.linha} · ${ctx.maquina}`, 'success');
+      const todos = await carregarPreventiva();
+      registrosPreventivaFrontend = todos.filter(r => r.setor === 'frontend');
+      registrosPreventiva = todos.filter(r => r.setor !== 'frontend');
+      carregarAtividadesPlanoFE();
+    } catch (err) {
+      toast('Erro ao aplicar plano Front-end: ' + err.message, 'error');
+    } finally {
+      btnAplicar.disabled = !contextoCompletoFE() || currentActivitiesFE.length === 0;
+      btnAplicar.textContent = '✅ Aplicar Plano Front-end';
+    }
+  });
+
+  renderPlanoActivitiesTableFE();
+
+  window._refreshPlanoPreventivaFrontend = () => {
+    loadPlanoMachinesFE();
+    carregarAtividadesPlanoFE();
+  };
+}
 
 onAuthStateChange((user) => {
   if (user) {

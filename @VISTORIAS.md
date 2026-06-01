@@ -4,6 +4,21 @@ Este documento registra a necessidade de vistorias técnicas após alterações 
 
 ## Histórico de Modificações
 
+### ⚠️ 01/06/2026 — VISTORIA PENDENTE — Separação Front-end / Back-end (Planos de Manutenção)
+**Status: PENDENTE — Realizar vistoria o mais rápido possível.**
+
+- Alterações realizadas:
+  - `css/styles.css`: Adicionados estilos para accordion sidebar e badges FE/BE.
+  - `index.html`: Sidebar convertida para accordions com sub-menus Back-end/Front-end. Clonadas views `#view-planos-manutencao-frontend` e `#view-plano-preventiva-frontend`. Adicionado modal `#modalEditarAtividadeFE`.
+  - `js/import_excel_preventiva.js`: Adicionada função `initExcelImportPreventivaFrontend()` que lê aba `FRONT-END` e insere registros com `setor='frontend'`. Deleta apenas registros frontend nunca backend.
+  - `js/app.js`: Adicionada variável `registrosPreventivaFrontend`. Split de dados no `init()`. Expandido `showView` com rotas FE. Adicionadas funções: `estadoPlanosFrontend`, `planosGoToStepFrontend`, `selecionarMesPlansosFrontend`, `selecionarLinhaPlanosFrontend`, `selecionarMaquinaPlanosFrontend`, `renderTabelaPreventivaFE`, `setupPlanoPreventivaUIFrontend`, `abrirFormularioPreventivaFE`, `abrirDetalhePreventivaFEPanel`. Accordion handler no `init()`. Import da função `initExcelImportPreventivaFrontend`.
+- **Verificações necessárias na vistoria:**
+  - Navegar pelas 4 rotas: `planos-manutencao`, `planos-manutencao-frontend`, `plano-preventiva`, `plano-preventiva-frontend`.
+  - Confirmar que Back-end não exibe registros com `setor='frontend'`.
+  - Confirmar que importar planilha FE não apaga dados BE.
+  - Verificar console limpo (sem SyntaxError, TypeError, 404).
+  - Confirmar `#secaoTabela` visível no CRUD (RC, Consertos, Compras, Fabricação).
+
 ### 29/05/2026 - Módulo de Preventiva
 - Modificações realizadas:
   - Adição da tabela `preventiva_registros` no banco (via Supabase RLS).
