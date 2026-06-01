@@ -14,7 +14,7 @@ import {
   agregarFornecedores,
 } from './logic.js';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
-import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, createMachineActivity } from './db.js';
+import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, createMachine } from './db.js';
 import { renderDashboardCharts } from './charts.js?v=4';
 import {
   COLUNAS_TABELA,
@@ -163,6 +163,38 @@ function renderMachineList() {
         li.style.fontWeight = 'bold';
       });
     });
+}
+
+// Local implementations for Machine Activities since Supabase tables are unavailable
+async function getMachineActivities(machineId) {
+  const activities = registrosPreventiva.filter(r => r.maquina === machineId);
+  const unique = [];
+  const seen = new Set();
+  let index = 1;
+  activities.forEach(a => {
+    const desc = a.descricao?.trim();
+    if (desc && !seen.has(desc)) {
+      seen.add(desc);
+      unique.push({
+        id: String(index),
+        ordem: index,
+        descricao: desc,
+        duracao_horas: a.duracao_horas || '',
+        hh_mec: a.hh_mec || '',
+        hh_eletrico: a.hh_eletrico || '',
+        status_auditoria: 'PADRÃO',
+        material: a.material || ''
+      });
+      index++;
+    }
+  });
+  return unique;
+}
+
+async function createMachineActivity(machineId, activity) {
+  // Mock function to prevent errors since we are using local Excel data
+  console.log('Mock createMachineActivity:', machineId, activity);
+  return { id: String(Date.now()), ...activity };
 }
 
 function renderMachineActivities() {
