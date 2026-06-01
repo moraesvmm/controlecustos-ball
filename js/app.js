@@ -134,14 +134,24 @@ function renderFiltros() {
 
 // ---------- Por Máquina view helpers ----------
 function renderMachineList() {
-  getMachines().then(list => {
-    machines = list;
-    const ul = $('#machineList');
-    if (!ul) return;
-    ul.innerHTML = list.map(m => `
-      <li data-id="${m.id}" style="cursor:pointer; padding:0.25rem 0;">${m.nome || m.id}
-      </li>`).join('');
-    ul.querySelectorAll('li').forEach(li => {
+  const maquinasRC = opcoesUnicas(registros, 'maquina');
+  const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+  const maquinasArray = Array.from(new Set([...maquinasRC, ...maquinasPrev])).sort();
+  
+  if (maquinasArray.length === 0) {
+    maquinasArray.push('Bodymaker', 'Necker', 'Decorator', 'LMS', 'Palletizer', 'Washer', 'Oven', 'Inside Spray');
+  }
+  
+  const list = maquinasArray.map(m => ({ id: m, nome: m }));
+  machines = list;
+  
+  const ul = $('#machineList');
+  if (!ul) return;
+  ul.innerHTML = list.map(m => `
+    <li data-id="${m.id}" style="cursor:pointer; padding:0.25rem 0;">${m.nome}
+    </li>`).join('');
+  
+  ul.querySelectorAll('li').forEach(li => {
       li.addEventListener('click', () => {
         selectedMachineId = li.dataset.id;
         $('#machineTitle').textContent = `Atividades da máquina: ${li.textContent}`;
@@ -152,10 +162,6 @@ function renderMachineList() {
         li.style.fontWeight = 'bold';
       });
     });
-  }).catch(err => {
-    console.error('Erro ao carregar máquinas', err);
-    toast('Erro ao carregar máquinas', 'error');
-  });
 }
 
 function renderMachineActivities() {
@@ -241,12 +247,17 @@ function setupPlanoPreventivaUI() {
 
   // Carregar máquinas ao abrir a view
   const loadPlanoMachines = () => {
-    getMachines().then(list => {
-      if (!machineSelect) return;
-      // Manter a primeira option
-      machineSelect.innerHTML = '<option value="">Selecione a máquina...</option>' + 
-        list.map(m => `<option value="${m.id}">${m.nome || m.id}</option>`).join('');
-    }).catch(e => console.error(e));
+    const maquinasRC = opcoesUnicas(registros, 'maquina');
+    const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+    const maquinasArray = Array.from(new Set([...maquinasRC, ...maquinasPrev])).sort();
+    
+    if (maquinasArray.length === 0) {
+      maquinasArray.push('Bodymaker', 'Necker', 'Decorator', 'LMS', 'Palletizer', 'Washer', 'Oven', 'Inside Spray');
+    }
+    
+    const list = maquinasArray.map(m => ({ id: m, nome: m }));
+    if (!machineSelect) return;
+    machineSelect.innerHTML = '<option value="">Selecione a máquina...</option>' + list.map(m => `<option value="${m.id}">${m.nome}</option>`).join('');
   };
   loadPlanoMachines();
 
@@ -1370,13 +1381,20 @@ window.selecionarLinhaPlanos = async function(linha) {
   });
   $('#kpi-linha-hh').textContent = totalHH.toFixed(1) + 'h';
   $('#kpi-linha-custo').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCusto);
-  
-  // Buscar máquinas para exibir no grid
+  // Buscar máquinas para exibir no grid (Fallback para usar registros em memória se a tabela falhar/não existir)
   try {
-    const maquinas = await getMachines();
-    const html = maquinas.map(m => `
-      <div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanos('${m.id}', '${m.nome}')" style="cursor:pointer; padding: 1rem; border-color: rgba(255,255,255,0.05); transition: background 0.2s;">
-        <div style="font-weight: 500; font-size: 0.95rem;">${m.nome}</div>
+    const maquinasRC = opcoesUnicas(registros, 'maquina');
+    const maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+    const maquinasArray = Array.from(new Set([...maquinasRC, ...maquinasPrev])).sort();
+    
+    // Fallback: se não houver máquinas em nenhum dos dois, insere nomes padrão da planta Ball
+    if (maquinasArray.length === 0) {
+      maquinasArray.push('Bodymaker', 'Necker', 'Decorator', 'LMS', 'Palletizer', 'Washer', 'Oven', 'Inside Spray');
+    }
+
+    const html = maquinasArray.map(m => `
+      <div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanos('${m}', '${m}')" style="cursor:pointer; padding: 1rem; border-color: rgba(255,255,255,0.05); transition: background 0.2s;">
+        <div style="font-weight: 500; font-size: 0.95rem;">${m}</div>
       </div>
     `).join('');
     $('#maquinas-grid-planos').innerHTML = html;
