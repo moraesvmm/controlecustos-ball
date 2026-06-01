@@ -1484,7 +1484,17 @@ window.abrirDetalhePreventivaPanel = function(id) {
     { label: 'Custo', value: Number(r.previsao_custos || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) }
   ];
 
-  document.getElementById('drillStats').innerHTML = stats  document.getElementById('drillInsight').style.display = 'none';
+  document.getElementById('drillStats').innerHTML = stats
+    .map(
+      (s) => `
+    <div class="drill-stat">
+      <span>${s.label}</span>
+      <strong>${s.value}</strong>
+    </div>`
+    )
+    .join('');
+
+  document.getElementById('drillInsight').style.display = 'none';
 
   const formatCards = (text) => {
     if (!text || text.trim() === '' || text === 'Sem descrição' || text === 'Nenhum material especificado') {
