@@ -1551,13 +1551,6 @@ window.migrarPlanilhaParaSupabase = async function() {
   
   console.log('Iniciando migração de ' + maquinasArray.length + ' máquinas...');
   for (const m of maquinasArray) {
-    try {
-      await db.createMachine({ id: m, nome: m });
-      console.log(`Máquina ${m} criada.`);
-    } catch(e) {
-      console.log(`Máquina ${m} já existe ou erro:`, e.message);
-    }
-    
     const activities = registrosPreventiva.filter(r => r.maquina === m);
     const seen = new Set();
     let index = 1;
