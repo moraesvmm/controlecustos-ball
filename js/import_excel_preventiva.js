@@ -65,6 +65,8 @@ export async function initExcelImportPreventiva(supabase, toast, atualizarDadosG
       console.log('[Preventiva Import] Headers detectados:', headers);
 
       const parsedRecordsMap = {};
+      let lastIdentificador = '';
+      let lastMaquina = '';
 
       for (const row of dataRows) {
         if (!row || row.every(c => c === null || c === '')) continue;
@@ -74,10 +76,22 @@ export async function initExcelImportPreventiva(supabase, toast, atualizarDadosG
           r[headers[i]] = row[i];
         }
 
-        const identificador = findVal(r, 'IDENTIFICADOR');
+        let identificador = findVal(r, 'IDENTIFICADOR');
+        if (identificador) {
+          lastIdentificador = identificador;
+        } else {
+          identificador = lastIdentificador;
+        }
+        
         if (!identificador) continue;
 
-        const maquina      = findVal(r, 'MAQUINA', 'MÁQUINA');
+        let maquina = findVal(r, 'MAQUINA', 'MÁQUINA');
+        if (maquina) {
+          lastMaquina = maquina;
+        } else {
+          maquina = lastMaquina;
+        }
+        
         const descricao    = findVal(r, 'DESCRI', 'ATIVIDADE', 'TAREFA', 'DESCRIÇÃO', 'DESCRIÇAO', 'DESCRICAO');
         const material     = findVal(r, 'MATERIAL', 'MATERIAIS', 'PEÇAS', 'PECAS');
         const plano_padrao = findVal(r, 'PLANO PADRAO ?', 'PLANO PADRÃO ?', 'PLANO PADRAO', 'PLANO PADRÃO') || 'S';
