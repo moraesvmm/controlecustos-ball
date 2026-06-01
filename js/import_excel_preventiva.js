@@ -78,8 +78,8 @@ export async function initExcelImportPreventiva(supabase, toast, atualizarDadosG
         if (!identificador) continue;
 
         const maquina      = findVal(r, 'MAQUINA', 'MÁQUINA');
-        const descricao    = findVal(r, 'DESCRIÇÃO', 'DESCRIÇAO', 'DESCRICAO');
-        const material     = findVal(r, 'MATERIAL');
+        const descricao    = findVal(r, 'DESCRI', 'ATIVIDADE', 'TAREFA', 'DESCRIÇÃO', 'DESCRIÇAO', 'DESCRICAO');
+        const material     = findVal(r, 'MATERIAL', 'MATERIAIS', 'PEÇAS', 'PECAS');
         const plano_padrao = findVal(r, 'PLANO PADRAO ?', 'PLANO PADRÃO ?', 'PLANO PADRAO', 'PLANO PADRÃO') || 'S';
 
         const duracao_horas   = parseNum(findVal(r, 'DURAÇÃO HORAS', 'DURACAO HORAS', 'DURA'));
