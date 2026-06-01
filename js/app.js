@@ -156,7 +156,7 @@ function renderMachineList() {
       li.addEventListener('click', () => {
         selectedMachineId = li.dataset.id;
         $('#machineTitle').textContent = `Atividades da máquina: ${li.textContent}`;
-        $('#btnAddActivity').style.display = 'inline-block';
+        if ($('#btnAddActivity')) $('#btnAddActivity').style.display = 'inline-block';
         renderMachineActivities();
         // highlight selection
         ul.querySelectorAll('li').forEach(x => x.style.fontWeight = 'normal');
@@ -201,12 +201,13 @@ function renderMachineActivities() {
     const descLines = (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0)
       ? a.atividades_descricoes
       : (a.descricao ? [a.descricao] : []);
-    const descResumo = descLines[0] ? descLines[0].substring(0, 80) + (descLines[0].length > 80 || descLines.length > 1 ? '...' : '') : '-';
+    const descStr = String(descLines[0] || '');
+    const descResumo = descStr ? descStr.substring(0, 80) + (descStr.length > 80 || descLines.length > 1 ? '...' : '') : '-';
     
     return `<tr data-id="${a.id}" style="cursor:pointer;" onclick="abrirDetalhePreventivaPanel('${a.id}')">
       <td><strong>${a.identificador || '-'}</strong></td>
       <td title="${(descLines.join(' | ')).replace(/"/g, '&quot;')}">${descResumo}</td>
-      <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${(a.material || '').replace(/"/g, '&quot;')}">${a.material ? a.material.split('\n')[0].substring(0,50) + (a.material.length > 50 ? '...' : '') : '-'}</td>
+      <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${String(a.material || '').replace(/"/g, '&quot;')}">${a.material ? String(a.material).split('\n')[0].substring(0,50) + (String(a.material).length > 50 ? '...' : '') : '-'}</td>
       <td><span class="badge ${a.plano_padrao === 'S' ? 'badge-success' : 'badge-warning'}">${a.plano_padrao || '-'}</span></td>
       <td>${a.duracao_horas || '-'}</td>
       <td>${a.hh_mec || '-'}</td>
@@ -368,14 +369,15 @@ function setupPlanoPreventivaUI() {
       .map((a, idx) => {
         const descLines = descricaoLinhas(a);
         const descFull = descLines.join(' | ').replace(/"/g, '&quot;');
-        const descResumo = descLines[0]
-          ? descLines[0].substring(0, 60) + (descLines[0].length > 60 || descLines.length > 1 ? '...' : '')
+        const descStr = String(descLines[0] || '');
+        const descResumo = descStr
+          ? descStr.substring(0, 60) + (descStr.length > 60 || descLines.length > 1 ? '...' : '')
           : '-';
         const mat = (a.material || '').replace(/"/g, '&quot;');
         return `<tr>
           <td><strong>${a.identificador || '-'}</strong></td>
           <td title="${descFull}">${descResumo}</td>
-          <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${mat}">${a.material ? a.material.split('\n')[0].substring(0, 40) + (a.material.length > 40 ? '...' : '') : '-'}</td>
+          <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${mat}">${a.material ? String(a.material).split('\n')[0].substring(0, 40) + (String(a.material).length > 40 ? '...' : '') : '-'}</td>
           <td>${a.plano_padrao || '-'}</td>
           <td>${a.duracao_horas ?? '-'}</td>
           <td>${a.hh_mec ?? '-'}</td>
