@@ -2627,3 +2627,32 @@ document.addEventListener('DOMContentLoaded', initDragToScroll);
 if (document.readyState === 'complete' || document.readyState === 'interactive') {
   setTimeout(initDragToScroll, 100);
 }
+
+/* ===================================================
+   THEME TOGGLE — Modo Claro / Escuro
+   =================================================== */
+(function initThemeToggle() {
+  const STORAGE_KEY = 'cc-theme';
+  const btn = document.getElementById('btnToggleTheme');
+
+  function applyTheme(isLight) {
+    document.body.classList.toggle('light-mode', isLight);
+    const icon = btn?.querySelector('.theme-icon');
+    const label = btn?.querySelector('.theme-label');
+    if (icon) icon.textContent = isLight ? '☀️' : '🌙';
+    if (label) label.textContent = isLight ? 'Modo Escuro' : 'Modo Claro';
+    localStorage.setItem(STORAGE_KEY, isLight ? 'light' : 'dark');
+  }
+
+  // Restaurar preferência salva
+  const saved = localStorage.getItem(STORAGE_KEY);
+  const preferLight = saved ? saved === 'light' : false;
+  applyTheme(preferLight);
+
+  if (btn) {
+    btn.addEventListener('click', () => {
+      const isNowLight = !document.body.classList.contains('light-mode');
+      applyTheme(isNowLight);
+    });
+  }
+})();

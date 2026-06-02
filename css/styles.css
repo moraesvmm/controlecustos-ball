@@ -16,6 +16,25 @@
   --shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
 }
 
+/* ===== LIGHT MODE ===== */
+body.light-mode {
+  --bg: #f0f2f7;
+  --bg2: #e4e8f2;
+  --surface: rgba(255, 255, 255, 0.85);
+  --surface-solid: #ffffff;
+  --border: rgba(100, 116, 139, 0.18);
+  --text: #0f172a;
+  --muted: #64748b;
+  --gold: #b8860b;
+  --gold-rgb: 184, 134, 11;
+  --gold-dim: rgba(184, 134, 11, 0.12);
+  --accent: #0284c7;
+  --danger: #dc2626;
+  --success: #059669;
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -555,7 +574,7 @@ body.view-crud .main-layout {
 }
 
 .data-table th {
-  background: #1a2438;
+  background: var(--surface-solid);
   position: sticky;
   top: 0;
   z-index: 2;
@@ -564,6 +583,7 @@ body.view-crud .main-layout {
   text-transform: uppercase;
   font-size: 0.68rem;
   letter-spacing: 0.04em;
+  border-bottom: 2px solid var(--border);
 }
 
 .data-table tbody tr {
@@ -1687,4 +1707,179 @@ body.view-crud .main-layout {
   #painel-fixo { position: static; }
   .months-grid { grid-template-columns: repeat(2, 1fr); }
   .form-grid { grid-template-columns: 1fr; }
+}
+
+/* ===================================================
+   LIGHT MODE — OVERRIDES ESPECÍFICOS
+   =================================================== */
+
+/* Botão toggle de tema */
+#btnToggleTheme {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.25s;
+  white-space: nowrap;
+}
+#btnToggleTheme:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold-dim);
+}
+#btnToggleTheme .theme-icon {
+  font-size: 1rem;
+  transition: transform 0.4s;
+}
+body.light-mode #btnToggleTheme .theme-icon {
+  transform: rotate(180deg);
+}
+
+/* App background no light mode */
+body.light-mode .app-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, rgba(184, 134, 11, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 90% 10%, rgba(2, 132, 199, 0.06), transparent),
+    var(--bg);
+}
+
+/* Sidebar no light mode */
+body.light-mode aside.sidebar {
+  background: #ffffff !important;
+  box-shadow: 2px 0 12px rgba(0,0,0,0.06);
+}
+
+/* Topbar no light mode */
+body.light-mode .topbar {
+  background: rgba(255,255,255,0.95) !important;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+}
+
+/* Cabeçalhos de tabela — borda dourada suave */
+body.light-mode .data-table th {
+  background: #f8fafc;
+  border-bottom: 2px solid rgba(184, 134, 11, 0.25);
+}
+
+/* Linhas da tabela no light mode */
+body.light-mode .data-table tbody tr:hover td {
+  background: rgba(184, 134, 11, 0.05);
+}
+body.light-mode .data-table tr.row-late td {
+  background: rgba(220, 38, 38, 0.04);
+}
+body.light-mode .data-table tbody tr.row-selected td {
+  background: rgba(184, 134, 11, 0.08) !important;
+}
+
+/* Status chips */
+body.light-mode .status-chip {
+  background: rgba(0,0,0,0.04);
+}
+
+/* Badges no light mode — mais escuros para contraste */
+body.light-mode .badge-ENTREGUE { background: rgba(5, 150, 105, 0.12); color: #065f46; }
+body.light-mode .badge-PENDENTE-DE-ENTREGA { background: rgba(29, 78, 216, 0.12); color: #1e3a8a; }
+body.light-mode .badge-PENDENTE-DE-PEDIDO { background: rgba(124, 58, 237, 0.12); color: #4c1d95; }
+body.light-mode .badge-PENDENTE-DE-ORCAMENTO,
+body.light-mode .badge-PENDENTE-DE-ORÇAMENTO { background: rgba(180, 83, 9, 0.12); color: #78350f; }
+body.light-mode .badge-PENDENTE-DE-RC,
+body.light-mode .badge-PENDENTE-RC { background: rgba(161, 98, 7, 0.12); color: #713f12; }
+body.light-mode .badge-PENDENTE { background: rgba(71, 85, 105, 0.12); color: #334155; }
+body.light-mode .badge-CRITICA { background: rgba(185, 28, 28, 0.12); color: #7f1d1d; }
+body.light-mode .badge-ALTA { background: rgba(154, 52, 18, 0.12); color: #7c2d12; }
+
+/* Chips de calendário */
+body.light-mode .chip-success { background: rgba(5, 150, 105, 0.1); color: #065f46; }
+body.light-mode .chip-danger  { background: rgba(220, 38, 38, 0.1); color: #7f1d1d; }
+body.light-mode .chip-warning { background: rgba(161, 98, 7, 0.1); color: #713f12; }
+
+/* Alerta items */
+body.light-mode .alerta-item {
+  background: rgba(220, 38, 38, 0.05);
+  border-color: rgba(220, 38, 38, 0.2);
+}
+
+/* Inputs no light mode */
+body.light-mode .form-grid input,
+body.light-mode .form-grid select,
+body.light-mode .form-grid textarea,
+body.light-mode .filters select,
+body.light-mode .filters input {
+  background: #ffffff;
+  border-color: rgba(100, 116, 139, 0.3);
+  color: var(--text);
+}
+body.light-mode .form-grid input:focus,
+body.light-mode .form-grid select:focus,
+body.light-mode .form-grid textarea:focus,
+body.light-mode .filters select:focus,
+body.light-mode .filters input:focus {
+  outline: 2px solid rgba(184, 134, 11, 0.5);
+  border-color: var(--gold);
+}
+
+/* Modal no light */
+body.light-mode .modal {
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+body.light-mode .drill-panel {
+  box-shadow: -6px 0 24px rgba(0,0,0,0.10);
+}
+
+/* Modal overlay menos escuro no light */
+body.light-mode .modal-overlay {
+  background: rgba(15, 23, 42, 0.4);
+}
+body.light-mode .drill-overlay {
+  background: rgba(15, 23, 42, 0.3);
+}
+
+/* Btn icon no light */
+body.light-mode .btn-icon {
+  background: #f1f5f9;
+}
+
+/* Scrollbar no light */
+body.light-mode ::-webkit-scrollbar-thumb {
+  background: rgba(184, 134, 11, 0.35);
+  border-color: #f0f2f7;
+}
+body.light-mode ::-webkit-scrollbar-track {
+  background: #f0f2f7;
+}
+
+/* Nav items no light mode */
+body.light-mode .nav-item:hover {
+  background: rgba(184, 134, 11, 0.08) !important;
+  color: var(--gold) !important;
+}
+body.light-mode .nav-item.active {
+  background: rgba(184, 134, 11, 0.12) !important;
+  color: var(--gold) !important;
+}
+
+/* Row action bar no light */
+body.light-mode .row-action-bar {
+  background: rgba(184, 134, 11, 0.06);
+  border-color: rgba(184, 134, 11, 0.3);
+}
+
+/* SweetAlert no light mode */
+body.light-mode .swal2-popup {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+body.light-mode .swal2-title,
+body.light-mode .swal2-html-container {
+  color: #0f172a !important;
 }
