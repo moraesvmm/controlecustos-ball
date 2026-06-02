@@ -560,6 +560,13 @@
         <section style="flex:1; min-width:0;">
           <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3 id="machineTitle" style="margin:0;">Selecione uma máquina</h3>
+            <div id="geralSetorFilterContainer" style="display:none;">
+              <select id="geralSetorFilter" onchange="renderMachineActivities()" class="input-form" style="width: auto; padding: 0.4rem 0.8rem; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; cursor: pointer;">
+                <option value="todos">Todos (Front & Back)</option>
+                <option value="frontend">Front-end</option>
+                <option value="backend">Back-end</option>
+              </select>
+            </div>
           </header>
           <div class="table-scroll-main" style="border-radius: 6px; border: 1px solid var(--border); flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 75vh;">
             <div class="table-scroll-inner" style="flex: 1; overflow: auto;">

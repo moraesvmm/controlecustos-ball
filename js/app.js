@@ -135,43 +135,80 @@ function renderFiltros() {
 
 // ---------- Por Máquina view helpers ----------
 function renderMachineList() {
-  let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
-  maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
-  const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
-  
-  if (maquinasArray.length === 0) {
-    maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
-    maquinasArray.sort();
-  }
-  
-  const list = maquinasArray.map(m => ({ id: m, nome: m }));
-  machines = list;
-  
   const ul = $('#machineList');
   if (!ul) return;
-  ul.innerHTML = list.map(m => `
-    <li data-id="${m.id}" style="cursor:pointer; padding:0.25rem 0;">${m.nome}
-    </li>`).join('');
+  
+  const todasMaquinas = [...registrosPreventiva, ...registrosPreventivaFrontend]
+     .map(r => r.maquina)
+     .filter(Boolean);
+  const maquinas = [...new Set(todasMaquinas)].sort();
+  
+  if (maquinas.length === 0) {
+    ul.innerHTML = '<li style="color:var(--muted); font-size:0.85rem;">Nenhuma máquina encontrada. Importe a planilha.</li>';
+    return;
+  }
+  
+  const htmlGeral = `
+    <li data-id="GERAL" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);" 
+        onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
+        onmouseout="this.style.background=selectedMachineId==='GERAL'?'rgba(212,175,55,0.15)':''">Geral (Todas)</li>
+  `;
+  const htmlMaquinas = maquinas.map(m => `
+    <li data-id="${m}" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s;" 
+        onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
+        onmouseout="this.style.background=selectedMachineId===this.dataset.id?'rgba(212,175,55,0.15)':''">${m}</li>
+  `).join('');
+  
+  ul.innerHTML = htmlGeral + htmlMaquinas;
   
   ul.querySelectorAll('li').forEach(li => {
-      li.addEventListener('click', () => {
-        selectedMachineId = li.dataset.id;
-        $('#machineTitle').textContent = `Atividades da máquina: ${li.textContent}`;
-        if ($('#btnAddActivity')) $('#btnAddActivity').style.display = 'inline-block';
-        renderMachineActivities();
-        // highlight selection
-        ul.querySelectorAll('li').forEach(x => x.style.fontWeight = 'normal');
-        li.style.fontWeight = 'bold';
-      });
+    li.addEventListener('click', () => {
+      selectedMachineId = li.dataset.id;
+      $('#machineTitle').textContent = li.dataset.id === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Atividades: ${li.dataset.id}`;
+      if ($('#geralSetorFilterContainer')) {
+        $('#geralSetorFilterContainer').style.display = li.dataset.id === 'GERAL' ? 'block' : 'none';
+      }
+      if ($('#btnAddActivity')) $('#btnAddActivity').style.display = 'inline-block';
+      renderMachineActivities();
+      ul.querySelectorAll('li').forEach(x => { x.style.fontWeight = 'normal'; x.style.background = ''; x.style.color = 'var(--text)'; });
+      li.style.fontWeight = 'bold';
+      li.style.background = 'rgba(212,175,55,0.15)';
+      li.style.color = 'var(--primary)';
     });
+  });
+
+  if (!selectedMachineId) {
+    selectedMachineId = 'GERAL';
+  }
+  const selLi = document.querySelector(`#machineList li[data-id="${selectedMachineId}"]`);
+  if (selLi) selLi.click();
 }
 
 function renderMachineActivities() {
   if (!selectedMachineId) return;
-  // Busca direto em registrosPreventiva (fonte de verdade = planilha importada)
-  const acts = selectedMachineId === 'GERAL' 
-    ? registrosPreventiva.slice() 
-    : registrosPreventiva.filter(r => r.maquina && r.maquina.toUpperCase() === selectedMachineId.toUpperCase());
+  
+  let acts = [];
+  if (selectedMachineId === 'GERAL') {
+    const filterVal = $('#geralSetorFilter') ? $('#geralSetorFilter').value : 'todos';
+    let sourceActs = [];
+    if (filterVal === 'todos') {
+       sourceActs = [...registrosPreventiva, ...registrosPreventivaFrontend];
+    } else if (filterVal === 'frontend') {
+       sourceActs = registrosPreventivaFrontend;
+    } else {
+       sourceActs = registrosPreventiva;
+    }
+    acts = sourceActs.slice();
+  } else {
+    const allActs = [...registrosPreventiva, ...registrosPreventivaFrontend];
+    acts = allActs.filter(r => r.maquina && r.maquina.toUpperCase() === selectedMachineId.toUpperCase());
+  }
+
+  acts.sort((a, b) => {
+    const idA = a.identificador || '';
+    const idB = b.identificador || '';
+    return idA.localeCompare(idB, undefined, {numeric: true});
+  });
     
   const table = $('#machineActivitiesTable');
   if (!table) return;
@@ -240,47 +277,7 @@ function renderMachineActivities() {
   }).join('');
 }
 
-function setupPorMaquinaUI() {
-  // Renderiza lista de máquinas a partir de registrosPreventiva
-  const renderMaquinasSidebar = () => {
-    const ul = $('#machineList');
-    if (!ul) return;
-    const maquinas = [...new Set(registrosPreventiva.map(r => r.maquina).filter(Boolean))].sort();
-    if (maquinas.length === 0) {
-      ul.innerHTML = '<li style="color:var(--muted); font-size:0.85rem;">Nenhuma máquina encontrada. Importe a planilha.</li>';
-      return;
-    }
-    const htmlGeral = `
-      <li data-id="GERAL" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; font-weight:bold; color:var(--primary); transition: background 0.15s; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);" 
-          onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
-          onmouseout="this.style.background=selectedMachineId==='GERAL'?'rgba(212,175,55,0.15)':''">Geral (Todas)</li>
-    `;
-    const htmlMaquinas = maquinas.map(m => `
-      <li data-id="${m}" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s;" 
-          onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
-          onmouseout="this.style.background=selectedMachineId===this.dataset.id?'rgba(212,175,55,0.15)':''">${m}</li>
-    `).join('');
-    
-    ul.innerHTML = htmlGeral + htmlMaquinas;
-    
-    ul.querySelectorAll('li').forEach(li => {
-      li.addEventListener('click', () => {
-        selectedMachineId = li.dataset.id;
-        $('#machineTitle').textContent = li.dataset.id === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Atividades: ${li.dataset.id}`;
-        renderMachineActivities();
-        ul.querySelectorAll('li').forEach(x => { x.style.fontWeight = 'normal'; x.style.background = ''; x.style.color = 'var(--text)'; });
-        li.style.fontWeight = 'bold';
-        li.style.background = 'rgba(212,175,55,0.15)';
-        li.style.color = 'var(--primary)';
-      });
-    });
-  };
-  renderMaquinasSidebar();
-  if (!selectedMachineId) {
-    const geralLi = document.querySelector('#machineList li[data-id="GERAL"]');
-    if (geralLi) geralLi.click();
-  }
-}
+
 
 function setupPlanoPreventivaUI() {
   const machineSelect = $('#planoMachineSelect');
@@ -1195,7 +1192,7 @@ async function init() {
     gerarRelatorioSLAPDF(registros);
   });
 
-  setupPorMaquinaUI();
+
   setupPlanoPreventivaUI();
   setupPlanoPreventivaUIFrontend();
 
