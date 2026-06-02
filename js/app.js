@@ -460,6 +460,57 @@ function setupPlanoPreventivaUI() {
     renderPlanoActivitiesTable();
   };
 
+
+  const renderDescricoesGerador = (arr) => {
+    const lista = document.getElementById('listaDescricoesGerador');
+    if (!lista) return;
+    if (!arr || arr.length === 0) {
+      lista.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0.25rem 0;">Nenhuma descrição.</p>';
+      return;
+    }
+    lista.innerHTML = arr.map((desc, idx) => `
+      <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+        <textarea class="desc-input-gerador" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;">${desc.replace(/"/g, '&quot;')}</textarea>
+        <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+      </div>
+    `).join('');
+  };
+  document.getElementById('btnNovaDescricaoGerador')?.addEventListener('click', () => {
+    const lista = document.getElementById('listaDescricoesGerador');
+    if (lista.querySelector('p')) lista.innerHTML = '';
+    lista.insertAdjacentHTML('beforeend', `
+      <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+        <textarea class="desc-input-gerador" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;"></textarea>
+        <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+      </div>
+    `);
+  });
+
+  const renderMateriaisGerador = (arr) => {
+    const lista = document.getElementById('listaMateriaisGerador');
+    if (!lista) return;
+    if (!arr || arr.length === 0) {
+      lista.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0.25rem 0;">Nenhum material.</p>';
+      return;
+    }
+    lista.innerHTML = arr.map((desc, idx) => `
+      <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+        <textarea class="mat-input-gerador" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;">${desc.replace(/"/g, '&quot;')}</textarea>
+        <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+      </div>
+    `).join('');
+  };
+  document.getElementById('btnNovoMaterialGerador')?.addEventListener('click', () => {
+    const lista = document.getElementById('listaMateriaisGerador');
+    if (lista.querySelector('p')) lista.innerHTML = '';
+    lista.insertAdjacentHTML('beforeend', `
+      <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+        <textarea class="mat-input-gerador" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;"></textarea>
+        <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+      </div>
+    `);
+  });
+
   window.abrirModalAtividadePlano = function (idx) {
     if (!contextoCompleto()) {
       toast('Selecione máquina, mês e linha antes de editar.', 'warning');
@@ -474,8 +525,9 @@ function setupPlanoPreventivaUI() {
     $('#editAtivId').value = String(idx);
     $('#editAtivIdentificador').value = a.identificador || '';
     $('#editAtivMaquina').value = ctx.maquina;
-    $('#editAtivDescricao').value = descricaoLinhas(a).join('\n');
-    $('#editAtivMaterial').value = Array.isArray(a.material) ? a.material.join('\n') : (a.material || '');
+    renderDescricoesGerador(a.atividades_descricoes && a.atividades_descricoes.length ? a.atividades_descricoes : descricaoLinhas(a));
+    const matArray = Array.isArray(a.material) ? a.material : (a.material ? [String(a.material)] : []);
+    renderMateriaisGerador(matArray);
     $('#editAtivDuracao').value = a.duracao_horas ?? '';
     $('#editAtivHhMec').value = a.hh_mec ?? '';
     $('#editAtivHhEle').value = a.hh_eletrico ?? '';
@@ -497,8 +549,8 @@ function setupPlanoPreventivaUI() {
     if (editandoPlanoIdx == null || !currentActivities[editandoPlanoIdx]) return;
 
     const ctx = getPlanoContexto();
-    const descText = $('#editAtivDescricao').value.trim();
-    const descricoes = descText ? descText.split('\n').map((l) => l.trim()).filter(Boolean) : [];
+    const descricoes = Array.from(document.querySelectorAll('.desc-input-gerador')).map(el => el.value.trim()).filter(Boolean);
+    const materiais = Array.from(document.querySelectorAll('.mat-input-gerador')).map(el => el.value.trim()).filter(Boolean);
 
     const atualizado = {
       ...currentActivities[editandoPlanoIdx],
@@ -506,7 +558,7 @@ function setupPlanoPreventivaUI() {
       maquina: ctx.maquina,
       mes: ctx.mes,
       linha: ctx.linha,
-      material: $('#editAtivMaterial').value.trim() ? $('#editAtivMaterial').value.trim().split('\n').filter(Boolean) : [],
+      material: materiais,
       duracao_horas: parseFloat($('#editAtivDuracao').value) || 0,
       hh_mec: parseFloat($('#editAtivHhMec').value) || 0,
       hh_eletrico: parseFloat($('#editAtivHhEle').value) || 0,
@@ -2116,7 +2168,8 @@ window.abrirFormularioPreventivaFE = function(id) {
   $('#editAtivIdFE').value = editandoPreventivaFE.id || '';
   $('#editAtivIdentificadorFE').value = editandoPreventivaFE.identificador || '';
   $('#editAtivMaquinaFE').value = editandoPreventivaFE.maquina || '';
-  $('#editAtivDescricaoFE').value = (editandoPreventivaFE.atividades_descricoes?.[0] || editandoPreventivaFE.descricao || '');
+    const descArrFE = editandoPreventivaFE.atividades_descricoes?.length ? editandoPreventivaFE.atividades_descricoes : (editandoPreventivaFE.descricao ? [editandoPreventivaFE.descricao] : []);
+    renderDescricoesGeradorFE(descArrFE);
   $('#editAtivDuracaoFE').value = editandoPreventivaFE.duracao_horas || '';
   $('#editAtivHhMecFE').value = editandoPreventivaFE.hh_mec || '';
   $('#editAtivHhEleFE').value = editandoPreventivaFE.hh_eletrico || '';
@@ -2134,13 +2187,14 @@ $('#modalEditarAtividadeFE')?.addEventListener('click', (e) => { if (e.target ==
 
 $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const descricao = $('#editAtivDescricaoFE').value.trim();
+  const descricoes = Array.from(document.querySelectorAll('.desc-input-gerador-fe')).map(el => el.value.trim()).filter(Boolean);
+    const descricao = descricoes[0] || '';
   const payload = {
     ...editandoPreventivaFE,
     identificador: $('#editAtivIdentificadorFE').value.trim(),
     maquina: $('#editAtivMaquinaFE').value.trim(),
     descricao,
-    atividades_descricoes: descricao ? [descricao] : [],
+    atividades_descricoes: descricoes,
     duracao_horas: parseFloat($('#editAtivDuracaoFE').value) || 0,
     hh_mec: parseFloat($('#editAtivHhMecFE').value) || 0,
     hh_eletrico: parseFloat($('#editAtivHhEleFE').value) || 0,

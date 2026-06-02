@@ -764,7 +764,11 @@
             <div class="form-grid">
               <label><span>Identificador</span><input type="text" id="editAtivIdentificadorFE" placeholder="Ex: ESMALTADEIRA - 01" /></label>
               <label><span>Máquina</span><input type="text" id="editAtivMaquinaFE" readonly style="opacity:0.6;" /></label>
-              <label class="full"><span>Descrição</span><textarea id="editAtivDescricaoFE" rows="4" placeholder="Descreva as etapas da atividade..."></textarea></label>
+              <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Descrições / Atividades</span>
+                  <div id="listaDescricoesGeradorFE" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovaDescricaoGeradorFE" style="align-self:flex-start;">+ Adicionar descrição</button>
+                </div>
             </div>
           </div>
           <div class="form-section">
@@ -821,14 +825,16 @@
                 <span>Máquina</span>
                 <input type="text" id="editAtivMaquina" readonly style="opacity:0.6;" />
               </label>
-              <label class="full">
-                <span>Descrição</span>
-                <textarea id="editAtivDescricao" rows="4" placeholder="Descreva as etapas da atividade..."></textarea>
-              </label>
-              <label class="full">
-                <span>Material</span>
-                <textarea id="editAtivMaterial" rows="3" placeholder="Liste os materiais necessários..."></textarea>
-              </label>
+                              <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Descrições / Atividades</span>
+                  <div id="listaDescricoesGerador" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovaDescricaoGerador" style="align-self:flex-start;">+ Adicionar descrição</button>
+                </div>
+                <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Materiais</span>
+                  <div id="listaMateriaisGerador" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovoMaterialGerador" style="align-self:flex-start;">+ Adicionar material</button>
+                </div>
             </div>
           </div>
 
