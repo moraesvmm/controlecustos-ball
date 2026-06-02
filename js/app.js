@@ -2411,7 +2411,7 @@ onAuthStateChange((user) => {
       else if (hora >= 18) saudacao = 'Boa noite';
       
       const nomeUsuario = user.user_metadata?.username || user.email?.split('@')[0] || 'Usuário';
-      greetingEl.textContent = `${saudacao}, ${nomeUsuario}`;
+      greetingEl.textContent = `${saudacao}, ${nomeUsuario}!`;
     }
 
     document.getElementById('app-container').style.display = 'flex';
