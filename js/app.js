@@ -1113,7 +1113,7 @@ async function init() {
     return;
   }
 
-  $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros · Supabase`;
+  $('#appStatus').innerHTML = `<span class="dot-online"></span> ${registros.length} registros`;
 
   STATUS_LIST.forEach((s) => {
     $('#filtroStatus').innerHTML += `<option value="${s}">${s}</option>`;
