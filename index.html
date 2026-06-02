@@ -211,10 +211,8 @@
 
     <div id="view-dashboard" class="view active">
       <div id="secaoDashboard">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-          <div>
-            <p class="section-hint">Clique em qualquer barra do gráfico para abrir o detalhamento dos gastos.</p>
-          </div>
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <div></div>
           <div class="tooltip-container">
             <button type="button" class="btn btn-primary" id="btnExportDashboardPdf">Gerar Relatório Executivo (PDF)</button>
             <div class="tooltip-card">
@@ -229,13 +227,14 @@
             </div>
           </div>
         </header>
+        <p class="section-hint" style="margin-bottom: 0.75rem;">Clique em qualquer barra do gráfico para abrir o detalhamento dos gastos.</p>
         <div class="charts-grid">
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div></div>
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartMes"></canvas></div></div>
           <div class="chart-box chart-wide"><div class="chart-canvas-wrap chart-tall"><canvas id="chartMaquina"></canvas></div></div>
         </div>
-        <h3 style="margin: 1.5rem 0 1rem; color: #fff;">Status de Retorno por Natureza (dias em aberto)</h3>
-        <p class="section-hint">Clique nas fatias para detalhar itens em aberto por tempo de saída.</p>
+        <h3 style="margin: 1.5rem 0 0.25rem; color: var(--text);">Status de Retorno por Natureza (dias em aberto)</h3>
+        <p class="section-hint" style="margin-bottom: 0.75rem;">Clique nas fatias para detalhar itens em aberto por tempo de saída.</p>
         <div class="charts-grid charts-grid-prazos">
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartConsertoDias"></canvas></div></div>
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartComprasDias"></canvas></div></div>

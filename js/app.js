@@ -2639,8 +2639,9 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     document.body.classList.toggle('light-mode', isLight);
     const icon = btn?.querySelector('.theme-icon');
     const label = btn?.querySelector('.theme-label');
-    if (icon) icon.textContent = isLight ? '☀️' : '🌙';
-    if (label) label.textContent = isLight ? 'Modo Claro' : 'Modo Escuro';
+    // Mostra o modo que será ativado ao clicar (o oposto do atual)
+    if (icon) icon.textContent = isLight ? '🌙' : '☀️';
+    if (label) label.textContent = isLight ? 'Modo Escuro' : 'Modo Claro';
     localStorage.setItem(STORAGE_KEY, isLight ? 'light' : 'dark');
   }
 
