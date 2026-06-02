@@ -273,8 +273,7 @@ function renderMachineActivities() {
     return trHtml;
   }).join('');
 }
-
-
+window.renderMachineActivities = renderMachineActivities;
 
 function setupPlanoPreventivaUI() {
   const machineSelect = $('#planoMachineSelect');
