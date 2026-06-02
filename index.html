@@ -141,9 +141,10 @@
       
       <!-- Topbar (fixo) -->
       <header class="topbar" style="padding: 1.25rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;">
-        <div>
-          <h2 id="topbarTitle" style="font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1.25rem; color: var(--text); margin: 0;">Visão Geral</h2>
-        </div>
+          <div>
+            <h2 id="topbarTitle" style="font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1.25rem; color: var(--text); margin: 0;">Visão Geral</h2>
+            <div id="userGreeting" style="font-size: 0.85rem; color: var(--primary); margin-top: 0.2rem; font-weight: 500;"></div>
+          </div>
         <div style="display: flex; gap: 1rem; align-items: center;">
           <input type="file" id="fileImportExcel" accept=".xlsx, .xls" style="display: none;" />
           <button type="button" class="btn btn-outline" id="btnImportarExcel" style="font-size: 0.85rem;">Importar Base de Dados</button>

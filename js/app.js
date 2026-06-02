@@ -2332,6 +2332,19 @@ function setupPlanoPreventivaUIFrontend() {
 onAuthStateChange((user) => {
   if (user) {
     document.getElementById('login-container').style.display = 'none';
+    
+    // Atualizar saudação
+    const greetingEl = document.getElementById('userGreeting');
+    if (greetingEl) {
+      const hora = new Date().getHours();
+      let saudacao = 'Bom dia';
+      if (hora >= 12 && hora < 18) saudacao = 'Boa tarde';
+      else if (hora >= 18) saudacao = 'Boa noite';
+      
+      const nomeUsuario = user.user_metadata?.username || user.email?.split('@')[0] || 'Usuário';
+      greetingEl.textContent = `${saudacao}, ${nomeUsuario}`;
+    }
+
     document.getElementById('app-container').style.display = 'flex';
     if (!isAppInitialized) {
       isAppInitialized = true;
