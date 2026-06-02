@@ -469,13 +469,14 @@ nav.tabs button.active {
 body.view-crud .main-layout {
   display: flex;
   flex-direction: column;
+  padding-bottom: 1rem;
 }
 
 .crud-section {
   display: flex;
   flex-direction: column;
   margin-top: 0.5rem;
-  height: calc(100vh - 140px);
+  flex: 1;
   min-height: 400px;
 }
 
