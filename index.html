@@ -432,7 +432,14 @@
         </nav>
 
         <!-- STEP 1: Seleção de Mês -->
-        <div id="step-mes-fe">
+        <div id="step-mes-fe" style="position: relative;">
+          <div style="position: absolute; top: 0; right: 0;">
+            <input type="file" id="fileImportExcelPreventivaFE" accept=".xlsx, .xls" style="display: none;" />
+            <button type="button" class="btn btn-outline" id="btnImportarPreventivaSomenteFE" style="font-size: 0.85rem; border-color: rgba(110,231,183,0.4); color: #6ee7b7; display: flex; align-items: center; gap: 0.4rem;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Importar Base
+            </button>
+          </div>
           <header style="text-align: center; margin-bottom: 2rem;">
             <div style="background: rgba(16,185,129,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -490,11 +497,7 @@
               </div>
               <h4 style="margin-bottom: 1rem;">Selecione a Máquina</h4>
               <div id="maquinas-grid-planos-fe" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;"></div>
-              <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-                <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.75rem;">Importar planilha Front-end desta linha:</p>
-                <input type="file" id="fileImportExcelPreventivaFE" accept=".xlsx, .xls" style="display: none;" />
-                <button type="button" class="btn btn-outline" id="btnImportarPreventivaSomenteFE" style="width: 100%; font-size: 0.85rem; border-color: rgba(110,231,183,0.4); color: #6ee7b7;">📥 Importar Planilha Front-end</button>
-              </div>
+              <!-- Botão import foi movido para a tela geral -->
             </section>
           </div>
         </div>
@@ -574,9 +577,13 @@
       <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
         
         <!-- Cabeçalho com seleção de contexto -->
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+        <div style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom:1.5rem; gap:1rem;">
           <div>
-            <h3 style="margin:0 0 0.25rem 0;">Gerador de Planos Automático</h3>
+            <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:20px; padding:0.3rem 0.8rem; margin-bottom:0.75rem;">
+              <span class="setor-badge setor-badge-backend">BE</span>
+              <span style="font-size:0.8rem; color:#38bdf8; font-weight:500;">Back-end da Fábrica</span>
+            </div>
+            <h3 style="margin:0 0 0.25rem 0;">Gerador de Planos — Back-end</h3>
             <p class="section-hint" style="margin:0;">Selecione máquina, mês e linha. Clique em <strong>Editar</strong> para abrir o modal (como no Controle RC), ajuste as tarefas e aplique somente ao contexto selecionado.</p>
             <p id="planoContextoLabel" style="margin:0.5rem 0 0; font-size:0.85rem; color:var(--primary); display:none;"></p>
           </div>
@@ -663,7 +670,7 @@
          ===================================================== -->
     <div id="view-plano-preventiva-frontend" class="view">
       <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem;">
+        <div style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom:1.5rem; gap:1rem;">
           <div>
             <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(110,231,183,0.1); border:1px solid rgba(110,231,183,0.25); border-radius:20px; padding:0.3rem 0.8rem; margin-bottom:0.75rem;">
               <span class="setor-badge setor-badge-frontend">FE</span>

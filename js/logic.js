@@ -109,23 +109,20 @@ export function calcularAnoPrevisto(row) {
 
 /** Coluna U - VALOR PREVISTO (somente itens ainda não entregues) */
 export function calcularValorPrevisto(row) {
-  if (hasValue(row.data_recebimento)) return null;
+  const status = row.status || calcularStatus(row);
+  if (status === 'ENTREGUE') return null;
   const d = parseDate(row.previsao_entrega);
   if (!d) return null;
-  const now = new Date();
-  if (
-    d.getFullYear() * 12 + d.getMonth() >=
-    now.getFullYear() * 12 + now.getMonth()
-  ) {
-    return Number(row.valor) || 0;
-  }
-  return null;
+  return Number(row.valor) || 0;
 }
 
 /** Coluna V - VALOR RECEBIDO */
 export function calcularValorRecebido(row) {
-  if (!hasValue(row.data_recebimento)) return null;
-  return Number(row.valor) || 0;
+  const status = row.status || calcularStatus(row);
+  if (status === 'ENTREGUE') {
+    return Number(row.valor) || 0;
+  }
+  return null;
 }
 
 /** Coluna W - MES REFERENCIA */
@@ -202,7 +199,8 @@ function mesChaveDeData(v) {
 
 /** Retorna o mês original de previsão de um item atrasado (ex: "Abr") ou null */
 export function calcularMesOriginalAtraso(row) {
-  if (hasValue(row.data_recebimento)) return null; // já entregue
+  const status = row.status || calcularStatus(row);
+  if (status === 'ENTREGUE') return null; // já entregue
   const pe = parseDate(row.previsao_entrega);
   if (!pe) return null;
   const now = new Date();
@@ -233,13 +231,14 @@ export function agregarRecebidosPrevistos(registros) {
     // --- Recebido: sempre soma no mês do recebimento ---
     const vr = r.valor_recebido ?? calcularValorRecebido(r);
     if (vr) {
-      const key = mesChaveDeData(r.data_recebimento) || '—';
+      const key = mesChaveDeData(r.data_recebimento) || mesChaveDeData(r.previsao_entrega) || mesAtualKey;
       bucket(key).recebido += Number(vr);
     }
 
     // --- Previsto: lógica roll-forward ---
     const pe = parseDate(r.previsao_entrega);
-    if (pe && !hasValue(r.data_recebimento)) {
+    const status = r.status || calcularStatus(r);
+    if (pe && status !== 'ENTREGUE') {
       const peMonth = pe.getFullYear() * 12 + pe.getMonth();
       const valor = Number(r.valor) || 0;
       if (valor > 0) {

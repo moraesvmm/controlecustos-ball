@@ -447,7 +447,7 @@ function setupPlanoPreventivaUI() {
     $('#editAtivIdentificador').value = a.identificador || '';
     $('#editAtivMaquina').value = ctx.maquina;
     $('#editAtivDescricao').value = descricaoLinhas(a).join('\n');
-    $('#editAtivMaterial').value = a.material || '';
+    $('#editAtivMaterial').value = Array.isArray(a.material) ? a.material.join('\n') : (a.material || '');
     $('#editAtivDuracao').value = a.duracao_horas ?? '';
     $('#editAtivHhMec').value = a.hh_mec ?? '';
     $('#editAtivHhEle').value = a.hh_eletrico ?? '';
@@ -478,7 +478,7 @@ function setupPlanoPreventivaUI() {
       maquina: ctx.maquina,
       mes: ctx.mes,
       linha: ctx.linha,
-      material: $('#editAtivMaterial').value.trim(),
+      material: $('#editAtivMaterial').value.trim() ? $('#editAtivMaterial').value.trim().split('\n').filter(Boolean) : [],
       duracao_horas: parseFloat($('#editAtivDuracao').value) || 0,
       hh_mec: parseFloat($('#editAtivHhMec').value) || 0,
       hh_eletrico: parseFloat($('#editAtivHhEle').value) || 0,
@@ -571,7 +571,7 @@ function setupPlanoPreventivaUI() {
         identificador: a.identificador || '',
         maquina: ctx.maquina,
         descricao: a.descricao || descricaoLinhas(a)[0] || '',
-        material: a.material || '',
+        material: Array.isArray(a.material) ? a.material : (a.material ? [String(a.material)] : []),
         plano_padrao: a.plano_padrao || 'S',
         mes: ctx.mes,
         linha: ctx.linha,
@@ -1448,7 +1448,7 @@ function renderTabelaPreventiva() {
 
 window.abrirFormularioPreventiva = function(id) {
   editandoPreventiva = id ? registrosPreventiva.find(r => r.id === id) : {
-    identificador: '', maquina: '', material: '', plano_padrao: 'S', duracao_horas: 0, hh_mec: 0, hh_eletrico: 0,
+    identificador: '', maquina: '', material: [], plano_padrao: 'S', duracao_horas: 0, hh_mec: 0, hh_eletrico: 0,
     resp_fabrica: '', resp_manutencao: '', status_auditoria: '', previsao_custos: 0, atividades_descricoes: [], programacao: []
   };
 
@@ -1458,7 +1458,7 @@ window.abrirFormularioPreventiva = function(id) {
   f.id.value = editandoPreventiva.id || '';
   f.identificador.value = editandoPreventiva.identificador || '';
   f.maquina.value = editandoPreventiva.maquina || '';
-  f.material.value = editandoPreventiva.material || '';
+  f.material.value = Array.isArray(editandoPreventiva.material) ? editandoPreventiva.material.join('\n') : (editandoPreventiva.material || '');
   f.plano_padrao.value = editandoPreventiva.plano_padrao || 'S';
   f.duracao_horas.value = editandoPreventiva.duracao_horas || '';
   f.hh_mec.value = editandoPreventiva.hh_mec || '';
@@ -1556,7 +1556,7 @@ $('#formRegistroPreventiva')?.addEventListener('submit', async (e) => {
     ...editandoPreventiva,
     identificador: f.identificador.value,
     maquina: f.maquina.value,
-    material: f.material.value,
+    material: f.material.value.trim() ? f.material.value.trim().split('\n').filter(Boolean) : [],
     plano_padrao: f.plano_padrao.value,
     duracao_horas: parseFloat(f.duracao_horas.value) || 0,
     hh_mec: parseFloat(f.hh_mec.value) || 0,
@@ -1777,15 +1777,16 @@ window.abrirDetalhePreventivaPanel = function(id) {
   document.getElementById('drillInsight').style.display = 'none';
 
   const formatCards = (text) => {
-    if (!text || text.trim() === '' || text === 'Sem descrição' || text === 'Nenhum material especificado' || text === 'undefined') {
+    const safeText = String(text || '');
+    if (!safeText || safeText.trim() === '' || safeText === 'Sem descrição' || safeText === 'Nenhum material especificado' || safeText === 'undefined') {
       return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">Não informado</p>`;
     }
     // Quebra por \n real (não literal)
-    const steps = text.split(/\n/)
+    const steps = safeText.split(/\n/)
                       .map(s => s.trim().replace(/^[-–]/, '').trim())
                       .filter(s => s.length > 1);
     
-    if (steps.length === 0) return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">${text}</p>`;
+    if (steps.length === 0) return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">${safeText}</p>`;
 
     return steps.map((step, idx) => `
       <div style="background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
@@ -1805,10 +1806,12 @@ window.abrirDetalhePreventivaPanel = function(id) {
     rawDesc = 'Não informado';
   }
 
-  // Material: pode vir como string com \n reais
+  // Material: pode vir como array ou string com \n reais
   let rawMat;
-  if (r.material && r.material !== 'undefined' && r.material.trim() !== '') {
-    rawMat = r.material;
+  if (r.material && Array.isArray(r.material) && r.material.length > 0) {
+    rawMat = r.material.join('\n');
+  } else if (r.material && !Array.isArray(r.material) && String(r.material) !== 'undefined' && String(r.material).trim() !== '') {
+    rawMat = String(r.material);
   } else {
     rawMat = 'Não informado';
   }
@@ -2235,7 +2238,7 @@ function setupPlanoPreventivaUIFrontend() {
         maquina: ctx.maquina,
         descricao: a.atividades_descricoes?.[0] || a.descricao || '',
         atividades_descricoes: a.atividades_descricoes || [],
-        material: '', plano_padrao: 'S',
+        material: [], plano_padrao: 'S',
         mes: ctx.mes, linha: ctx.linha,
         duracao_horas: a.duracao_horas || 0,
         hh_mec: a.hh_mec || 0, hh_eletrico: a.hh_eletrico || 0, hh_lub: a.hh_lub || 0,
@@ -2355,7 +2358,7 @@ window.migrarPlanilhaParaSupabase = async function() {
             resp_manutencao: a.resp_manutencao || '',
             previsao_custos: parseFloat(a.previsao_custos) || 0,
             status_auditoria: a.status_auditoria || 'PADRÃO',
-            material: a.material || ''
+            material: Array.isArray(a.material) ? a.material : (a.material ? [String(a.material)] : [])
           });
         } catch(e) {
           console.error(`Erro na atividade da máquina ${m}:`, e.message);
