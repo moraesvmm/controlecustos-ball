@@ -1883,3 +1883,96 @@ body.light-mode .swal2-title,
 body.light-mode .swal2-html-container {
   color: #0f172a !important;
 }
+
+/* ===================================================
+   LIGHT MODE — CORREÇÕES DE CORES HARDCODED NO HTML
+   Inline styles com cores claras fixas que ficam
+   invisíveis sobre fundo branco.
+   =================================================== */
+
+/* Títulos e textos da sidebar com cores hardcoded */
+body.light-mode aside.sidebar h1,
+body.light-mode aside.sidebar h2,
+body.light-mode aside.sidebar span,
+body.light-mode aside.sidebar p {
+  color: var(--text) !important;
+}
+
+/* Todos os botões nav-item na sidebar */
+body.light-mode .nav-item {
+  color: var(--muted) !important;
+}
+body.light-mode .nav-item.active,
+body.light-mode .nav-item:hover {
+  color: var(--gold) !important;
+}
+
+/* Textos de subtítulos de seção dentro do main */
+body.light-mode [style*="color: #f8fafc"],
+body.light-mode [style*="color: #f1f5f9"],
+body.light-mode [style*="color: #e2e8f0"],
+body.light-mode [style*="color: #cbd5e1"],
+body.light-mode [style*="color: #94a3b8"] {
+  color: var(--muted) !important;
+}
+
+/* Bordas com rgba branco — ficam sumidas no light */
+body.light-mode [style*="rgba(255,255,255,0.1)"] {
+  border-color: var(--border) !important;
+}
+
+/* KPI cards com texto em branco/claro */
+body.light-mode .kpi-card [style*="color: #"],
+body.light-mode .kpi-card [style*="color: rgb"] {
+  color: var(--text) !important;
+}
+
+/* Seções de navegação de breadcrumb no light */
+body.light-mode nav[aria-label="breadcrumb"] {
+  border-bottom-color: var(--border) !important;
+}
+body.light-mode nav[aria-label="breadcrumb"] ol {
+  color: var(--muted) !important;
+}
+
+/* Topbar: greeting e outros textos que usam var(--primary) ou cor fixa */
+body.light-mode #userGreeting {
+  color: var(--gold) !important;
+}
+
+/* Textos "muted" inline via style que ficam invisíveis */
+body.light-mode [style*="color: var(--text-light)"],
+body.light-mode [style*="color: var(--primary)"] {
+  color: var(--muted) !important;
+}
+
+/* Planos de manutenção: textos de seção */
+body.light-mode #view-planos-manutencao h2,
+body.light-mode #view-planos-manutencao h3,
+body.light-mode #view-planos-manutencao p,
+body.light-mode #view-planos-manutencao div,
+body.light-mode #view-planos-manutencao-frontend h2,
+body.light-mode #view-planos-manutencao-frontend h3,
+body.light-mode #view-planos-manutencao-frontend p {
+  color: var(--text);
+}
+
+/* Calendário: cabeçalhos dos dias */
+body.light-mode .cal-header {
+  color: var(--text) !important;
+}
+body.light-mode .cal-day-num {
+  color: var(--text) !important;
+}
+body.light-mode .cal-cell {
+  background: #ffffff;
+}
+body.light-mode .cal-cell.empty {
+  background: #f8fafc;
+}
+
+/* Seção de login — mantém fundo escuro, não aplica light */
+#login-container,
+#login-container * {
+  /* login sempre dark — não afetado pelo light-mode */
+}
