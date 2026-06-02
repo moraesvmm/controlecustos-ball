@@ -1797,31 +1797,28 @@ window.selecionarLinhaPlanos = async function(linha) {
   
   $('#step-maquina-section').style.display = 'block';
   
-  // Atualizar KPIs da linha usando os registros
-  const regs = registrosPreventiva.filter(r => r.linha === linha || r.mes === estadoPlanos.mes); // Nota: o DB precisa ter mes e linha no registro. Se não tiver, usar lógica apropriada.
+  // Buscar máquinas para exibir no grid (Apenas do plano de preventiva)
+  let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+  maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
+  const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
+  if (maquinasArray.length === 0) {
+    maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
+  }
+
+  // Atualizar KPIs da linha usando os registros das máquinas
+  const regs = registrosPreventiva.filter(r => maquinasArray.includes(r.maquina));
   $('#kpi-linha-atividades').textContent = regs.length || 0;
   
   let totalHH = 0;
   let totalCusto = 0;
   regs.forEach(r => {
-    totalHH += (parseFloat(r.hh_mec) || 0) + (parseFloat(r.hh_eletrico) || 0);
+    totalHH += (parseFloat(r.hh_mec) || 0) + (parseFloat(r.hh_eletrico) || 0) + (parseFloat(r.hh_lub) || 0);
     totalCusto += parseFloat(r.previsao_custos) || 0;
   });
   $('#kpi-linha-hh').textContent = totalHH.toFixed(1) + 'h';
   $('#kpi-linha-custo').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCusto);
   // Buscar máquinas para exibir no grid (Apenas do plano de preventiva)
-  try {
-    let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
-    maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
-    const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
-    
-    // Fallback: usar a lista da planilha original
-    if (maquinasArray.length === 0) {
-      maquinasArray.push('ABASTECIMENTO', 'ACUMULADORES', 'FORNO', 'IMPRESSORA', 'LAVADORA', 'PRENSA', 'QUEIMADORES', 'TORNO', 'VERNIZ INTERNO');
-      maquinasArray.sort();
-    }
-
-    const html = maquinasArray.map(m => `
+  try {    const html = maquinasArray.map(m => `
       <div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanos('${m}', '${m}')" style="cursor:pointer; padding: 1rem; border-color: rgba(255,255,255,0.05); transition: background 0.2s;">
         <div style="font-weight: 500; font-size: 0.95rem;">${m}</div>
       </div>
@@ -2154,6 +2151,59 @@ $('#btnLimparFiltrosPreventivaFE')?.addEventListener('click', () => {
 $('#btnNovaPreventivaFE')?.addEventListener('click', () => abrirFormularioPreventivaFE(null));
 
 // Modal edição Frontend
+
+// --- Frontend Generator UI ---
+const renderDescricoesGeradorFE = (arr) => {
+  const lista = document.getElementById('listaDescricoesGeradorFE');
+  if (!lista) return;
+  if (!arr || arr.length === 0) {
+    lista.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0.25rem 0;">Nenhuma descrição.</p>';
+    return;
+  }
+  lista.innerHTML = arr.map((desc, idx) => `
+    <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+      <textarea class="desc-input-gerador-fe" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;">${String(desc).replace(/"/g, '&quot;')}</textarea>
+      <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+    </div>
+  `).join('');
+};
+document.getElementById('btnNovaDescricaoGeradorFE')?.addEventListener('click', () => {
+  const lista = document.getElementById('listaDescricoesGeradorFE');
+  if (lista && lista.querySelector('p')) lista.innerHTML = '';
+  lista?.insertAdjacentHTML('beforeend', `
+    <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+      <textarea class="desc-input-gerador-fe" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;"></textarea>
+      <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+    </div>
+  `);
+});
+
+const renderMateriaisGeradorFE = (arr) => {
+  const lista = document.getElementById('listaMateriaisGeradorFE');
+  if (!lista) return;
+  if (!arr || arr.length === 0) {
+    lista.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0.25rem 0;">Nenhum material.</p>';
+    return;
+  }
+  lista.innerHTML = arr.map((mat, idx) => `
+    <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+      <textarea class="mat-input-gerador-fe" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;">${String(mat).replace(/"/g, '&quot;')}</textarea>
+      <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+    </div>
+  `).join('');
+};
+document.getElementById('btnNovoMaterialGeradorFE')?.addEventListener('click', () => {
+  const lista = document.getElementById('listaMateriaisGeradorFE');
+  if (lista && lista.querySelector('p')) lista.innerHTML = '';
+  lista?.insertAdjacentHTML('beforeend', `
+    <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+      <textarea class="mat-input-gerador-fe" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;"></textarea>
+      <button type="button" class="btn-icon" onclick="this.parentElement.remove()" style="margin-top:0.25rem;opacity:0.7;" title="Remover">❌</button>
+    </div>
+  `);
+});
+// ------------------------------
+
 let editandoPreventivaFE = null;
 
 window.abrirFormularioPreventivaFE = function(id) {
@@ -2170,6 +2220,8 @@ window.abrirFormularioPreventivaFE = function(id) {
   $('#editAtivMaquinaFE').value = editandoPreventivaFE.maquina || '';
     const descArrFE = editandoPreventivaFE.atividades_descricoes?.length ? editandoPreventivaFE.atividades_descricoes : (editandoPreventivaFE.descricao ? [editandoPreventivaFE.descricao] : []);
     renderDescricoesGeradorFE(descArrFE);
+    const matArrFE = Array.isArray(editandoPreventivaFE.material) ? editandoPreventivaFE.material : (editandoPreventivaFE.material ? [String(editandoPreventivaFE.material)] : []);
+    renderMateriaisGeradorFE(matArrFE);
   $('#editAtivDuracaoFE').value = editandoPreventivaFE.duracao_horas || '';
   $('#editAtivHhMecFE').value = editandoPreventivaFE.hh_mec || '';
   $('#editAtivHhEleFE').value = editandoPreventivaFE.hh_eletrico || '';
@@ -2188,13 +2240,15 @@ $('#modalEditarAtividadeFE')?.addEventListener('click', (e) => { if (e.target ==
 $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const descricoes = Array.from(document.querySelectorAll('.desc-input-gerador-fe')).map(el => el.value.trim()).filter(Boolean);
-    const descricao = descricoes[0] || '';
+  const materiais = Array.from(document.querySelectorAll('.mat-input-gerador-fe')).map(el => el.value.trim()).filter(Boolean);
+  const descricao = descricoes[0] || '';
   const payload = {
     ...editandoPreventivaFE,
     identificador: $('#editAtivIdentificadorFE').value.trim(),
     maquina: $('#editAtivMaquinaFE').value.trim(),
     descricao,
     atividades_descricoes: descricoes,
+    material: materiais,
     duracao_horas: parseFloat($('#editAtivDuracaoFE').value) || 0,
     hh_mec: parseFloat($('#editAtivHhMecFE').value) || 0,
     hh_eletrico: parseFloat($('#editAtivHhEleFE').value) || 0,
@@ -2518,35 +2572,50 @@ function initDragToScroll() {
     let startX;
     let scrollLeft;
 
+    const onMouseMove = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX) * 1.5; 
+      slider.scrollLeft = scrollLeft - walk;
+    };
+
+    const onMouseUp = () => {
+      isDown = false;
+      slider.style.cursor = 'grab';
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
     slider.addEventListener('mousedown', (e) => {
-      // Prevent drag if clicking on the horizontal scrollbar
-      if (e.offsetY >= slider.clientHeight) return;
+      // Prevent drag if clicking on the native horizontal scrollbar
+      if (e.target === slider && e.offsetY >= slider.clientHeight) return;
+      
       isDown = true;
       slider.style.cursor = 'grabbing';
       startX = e.pageX - slider.offsetLeft;
       scrollLeft = slider.scrollLeft;
+
+      // Attach events to window so dragging continues even if mouse leaves the table
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
     });
     
     slider.addEventListener('mouseleave', () => {
-      isDown = false;
-      slider.style.cursor = 'default';
-    });
-    
-    slider.addEventListener('mouseup', () => {
-      isDown = false;
-      slider.style.cursor = 'default';
+      if (!isDown) {
+        slider.style.cursor = 'default';
+      }
     });
     
     slider.addEventListener('mousemove', (e) => {
       if (!isDown) {
         // Change cursor to grab only if not hovering the scrollbar
-        slider.style.cursor = (e.offsetY >= slider.clientHeight) ? 'default' : 'grab';
-        return;
+        const isScrollbar = e.target === slider && e.offsetY >= slider.clientHeight;
+        const newCursor = isScrollbar ? 'default' : 'grab';
+        if (slider.style.cursor !== newCursor) {
+          slider.style.cursor = newCursor;
+        }
       }
-      e.preventDefault();
-      const x = e.pageX - slider.offsetLeft;
-      const walk = (x - startX) * 1.5; 
-      slider.scrollLeft = scrollLeft - walk;
     });
   });
 }

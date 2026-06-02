@@ -263,7 +263,14 @@
         </nav>
 
         <!-- STEP 1: Seleção de Mês -->
-        <div id="step-mes">
+        <div id="step-mes" style="position: relative;">
+          <div style="position: absolute; top: 0; right: 0;">
+            <input type="file" id="fileImportExcelPreventiva" accept=".xlsx, .xls" style="display: none;" />
+            <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly" style="font-size: 0.85rem; border-color: rgba(56,189,248,0.4); color: #38bdf8; display: flex; align-items: center; gap: 0.4rem;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Importar Base
+            </button>
+          </div>
           <header style="text-align: center; margin-bottom: 2rem;">
             <div style="background: rgba(16,185,129,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
               <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
@@ -357,12 +364,7 @@
               <div id="maquinas-grid-planos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
               </div>
 
-              <!-- Botão de Importação da Linha -->
-              <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
-                <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 0.75rem;">Atualizar dados desta linha com planilha Excel:</p>
-                <input type="file" id="fileImportExcelPreventiva" accept=".xlsx, .xls" style="display: none;" />
-                <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly" style="width: 100%; font-size: 0.85rem;">📥 Importar Planilha da Linha</button>
-              </div>
+
             </section>
           </div>
         </div>
@@ -768,6 +770,11 @@
                   <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Descrições / Atividades</span>
                   <div id="listaDescricoesGeradorFE" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
                   <button type="button" class="btn btn-outline btn-sm" id="btnNovaDescricaoGeradorFE" style="align-self:flex-start;">+ Adicionar descrição</button>
+                </div>
+                <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Materiais</span>
+                  <div id="listaMateriaisGeradorFE" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovoMaterialGeradorFE" style="align-self:flex-start;">+ Adicionar material</button>
                 </div>
             </div>
           </div>
