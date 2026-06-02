@@ -151,12 +151,12 @@ function renderMachineList() {
   const htmlGeral = `
     <li data-id="GERAL" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);" 
         onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
-        onmouseout="this.style.background=selectedMachineId==='GERAL'?'rgba(212,175,55,0.15)':''">Geral (Todas)</li>
+        onmouseout="this.style.background=window.selectedMachineId==='GERAL'?'rgba(212,175,55,0.15)':''">Geral (Todas)</li>
   `;
   const htmlMaquinas = maquinas.map(m => `
     <li data-id="${m}" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s;" 
         onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
-        onmouseout="this.style.background=selectedMachineId===this.dataset.id?'rgba(212,175,55,0.15)':''">${m}</li>
+        onmouseout="this.style.background=window.selectedMachineId===this.dataset.id?'rgba(212,175,55,0.15)':''">${m}</li>
   `).join('');
   
   ul.innerHTML = htmlGeral + htmlMaquinas;
@@ -164,6 +164,7 @@ function renderMachineList() {
   ul.querySelectorAll('li').forEach(li => {
     li.addEventListener('click', () => {
       selectedMachineId = li.dataset.id;
+        window.selectedMachineId = selectedMachineId;
       $('#machineTitle').textContent = li.dataset.id === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Atividades: ${li.dataset.id}`;
       if ($('#btnAddActivity')) $('#btnAddActivity').style.display = 'inline-block';
       renderMachineActivities();
@@ -176,6 +177,7 @@ function renderMachineList() {
 
   if (!selectedMachineId) {
     selectedMachineId = 'GERAL';
+      window.selectedMachineId = selectedMachineId;
   }
   const selLi = document.querySelector(`#machineList li[data-id="${selectedMachineId}"]`);
   if (selLi) selLi.click();
@@ -397,7 +399,7 @@ function setupPlanoPreventivaUI() {
         const descResumo = descStr
           ? descStr.substring(0, 60) + (descStr.length > 60 || descLines.length > 1 ? '...' : '')
           : '-';
-        const mat = (a.material || '').replace(/"/g, '&quot;');
+        const mat = (Array.isArray(a.material) ? a.material.join('\n') : String(a.material || '')).replace(/"/g, '&quot;');
         return `<tr>
           <td><strong>${a.identificador || '-'}</strong></td>
           <td title="${descFull}">${descResumo}</td>
