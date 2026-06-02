@@ -286,6 +286,8 @@ function setupPlanoPreventivaUI() {
   const countLabel = $('#planoAtividadesCount');
   const modalAtiv = $('#modalEditarAtividade');
   let currentActivities = [];
+  if (!window.editedPlanoItems) window.editedPlanoItems = new Set();
+  if (!window.editedPlanoItems) window.editedPlanoItems = new Set();
   let planoFonte = 'vazio';
   let editandoPlanoIdx = null;
 
@@ -400,7 +402,8 @@ function setupPlanoPreventivaUI() {
           ? descStr.substring(0, 60) + (descStr.length > 60 || descLines.length > 1 ? '...' : '')
           : '-';
         const mat = (Array.isArray(a.material) ? a.material.join('\n') : String(a.material || '')).replace(/"/g, '&quot;');
-        return `<tr>
+        const isEdited = window.editedPlanoItems && window.editedPlanoItems.has(a.identificador);
+        return `<tr ondblclick="abrirModalAtividadePlano(${idx})" style="cursor:pointer; ${isEdited ? 'background-color: rgba(212,175,55,0.08); border-left: 3px solid var(--primary);' : ''}">
           <td><strong>${a.identificador || '-'}</strong></td>
           <td title="${descFull}">${descResumo}</td>
           <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${mat}">${a.material ? String(a.material).split('\n')[0].substring(0, 40) + (String(a.material).length > 40 ? '...' : '') : '-'}</td>
@@ -517,6 +520,8 @@ function setupPlanoPreventivaUI() {
     };
 
     currentActivities[editandoPlanoIdx] = atualizado;
+    if (window.editedPlanoItems && currentActivities[editandoPlanoIdx]) window.editedPlanoItems.add(currentActivities[editandoPlanoIdx].identificador);
+    if (window.editedPlanoItemsFE) window.editedPlanoItemsFE.add(currentActivities[editandoPlanoIdx].id);
     fecharModalAtividadePlano();
     renderPlanoActivitiesTable();
     toast('Atividade atualizada no plano. Clique em "Aplicar" para gravar na preventiva.', 'success');
@@ -625,7 +630,9 @@ function setupPlanoPreventivaUI() {
       toast('Erro ao aplicar plano: ' + err.message, 'error');
     } finally {
       btnAplicar.disabled = !contextoCompleto() || currentActivities.length === 0;
-      btnAplicar.textContent = '✅ Aplicar Plano à Preventiva';
+      btnAplicar.textContent = '✔️ Aplicar Plano à Preventiva';
+      if (window.editedPlanoItems) window.editedPlanoItems.clear();
+      renderPlanoActivitiesTable();
     }
   });
 
@@ -2055,8 +2062,9 @@ function renderTabelaPreventivaFE() {
     tbody.innerHTML = '<tr><td colspan="11" class="empty">Nenhuma atividade Front-end encontrada</td></tr>';
     return;
   }
-  tbody.innerHTML = filtrados.map((r, i) => `
-    <tr>
+  tbody.innerHTML = filtrados.map((r, i) => {
+    const isEdited = window.editedPlanoItemsFE && window.editedPlanoItemsFE.has(r.id);
+    return `<tr ondblclick="abrirFormularioPreventivaFE('${r.id}')" style="cursor:pointer; ${isEdited ? 'background-color: rgba(110,231,183,0.08); border-left: 3px solid #6ee7b7;' : ''}">
       <td><strong>${i + 1}</strong></td>
       <td>${r.maquina || '—'}</td>
       <td style="max-width:280px; white-space:normal; line-height:1.4;">${(r.atividades_descricoes?.[0] || r.descricao || '—').slice(0, 100)}${(r.atividades_descricoes?.[0] || r.descricao || '').length > 100 ? '…' : ''}</td>
@@ -2071,8 +2079,8 @@ function renderTabelaPreventivaFE() {
         <button type="button" class="btn-icon" onclick="abrirDetalhePreventivaFEPanel('${r.id}')" title="Ver Detalhes" style="background:var(--primary);color:#000;padding:0.4rem 0.8rem;border-radius:6px;font-size:0.8rem;width:auto;font-family:inherit;">Ver</button>
         <button type="button" class="btn-icon" onclick="abrirFormularioPreventivaFE('${r.id}')" title="Editar">✏️</button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 $('#filtroBuscaPreventivaFE')?.addEventListener('input', (e) => {
@@ -2146,6 +2154,7 @@ $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
   };
   try {
     await salvarPreventiva(payload);
+    if (window.editedPlanoItemsFE) window.editedPlanoItemsFE.add(payload.id);
     const todos = await carregarPreventiva();
     registrosPreventivaFrontend = todos.filter(r => r.setor === 'frontend');
     registrosPreventiva = todos.filter(r => r.setor !== 'frontend');
@@ -2202,18 +2211,18 @@ function setupPlanoPreventivaUIFrontend() {
   const btnAplicar = $('#btnAplicarPlanoFE');
   const table = $('#planoActivitiesTableFE');
   const countEl = $('#planoAtividadesCountFE');
-  const labelEl = $('#planoAtividadesLabelFE');
 
   if (!machineSelect || !btnAplicar || !table) return;
 
   let currentActivitiesFE = [];
+  if (!window.editedPlanoItemsFE) window.editedPlanoItemsFE = new Set();
 
   const getContextoFE = () => ({
     maquina: machineSelect.value,
     mes: monthSelect.value,
     linha: lineSelect.value,
   });
-  const contextoCompletoFE = () => {
+  const contextoFECompleto = () => {
     const ctx = getContextoFE();
     return ctx.maquina && ctx.mes && ctx.linha;
   };
@@ -2226,8 +2235,9 @@ function setupPlanoPreventivaUIFrontend() {
       if (countEl) countEl.textContent = '';
       return;
     }
-    tbody.innerHTML = currentActivitiesFE.map((a, i) => `
-      <tr>
+    tbody.innerHTML = currentActivitiesFE.map((a, i) => {
+      const isEdited = window.editedPlanoItemsFE && window.editedPlanoItemsFE.has(a.id);
+      return `<tr ondblclick="abrirFormularioPreventivaFE('${a.id}')" style="cursor:pointer; ${isEdited ? 'background-color: rgba(110,231,183,0.08); border-left: 3px solid #6ee7b7;' : ''}">
         <td>${i + 1}</td>
         <td>${a.maquina || '—'}</td>
         <td style="max-width:260px;white-space:normal;line-height:1.4;">${(a.atividades_descricoes?.[0] || a.descricao || '—').slice(0, 100)}</td>
@@ -2239,8 +2249,8 @@ function setupPlanoPreventivaUIFrontend() {
         <td>${a.sugestao || a.resp_fabrica || '—'}</td>
         <td><span class="badge ${a.status_auditoria === 'FINALIZADO' ? 'badge-success' : a.status_auditoria ? 'badge-warning' : ''}">${a.status_auditoria || '—'}</span></td>
         <td><button type="button" class="btn-icon" onclick="abrirFormularioPreventivaFE('${a.id}')" title="Editar">✏️</button></td>
-      </tr>
-    `).join('');
+      </tr>`;
+    }).join('');
     if (countEl) countEl.textContent = `${currentActivitiesFE.length} atividade(s)`;
   };
 
@@ -2256,7 +2266,7 @@ function setupPlanoPreventivaUIFrontend() {
       currentActivitiesFE = registrosPreventivaFrontend.filter(r => r.maquina === ctx.maquina);
     }
     renderPlanoActivitiesTableFE();
-    if (btnAplicar) btnAplicar.disabled = !contextoCompletoFE() || currentActivitiesFE.length === 0;
+    if (btnAplicar) btnAplicar.disabled = !contextoFECompleto() || currentActivitiesFE.length === 0;
   };
 
   const loadPlanoMachinesFE = () => {
@@ -2272,7 +2282,7 @@ function setupPlanoPreventivaUIFrontend() {
 
   btnAplicar?.addEventListener('click', async () => {
     const ctx = getContextoFE();
-    if (!contextoCompletoFE()) { toast('Selecione máquina, mês e linha antes de aplicar.', 'warning'); return; }
+    if (!contextoFECompleto()) { toast('Selecione máquina, mês e linha antes de aplicar.', 'warning'); return; }
     if (!currentActivitiesFE.length) { toast('Nenhuma atividade no plano Front-end.', 'warning'); return; }
     const confirm = await Swal.fire({
       title: 'Aplicar Plano Front-end',
@@ -2319,8 +2329,10 @@ function setupPlanoPreventivaUIFrontend() {
     } catch (err) {
       toast('Erro ao aplicar plano Front-end: ' + err.message, 'error');
     } finally {
-      btnAplicar.disabled = !contextoCompletoFE() || currentActivitiesFE.length === 0;
-      btnAplicar.textContent = '✅ Aplicar Plano Front-end';
+      btnAplicar.disabled = !contextoFECompleto() || currentActivitiesFE.length === 0;
+      btnAplicar.textContent = '✔️ Aplicar Plano ao Front-end';
+      if (window.editedPlanoItemsFE) window.editedPlanoItemsFE.clear();
+      renderPlanoActivitiesTableFE();
     }
   });
 
