@@ -1532,7 +1532,7 @@ function renderTabelaPreventiva() {
 }
 
 window.abrirFormularioPreventiva = function(id) {
-  editandoPreventiva = id ? registrosPreventiva.find(r => r.id === id) : {
+  editandoPreventiva = id ? registrosPreventiva.find(r => String(r.id) === String(id)) : {
     identificador: '', maquina: '', material: [], plano_padrao: 'S', duracao_horas: 0, hh_mec: 0, hh_eletrico: 0,
     resp_fabrica: '', resp_manutencao: '', status_auditoria: '', previsao_custos: 0, atividades_descricoes: [], programacao: []
   };
@@ -1860,7 +1860,7 @@ initExcelImportPreventiva(getClient(), toast, async () => {
 
 // View Detalhes Panel para Preventiva
 window.abrirDetalhePreventivaPanel = function(id) {
-  const r = registrosPreventiva.find((x) => x.id === id);
+  const r = registrosPreventiva.find((x) => String(x.id) === String(id));
   if (!r) return;
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
@@ -2208,7 +2208,7 @@ let editandoPreventivaFE = null;
 
 window.abrirFormularioPreventivaFE = function(id) {
   editandoPreventivaFE = id
-    ? registrosPreventivaFrontend.find(r => r.id === id)
+    ? registrosPreventivaFrontend.find(r => String(r.id) === String(id))
     : { identificador: '', maquina: estadoPlanosFrontend.maquina || '', descricao: '',
         atividades_descricoes: [], duracao_horas: 0, hh_mec: 0, hh_eletrico: 0, hh_lub: 0,
         frequencia_meses: null, sugestao: '', status_auditoria: '', setor: 'frontend', area_producao: 'FRONT-END' };
@@ -2276,7 +2276,7 @@ $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
 
 // Painel de detalhes Frontend
 window.abrirDetalhePreventivaFEPanel = function(id) {
-  const r = registrosPreventivaFrontend.find(x => x.id === id);
+  const r = registrosPreventivaFrontend.find(x => String(x.id) === String(id));
   if (!r) return;
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
