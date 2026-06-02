@@ -1458,7 +1458,6 @@ window.abrirFormularioPreventiva = function(id) {
   f.id.value = editandoPreventiva.id || '';
   f.identificador.value = editandoPreventiva.identificador || '';
   f.maquina.value = editandoPreventiva.maquina || '';
-  f.material.value = Array.isArray(editandoPreventiva.material) ? editandoPreventiva.material.join('\n') : (editandoPreventiva.material || '');
   f.plano_padrao.value = editandoPreventiva.plano_padrao || 'S';
   f.duracao_horas.value = editandoPreventiva.duracao_horas || '';
   f.hh_mec.value = editandoPreventiva.hh_mec || '';
@@ -1469,6 +1468,7 @@ window.abrirFormularioPreventiva = function(id) {
   f.previsao_custos.value = editandoPreventiva.previsao_custos || '';
 
   renderDescricoesPreventiva();
+  renderMateriaisPreventiva();
   renderProgramacaoPreventiva();
 
   $('#btnExcluirPreventivaModal').style.display = editandoPreventiva.id ? 'inline-flex' : 'none';
@@ -1505,6 +1505,40 @@ $('#btnNovaDescricaoPreventiva')?.addEventListener('click', () => {
   if (!editandoPreventiva.atividades_descricoes) editandoPreventiva.atividades_descricoes = [];
   editandoPreventiva.atividades_descricoes.push('');
   renderDescricoesPreventiva();
+});
+
+window.removerMaterialPreventiva = function(idx) {
+  if (confirm('Remover este material?')) {
+    editandoPreventiva.material.splice(idx, 1);
+    renderMateriaisPreventiva();
+  }
+};
+
+function renderMateriaisPreventiva() {
+  const lista = $('#listaMateriaisPreventiva');
+  if (!lista) return;
+  if (!editandoPreventiva.material?.length) {
+    lista.innerHTML = '<p style="color:var(--muted);font-size:0.85rem;margin:0.25rem 0;">Nenhum material. Clique em "+ Adicionar" abaixo.</p>';
+    return;
+  }
+  lista.innerHTML = editandoPreventiva.material.map((mat, idx) => `
+    <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+      <textarea class="mat-input" data-idx="${idx}" rows="2" style="flex:1;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem 0.75rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;line-height:1.5;">${mat}</textarea>
+      <button type="button" class="btn-icon" onclick="window.removerMaterialPreventiva(${idx})" title="Remover" style="margin-top:0.25rem;opacity:0.7;">❌</button>
+    </div>
+  `).join('');
+
+  lista.querySelectorAll('.mat-input').forEach(el => {
+    el.addEventListener('input', (e) => {
+      editandoPreventiva.material[e.target.dataset.idx] = e.target.value;
+    });
+  });
+}
+
+$('#btnNovoMaterialPreventiva')?.addEventListener('click', () => {
+  if (!editandoPreventiva.material) editandoPreventiva.material = [];
+  editandoPreventiva.material.push('');
+  renderMateriaisPreventiva();
 });
 
 function renderProgramacaoPreventiva() {
@@ -1556,7 +1590,7 @@ $('#formRegistroPreventiva')?.addEventListener('submit', async (e) => {
     ...editandoPreventiva,
     identificador: f.identificador.value,
     maquina: f.maquina.value,
-    material: f.material.value.trim() ? f.material.value.trim().split('\n').filter(Boolean) : [],
+    material: editandoPreventiva.material?.filter(m => m.trim()) || [],
     plano_padrao: f.plano_padrao.value,
     duracao_horas: parseFloat(f.duracao_horas.value) || 0,
     hh_mec: parseFloat(f.hh_mec.value) || 0,
