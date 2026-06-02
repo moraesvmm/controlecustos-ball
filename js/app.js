@@ -537,6 +537,7 @@ function setupPlanoPreventivaUI() {
 
   [machineSelect, monthSelect, lineSelect].forEach((el) => {
     el?.addEventListener('change', carregarAtividadesPlano);
+  window.carregarAtividadesPlano = carregarAtividadesPlano;
   });
 
   $('#btnFecharModalAtividade')?.addEventListener('click', fecharModalAtividadePlano);
@@ -2265,6 +2266,7 @@ function setupPlanoPreventivaUIFrontend() {
   loadPlanoMachinesFE();
 
   [machineSelect, monthSelect, lineSelect].forEach(el => el?.addEventListener('change', carregarAtividadesPlanoFE));
+  window.carregarAtividadesPlanoFE = carregarAtividadesPlanoFE;
 
   btnAplicar?.addEventListener('click', async () => {
     const ctx = getContextoFE();

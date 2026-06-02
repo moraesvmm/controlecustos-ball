@@ -602,13 +602,13 @@
         <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:flex-end; background:var(--surface); padding:1.25rem; border-radius:10px; border:1px solid var(--border);">
           <label style="flex:1; min-width:160px;">
             <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Máquina</span>
-            <select id="planoMachineSelect" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+            <select id="planoMachineSelect" onchange="carregarAtividadesPlano()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="">Selecione a máquina...</option>
             </select>
           </label>
           <label style="flex:1; min-width:160px;">
             <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Mês</span>
-            <select id="planoMesSelect" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+            <select id="planoMesSelect" onchange="carregarAtividadesPlano()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="">Selecione o mês...</option>
               <option value="JANEIRO">JANEIRO</option>
               <option value="FEVEREIRO">FEVEREIRO</option>
@@ -626,7 +626,7 @@
           </label>
           <label style="flex:1; min-width:120px;">
             <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Linha</span>
-            <select id="planoLinhaSelect" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+            <select id="planoLinhaSelect" onchange="carregarAtividadesPlano()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="L04">L04</option>
               <option value="L05">L05</option>
               <option value="L06" selected>L06</option>
@@ -694,13 +694,13 @@
         <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:flex-end; background:var(--surface); padding:1.25rem; border-radius:10px; border:1px solid var(--border);">
           <label style="flex:1; min-width:160px;">
             <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Máquina</span>
-            <select id="planoMachineSelectFE" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+            <select id="planoMachineSelectFE" onchange="carregarAtividadesPlanoFE()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="">Selecione a máquina...</option>
             </select>
           </label>
           <label style="flex:1; min-width:160px;">
             <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Mês</span>
-            <select id="planoMesSelectFE" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+            <select id="planoMesSelectFE" onchange="carregarAtividadesPlanoFE()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="">Selecione o mês...</option>
               <option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option>
               <option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option>
@@ -709,7 +709,7 @@
           </label>
           <label style="flex:1; min-width:120px;">
             <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Linha</span>
-            <select id="planoLinhaSelectFE" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+            <select id="planoLinhaSelectFE" onchange="carregarAtividadesPlanoFE()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
               <option value="L04">L04</option><option value="L05">L05</option>
               <option value="L06" selected>L06</option><option value="L07">L07</option>
               <option value="L08">L08</option><option value="L09">L09</option>
