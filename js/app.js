@@ -2508,3 +2508,46 @@ window.migrarPlanilhaParaSupabase = async function() {
   }
   console.log('MIGRAÇÃO FINALIZADA COM SUCESSO! Você já pode dar F5 na página e usar a tela normalmente.');
 };
+
+
+// Drag to scroll
+function initDragToScroll() {
+  const sliders = document.querySelectorAll('.table-scroll-inner');
+  sliders.forEach(slider => {
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    slider.addEventListener('mousedown', (e) => {
+      isDown = true;
+      slider.style.cursor = 'grabbing';
+      startX = e.pageX - slider.offsetLeft;
+      scrollLeft = slider.scrollLeft;
+    });
+    slider.addEventListener('mouseleave', () => {
+      isDown = false;
+      slider.style.cursor = 'grab';
+    });
+    slider.addEventListener('mouseup', () => {
+      isDown = false;
+      slider.style.cursor = 'grab';
+    });
+    slider.addEventListener('mousemove', (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX) * 1.5; // Velocidade do scroll
+      slider.scrollLeft = scrollLeft - walk;
+    });
+    
+    // Cursor inicial
+    slider.style.cursor = 'grab';
+  });
+}
+
+// Inicializar na carga inicial
+document.addEventListener('DOMContentLoaded', initDragToScroll);
+// Como script type module o DOM já pode estar pronto
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  setTimeout(initDragToScroll, 100);
+}
