@@ -20,37 +20,57 @@ let chartInstances = [];
 let registrosRef = [];
 let crudMesChartInstance = null;
 
-const premiumDefaults = {
-  responsive: true,
-  maintainAspectRatio: false,
-  interaction: { mode: 'nearest', intersect: true },
-  onHover: (e, el) => {
-    e.native.target.style.cursor = el.length ? 'pointer' : 'default';
-  },
-  plugins: {
-    legend: {
-      labels: { color: '#cbd5e1', font: CHART_FONT, padding: 16, usePointStyle: true },
+// Retorna cores adaptadas ao tema atual
+function themeColors() {
+  const isLight = document.body.classList.contains('light-mode');
+  return {
+    legendColor:  isLight ? '#334155' : '#cbd5e1',
+    titleColor:   isLight ? '#0f172a' : '#f8fafc',
+    tickColor:    isLight ? '#64748b' : '#94a3b8',
+    gridColor:    isLight ? 'rgba(100,116,139,0.12)' : 'rgba(148,163,184,0.08)',
+    tooltipBg:    isLight ? 'rgba(255,255,255,0.97)' : 'rgba(15,23,42,0.95)',
+    tooltipTitle: isLight ? '#0f172a' : '#f1f5f9',
+    tooltipBody:  isLight ? '#334155' : '#cbd5e1',
+    borderColor:  isLight ? '#e2e8f0' : '#0f172a',
+  };
+}
+
+function buildDefaults() {
+  const tc = themeColors();
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'nearest', intersect: true },
+    onHover: (e, el) => {
+      e.native.target.style.cursor = el.length ? 'pointer' : 'default';
     },
-    tooltip: {
-      backgroundColor: 'rgba(15, 23, 42, 0.95)',
-      titleFont: { ...CHART_FONT, size: 13, weight: '600' },
-      bodyFont: CHART_FONT,
-      borderColor: 'rgba(212, 175, 55, 0.35)',
-      borderWidth: 1,
-      padding: 12,
-      callbacks: {
-        label: (ctx) => {
-          let v = 0;
-          if (typeof ctx.parsed === 'number') v = ctx.parsed;
-          else if (ctx.chart?.options?.indexAxis === 'y') v = ctx.parsed.x;
-          else v = ctx.parsed.y;
-          return ` ${ctx.dataset.label}: ${fmtMoeda(v)}`;
+    plugins: {
+      legend: {
+        labels: { color: tc.legendColor, font: CHART_FONT, padding: 16, usePointStyle: true },
+      },
+      tooltip: {
+        backgroundColor: tc.tooltipBg,
+        titleColor: tc.tooltipTitle,
+        bodyColor: tc.tooltipBody,
+        titleFont: { ...CHART_FONT, size: 13, weight: '600' },
+        bodyFont: CHART_FONT,
+        borderColor: 'rgba(212, 175, 55, 0.35)',
+        borderWidth: 1,
+        padding: 12,
+        callbacks: {
+          label: (ctx) => {
+            let v = 0;
+            if (typeof ctx.parsed === 'number') v = ctx.parsed;
+            else if (ctx.chart?.options?.indexAxis === 'y') v = ctx.parsed.x;
+            else v = ctx.parsed.y;
+            return ` ${ctx.dataset.label}: ${fmtMoeda(v)}`;
+          },
+          footer: () => 'Clique para ver detalhes',
         },
-        footer: () => 'Clique para ver detalhes',
       },
     },
-  },
-};
+  };
+}
 
 function gradient(ctx, c1, c2) {
   const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, 280);
@@ -118,6 +138,8 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
   if (!ctx) return;
 
   const byMes = agregarRecebidosPrevistos(registros);
+  const tc = themeColors();
+  const premiumDefaults = buildDefaults();
 
   crudMesChartInstance = new Chart(ctx, {
     type: 'bar',
@@ -146,15 +168,15 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
         title: {
           display: true,
           text: titulo,
-          color: '#f8fafc',
+          color: tc.titleColor,
           font: { ...CHART_FONT, size: 14, weight: '600' },
         },
       },
       scales: {
-        x: { ticks: { color: '#94a3b8', font: CHART_FONT }, grid: { display: false } },
+        x: { ticks: { color: tc.tickColor, font: CHART_FONT }, grid: { display: false } },
         y: {
-          ticks: { color: '#94a3b8', font: CHART_FONT, callback: (v) => fmtMoeda(v) },
-          grid: { color: 'rgba(148,163,184,0.08)' },
+          ticks: { color: tc.tickColor, font: CHART_FONT, callback: (v) => fmtMoeda(v) },
+          grid: { color: tc.gridColor },
         },
       },
     },
@@ -164,6 +186,9 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
 export function renderDashboardCharts(registros) {
   destroyCharts();
   registrosRef = registros;
+
+  const tc = themeColors();
+  const premiumDefaults = buildDefaults();
 
   const byStatus = agregarPorStatus(registros);
   const byMes = agregarRecebidosPrevistos(registros);
@@ -198,15 +223,15 @@ export function renderDashboardCharts(registros) {
           title: {
             display: true,
             text: 'STATUS × CUSTO',
-            color: '#f8fafc',
+            color: tc.titleColor,
             font: { ...CHART_FONT, size: 14, weight: '600' },
           },
         },
         scales: {
-          x: { ticks: { color: '#94a3b8', font: CHART_FONT }, grid: { color: 'rgba(148,163,184,0.08)' } },
+          x: { ticks: { color: tc.tickColor, font: CHART_FONT }, grid: { color: tc.gridColor } },
           y: {
-            ticks: { color: '#94a3b8', font: CHART_FONT, callback: (v) => fmtMoeda(v) },
-            grid: { color: 'rgba(148,163,184,0.08)' },
+            ticks: { color: tc.tickColor, font: CHART_FONT, callback: (v) => fmtMoeda(v) },
+            grid: { color: tc.gridColor },
           },
         },
       },
@@ -243,15 +268,15 @@ export function renderDashboardCharts(registros) {
           title: {
             display: true,
             text: 'RECEBIDOS E PREVISTOS',
-            color: '#f8fafc',
+            color: tc.titleColor,
             font: { ...CHART_FONT, size: 14, weight: '600' },
           },
         },
         scales: {
-          x: { ticks: { color: '#94a3b8', font: CHART_FONT }, grid: { display: false } },
+          x: { ticks: { color: tc.tickColor, font: CHART_FONT }, grid: { display: false } },
           y: {
-            ticks: { color: '#94a3b8', font: CHART_FONT, callback: (v) => fmtMoeda(v) },
-            grid: { color: 'rgba(148,163,184,0.08)' },
+            ticks: { color: tc.tickColor, font: CHART_FONT, callback: (v) => fmtMoeda(v) },
+            grid: { color: tc.gridColor },
           },
         },
       },
@@ -283,16 +308,16 @@ export function renderDashboardCharts(registros) {
           title: {
             display: true,
             text: 'GASTOS POR MÁQUINA',
-            color: '#f8fafc',
+            color: tc.titleColor,
             font: { ...CHART_FONT, size: 14, weight: '600' },
           },
         },
         scales: {
           x: {
-            ticks: { color: '#94a3b8', font: CHART_FONT, callback: (v) => fmtMoeda(v) },
-            grid: { color: 'rgba(148,163,184,0.08)' },
+            ticks: { color: tc.tickColor, font: CHART_FONT, callback: (v) => fmtMoeda(v) },
+            grid: { color: tc.gridColor },
           },
-          y: { ticks: { color: '#94a3b8', font: CHART_FONT, maxRotation: 0 }, grid: { display: false } },
+          y: { ticks: { color: tc.tickColor, font: CHART_FONT, maxRotation: 0 }, grid: { display: false } },
         },
       },
     });
@@ -301,17 +326,16 @@ export function renderDashboardCharts(registros) {
 
   // --- Gráficos de Pizza (Prazos de Retorno) ---
   const prazosColors = {
-    'Em dias': '#34d399', // Verde
-    'Pendente de retorno': '#fbbf24', // Amarelo
-    'Atrasado para retorno': '#f87171' // Vermelho
+    'Em dias': '#34d399',
+    'Pendente de retorno': '#fbbf24',
+    'Atrasado para retorno': '#f87171'
   };
 
   function renderPrazoChart(canvasId, title, natureza) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
     const data = agregarPrazosRetorno(registros, natureza);
-    // Se não houver dados e quisermos mostrar vazio, não retornamos, renderizamos vazio
-    
+
     const ch = new Chart(ctx, {
       type: 'doughnut',
       data: {
@@ -321,7 +345,7 @@ export function renderDashboardCharts(registros) {
           data: data.map(d => d.qtde),
           backgroundColor: data.map(d => prazosColors[d.label]),
           borderWidth: 2,
-          borderColor: '#0f172a',
+          borderColor: tc.borderColor,
           hoverOffset: 4
         }]
       },
@@ -334,15 +358,13 @@ export function renderDashboardCharts(registros) {
           title: {
             display: true,
             text: title,
-            color: '#f8fafc',
+            color: tc.titleColor,
             font: { ...CHART_FONT, size: 14, weight: '600' }
           },
           tooltip: {
             ...premiumDefaults.plugins.tooltip,
             callbacks: {
-              label: (ctx) => {
-                return ` ${ctx.label}: ${ctx.parsed} item(ns)`;
-              },
+              label: (ctx) => ` ${ctx.label}: ${ctx.parsed} item(ns)`,
               footer: () => 'Clique para ver detalhes'
             }
           }

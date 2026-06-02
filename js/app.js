@@ -2640,7 +2640,7 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     const icon = btn?.querySelector('.theme-icon');
     const label = btn?.querySelector('.theme-label');
     if (icon) icon.textContent = isLight ? '☀️' : '🌙';
-    if (label) label.textContent = isLight ? 'Modo Escuro' : 'Modo Claro';
+    if (label) label.textContent = isLight ? 'Modo Claro' : 'Modo Escuro';
     localStorage.setItem(STORAGE_KEY, isLight ? 'light' : 'dark');
   }
 
