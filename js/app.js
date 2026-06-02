@@ -2519,31 +2519,38 @@ function initDragToScroll() {
     let scrollLeft;
 
     slider.addEventListener('mousedown', (e) => {
+      // Prevent drag if clicking on the horizontal scrollbar
+      if (e.offsetY >= slider.clientHeight) return;
       isDown = true;
       slider.style.cursor = 'grabbing';
       startX = e.pageX - slider.offsetLeft;
       scrollLeft = slider.scrollLeft;
     });
+    
     slider.addEventListener('mouseleave', () => {
       isDown = false;
-      slider.style.cursor = 'grab';
-    });
-    slider.addEventListener('mouseup', () => {
-      isDown = false;
-      slider.style.cursor = 'grab';
-    });
-    slider.addEventListener('mousemove', (e) => {
-      if (!isDown) return;
-      e.preventDefault();
-      const x = e.pageX - slider.offsetLeft;
-      const walk = (x - startX) * 1.5; // Velocidade do scroll
-      slider.scrollLeft = scrollLeft - walk;
+      slider.style.cursor = 'default';
     });
     
-    // Cursor inicial
-    slider.style.cursor = 'grab';
+    slider.addEventListener('mouseup', () => {
+      isDown = false;
+      slider.style.cursor = 'default';
+    });
+    
+    slider.addEventListener('mousemove', (e) => {
+      if (!isDown) {
+        // Change cursor to grab only if not hovering the scrollbar
+        slider.style.cursor = (e.offsetY >= slider.clientHeight) ? 'default' : 'grab';
+        return;
+      }
+      e.preventDefault();
+      const x = e.pageX - slider.offsetLeft;
+      const walk = (x - startX) * 1.5; 
+      slider.scrollLeft = scrollLeft - walk;
+    });
   });
 }
+
 
 // Inicializar na carga inicial
 document.addEventListener('DOMContentLoaded', initDragToScroll);
