@@ -165,9 +165,6 @@ function renderMachineList() {
     li.addEventListener('click', () => {
       selectedMachineId = li.dataset.id;
       $('#machineTitle').textContent = li.dataset.id === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Atividades: ${li.dataset.id}`;
-      if ($('#geralSetorFilterContainer')) {
-        $('#geralSetorFilterContainer').style.display = li.dataset.id === 'GERAL' ? 'block' : 'none';
-      }
       if ($('#btnAddActivity')) $('#btnAddActivity').style.display = 'inline-block';
       renderMachineActivities();
       ul.querySelectorAll('li').forEach(x => { x.style.fontWeight = 'normal'; x.style.background = ''; x.style.color = 'var(--text)'; });
@@ -188,25 +185,25 @@ function renderMachineActivities() {
   if (!selectedMachineId) return;
   
   let acts = [];
+  const filterVal = $('#geralSetorFilter') ? $('#geralSetorFilter').value : 'todos';
+  let sourceActs = [];
+  if (filterVal === 'todos') {
+     sourceActs = [...registrosPreventiva, ...registrosPreventivaFrontend];
+  } else if (filterVal === 'frontend') {
+     sourceActs = registrosPreventivaFrontend;
+  } else {
+     sourceActs = registrosPreventiva;
+  }
+
   if (selectedMachineId === 'GERAL') {
-    const filterVal = $('#geralSetorFilter') ? $('#geralSetorFilter').value : 'todos';
-    let sourceActs = [];
-    if (filterVal === 'todos') {
-       sourceActs = [...registrosPreventiva, ...registrosPreventivaFrontend];
-    } else if (filterVal === 'frontend') {
-       sourceActs = registrosPreventivaFrontend;
-    } else {
-       sourceActs = registrosPreventiva;
-    }
     acts = sourceActs.slice();
   } else {
-    const allActs = [...registrosPreventiva, ...registrosPreventivaFrontend];
-    acts = allActs.filter(r => r.maquina && r.maquina.toUpperCase() === selectedMachineId.toUpperCase());
+    acts = sourceActs.filter(r => r.maquina && r.maquina.toUpperCase() === selectedMachineId.toUpperCase());
   }
 
   acts.sort((a, b) => {
-    const idA = a.identificador || '';
-    const idB = b.identificador || '';
+    const idA = String(a.identificador || '');
+    const idB = String(b.identificador || '');
     return idA.localeCompare(idB, undefined, {numeric: true});
   });
     
