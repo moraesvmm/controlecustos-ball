@@ -303,7 +303,7 @@ export function aplicarFiltros(registros, filtros) {
     if (filtros.fornecedor && filtros.fornecedor !== 'TODOS' && r.fornecedor !== filtros.fornecedor) return false;
     if (filtros.busca) {
       const q = filtros.busca.toLowerCase();
-      const blob = [r.item, r.descricao_falha, r.rc, r.po, r.solicitante, r.orcamento]
+      const blob = [r.item, r.descricao_falha, r.rc, r.po, r.solicitante, r.orcamento, r.maquina, r.linha, r.fornecedor, r.status]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
