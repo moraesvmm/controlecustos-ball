@@ -1086,10 +1086,10 @@ function atualizarBotaoEdicao() {
   const btn = $('#btnInlineEdit');
   if (!btn) return;
   if (isInlineEditMode) {
-    btn.style.background = 'var(--primary)';
-    btn.style.color = '#0f172a';
-    btn.style.fontWeight = '700';
-    btn.style.borderColor = 'var(--primary)';
+    btn.style.background = '#ef4444';
+      btn.style.color = '#ffffff';
+      btn.style.fontWeight = '700';
+      btn.style.borderColor = '#ef4444';
     btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="pointer-events:none"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/><circle cx="12" cy="16" r="1" fill="currentColor"/></svg><span style="pointer-events:none">Sair da Edição</span>`;
   } else {
     btn.style.background = 'transparent';
