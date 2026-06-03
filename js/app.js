@@ -840,7 +840,7 @@ function renderTabela() {
 }
 
 function abrirDetalhe(id) {
-  const r = registros.find((x) => x.id === id);
+  const r = registros.find((x) => String(x.id) === String(id));
   if (!r) return;
   abrirDrilldown({
     titulo: r.item,
@@ -968,7 +968,7 @@ function abrirModal(id) {
     rc: 'CONSERTO',
   };
   editando = id
-    ? registros.find((r) => r.id === id)
+    ? registros.find((r) => String(r.id) === String(id))
     : {
         natureza: naturezaPadrao[viewAtual] || 'CONSERTO',
         item_id: proximoItemId(registros, naturezaPadrao[viewAtual] || 'CONSERTO'),
@@ -2657,3 +2657,60 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     });
   }
 })();
+
+window.exportarMaquinaExcel = function() {
+  const table = document.getElementById('machineActivitiesTable');
+  if (!table || table.querySelector('tbody').rows.length === 0 || table.querySelector('tbody td').colSpan > 1) {
+    toast('Não há dados para exportar.', 'warning');
+    return;
+  }
+  
+  if (typeof ExcelJS === 'undefined') {
+    toast('Biblioteca ExcelJS não carregada. Atualize a página.', 'error');
+    return;
+  }
+  
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet('Máquinas & Templates');
+  
+  const thead = table.querySelector('thead tr');
+  const cols = Array.from(thead.querySelectorAll('th')).map(th => th.innerText).filter(t => t !== '');
+  
+  const headerRow = ws.addRow(cols);
+  headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF0F172A' } };
+  headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+  headerRow.height = 25;
+  
+  const tbody = table.querySelector('tbody');
+  Array.from(tbody.querySelectorAll('tr')).forEach(tr => {
+    const tds = Array.from(tr.querySelectorAll('td'));
+    if (tds.length < cols.length) return;
+    
+    const rowData = [];
+    for(let i=0; i<cols.length; i++) {
+      rowData.push(tds[i].innerText.replace(/\n/g, ' '));
+    }
+    const wsRow = ws.addRow(rowData);
+    wsRow.alignment = { vertical: 'top', horizontal: 'left', wrapText: true };
+  });
+  
+  ws.columns.forEach((column) => {
+    let maxLength = 10;
+    column.eachCell({ includeEmpty: false }, (cell) => {
+      const colLength = cell.value ? cell.value.toString().length : 10;
+      if (colLength > maxLength) maxLength = colLength;
+    });
+    column.width = Math.min(maxLength + 2, 50);
+  });
+  
+  const titulo = document.getElementById('machineTitle').innerText.replace(/\s+/g, '_');
+  
+  wb.xlsx.writeBuffer().then(buffer => {
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Relatorio_${titulo}_${new Date().toISOString().slice(0,10)}.xlsx`;
+    link.click();
+  });
+};

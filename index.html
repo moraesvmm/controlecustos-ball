@@ -566,12 +566,18 @@
         <section style="flex:1; min-width:0;">
           <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3 id="machineTitle" style="margin:0;">Selecione uma máquina</h3>
-            <div id="geralSetorFilterContainer">
-              <select id="geralSetorFilter" onchange="renderMachineActivities()" style="background: rgba(30,41,59,0.8); border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; padding: 0.5rem 2rem 0.5rem 1rem; font-weight: 600; cursor: pointer; outline: none; appearance: none; font-family: 'DM Sans', sans-serif;">
-                <option value="todos">Setor: Todos</option>
-                <option value="frontend">Setor: Front-end</option>
-                <option value="backend">Setor: Back-end</option>
-              </select>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+              <button type="button" class="btn btn-outline" onclick="exportarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                Exportar Excel
+              </button>
+              <div id="geralSetorFilterContainer">
+                <select id="geralSetorFilter" onchange="renderMachineActivities()" style="background: rgba(30,41,59,0.8); border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; padding: 0.5rem 2rem 0.5rem 1rem; font-weight: 600; cursor: pointer; outline: none; appearance: none; font-family: 'DM Sans', sans-serif;">
+                  <option value="todos">Setor: Todos</option>
+                  <option value="frontend">Setor: Front-end</option>
+                  <option value="backend">Setor: Back-end</option>
+                </select>
+              </div>
             </div>
           </header>
           <div class="table-scroll-main" style="border-radius: 6px; border: 1px solid var(--border); flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 75vh;">
