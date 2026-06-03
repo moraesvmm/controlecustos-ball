@@ -706,7 +706,7 @@ function atualizarBarraLinha() {
     return;
   }
 
-  const r = registros.find((x) => x.id === linhaSelecionadaId);
+  const r = registros.find((x) => String(x.id) === String(linhaSelecionadaId));
   if (!r) {
     linhaSelecionadaId = null;
     bar.classList.add('hidden');
@@ -722,7 +722,7 @@ function atualizarBarraLinha() {
 function selecionarLinha(id) {
   linhaSelecionadaId = id;
   document.querySelectorAll('#tabelaBody tr').forEach((tr) => {
-    tr.classList.toggle('row-selected', tr.dataset.id === id);
+    tr.classList.toggle('row-selected', String(tr.dataset.id) === String(id));
   });
   atualizarBarraLinha();
 }
@@ -735,7 +735,7 @@ function renderTabela() {
   const tbody = $('#tabelaBody');
   const count = $('#tableCount');
 
-  if (linhaSelecionadaId && !data.some((r) => r.id === linhaSelecionadaId)) {
+  if (linhaSelecionadaId && !data.some((r) => String(r.id) === String(linhaSelecionadaId))) {
     linhaSelecionadaId = null;
   }
 
@@ -757,7 +757,7 @@ function renderTabela() {
         (r.status || calcularStatus(r)) !== 'ENTREGUE' &&
         r.previsao_entrega &&
         new Date(r.previsao_entrega) < new Date();
-      const sel = r.id === linhaSelecionadaId ? ' row-selected' : '';
+      const sel = String(r.id) === String(linhaSelecionadaId) ? ' row-selected' : '';
       return `
     <tr data-id="${r.id}" class="${atrasado ? 'row-late' : ''}${sel}">
       ${COLUNAS_TABELA.map((c) => {
@@ -788,7 +788,7 @@ function renderTabela() {
         const col = cell.dataset.col;
         const rawVal = cell.dataset.raw;
         const id = cell.closest('tr').dataset.id;
-        const registro = data.find((x) => x.id === id);
+        const registro = data.find((x) => String(x.id) === String(id));
         if (!registro) return;
 
         const input = document.createElement('input');
@@ -807,7 +807,7 @@ function renderTabela() {
             return;
           }
           const updated = enriquecerRegistro({ ...registro, [col]: newVal || null });
-          const index = registros.findIndex((x) => x.id === id);
+          const index = registros.findIndex((x) => String(x.id) === String(id));
           if (index !== -1) {
             registros[index] = updated;
           }
@@ -1125,7 +1125,7 @@ async function init() {
   renderFiltros();
   setDrilldownEditHandler((id) => abrirModal(id));
   setDrilldownPhotoHandler(async (id, dataUrl) => {
-    const r = registros.find((x) => x.id === id);
+    const r = registros.find((x) => String(x.id) === String(id));
     if (!r) return;
     try {
       await salvarRegistro({ ...r, foto_url: dataUrl });
