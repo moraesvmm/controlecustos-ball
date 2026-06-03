@@ -222,6 +222,7 @@ export async function salvarPreventiva(registro) {
   }
 
   const client = getClient();
+  delete payload.descricao;
   if (registro.id) {
     const { data, error } = await client.from('preventiva_registros').update(payload).eq('id', registro.id).select().single();
     if (error) throw error;

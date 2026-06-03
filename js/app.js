@@ -653,7 +653,6 @@ function setupPlanoPreventivaUI() {
       const records = currentActivities.map((a) => ({
         identificador: a.identificador || '',
         maquina: ctx.maquina,
-        descricao: a.descricao || descricaoLinhas(a)[0] || '',
         material: Array.isArray(a.material) ? a.material : (a.material ? [String(a.material)] : []),
         plano_padrao: a.plano_padrao || 'S',
         mes: ctx.mes,
@@ -2244,7 +2243,6 @@ $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
     ...editandoPreventivaFE,
     identificador: $('#editAtivIdentificadorFE').value.trim(),
     maquina: $('#editAtivMaquinaFE').value.trim(),
-    descricao,
     atividades_descricoes: descricoes,
     material: materiais,
     duracao_horas: parseFloat($('#editAtivDuracaoFE').value) || 0,
@@ -2413,7 +2411,6 @@ function setupPlanoPreventivaUIFrontend() {
       const records = currentActivitiesFE.map(a => ({
         identificador: a.identificador || '',
         maquina: ctx.maquina,
-        descricao: a.atividades_descricoes?.[0] || a.descricao || '',
         atividades_descricoes: a.atividades_descricoes || [],
         material: [], plano_padrao: 'S',
         mes: ctx.mes, linha: ctx.linha,
@@ -2541,7 +2538,6 @@ window.migrarPlanilhaParaSupabase = async function() {
           await db.createMachineActivity(m, {
             ordem: index++,
             identificador: ident,
-            descricao: descText,
             plano_padrao: a.plano_padrao || 'S',
             duracao_horas: parseFloat(a.duracao_horas) || 0,
             hh_mec: parseFloat(a.hh_mec) || 0,
