@@ -150,7 +150,17 @@ function renderMachineList() {
   const ul = $('#machineList');
   if (!ul) return;
   
-  const todasMaquinas = [...registrosPreventiva, ...registrosPreventivaFrontend]
+  const filterVal = $('#geralSetorFilter') ? $('#geralSetorFilter').value : 'todos';
+  let sourceActs = [];
+  if (filterVal === 'todos') {
+     sourceActs = [...registrosPreventiva, ...registrosPreventivaFrontend];
+  } else if (filterVal === 'frontend') {
+     sourceActs = registrosPreventivaFrontend;
+  } else {
+     sourceActs = registrosPreventiva;
+  }
+  
+  const todasMaquinas = sourceActs
      .map(r => r.maquina)
      .filter(Boolean);
   const maquinas = [...new Set(todasMaquinas)].sort();
@@ -161,14 +171,10 @@ function renderMachineList() {
   }
   
   const htmlGeral = `
-    <li data-id="GERAL" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s; margin-bottom: 0.5rem; border-bottom: 1px solid var(--border);" 
-        onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
-        onmouseout="this.style.background=window.selectedMachineId==='GERAL'?'rgba(212,175,55,0.15)':''">Geral (Todas)</li>
+    <li data-id="GERAL" class="machine-list-item ${window.selectedMachineId === 'GERAL' ? 'active' : ''}">Geral (Todas)</li>
   `;
   const htmlMaquinas = maquinas.map(m => `
-    <li data-id="${m}" style="cursor:pointer; padding:0.4rem 0.5rem; border-radius:6px; font-size:0.9rem; transition: background 0.15s;" 
-        onmouseover="this.style.background='rgba(255,255,255,0.06)'" 
-        onmouseout="this.style.background=window.selectedMachineId===this.dataset.id?'rgba(212,175,55,0.15)':''">${m}</li>
+    <li data-id="${m}" class="machine-list-item ${window.selectedMachineId === m ? 'active' : ''}">${m}</li>
   `).join('');
   
   ul.innerHTML = htmlGeral + htmlMaquinas;
@@ -176,22 +182,26 @@ function renderMachineList() {
   ul.querySelectorAll('li').forEach(li => {
     li.addEventListener('click', () => {
       selectedMachineId = li.dataset.id;
-        window.selectedMachineId = selectedMachineId;
+      window.selectedMachineId = selectedMachineId;
       $('#machineTitle').textContent = li.dataset.id === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Atividades: ${li.dataset.id}`;
       if ($('#btnAddActivity')) $('#btnAddActivity').style.display = 'inline-block';
       renderMachineActivities();
-      ul.querySelectorAll('li').forEach(x => { x.style.fontWeight = 'normal'; x.style.background = ''; x.style.color = 'var(--text)'; });
-      li.style.fontWeight = 'bold';
-      li.style.background = 'rgba(212,175,55,0.15)';
-      li.style.color = 'var(--primary)';
+      
+      ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
+      li.classList.add('active');
     });
   });
 
   if (!selectedMachineId) {
     selectedMachineId = 'GERAL';
-      window.selectedMachineId = selectedMachineId;
+    window.selectedMachineId = selectedMachineId;
   }
-  const selLi = document.querySelector(`#machineList li[data-id="${selectedMachineId}"]`);
+  let selLi = document.querySelector(`#machineList li[data-id="${selectedMachineId}"]`);
+  if (!selLi) {
+    selectedMachineId = 'GERAL';
+    window.selectedMachineId = 'GERAL';
+    selLi = document.querySelector(`#machineList li[data-id="GERAL"]`);
+  }
   if (selLi) selLi.click();
 }
 
@@ -1776,6 +1786,13 @@ $('#formRegistroPreventiva')?.addEventListener('submit', async (e) => {
     previsao_custos: parseFloat(f.previsao_custos.value) || 0,
   };
   
+  if (!editandoPreventiva.mes && estadoPlanos.mes && (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06')) {
+    delete payload.id;
+    payload.mes = estadoPlanos.mes;
+    payload.linha = estadoPlanos.linha;
+    payload.plano_padrao = 'N';
+  }
+  
   try {
     await salvarPreventiva(payload);
     registrosPreventiva = await carregarPreventiva();
@@ -2061,7 +2078,7 @@ window.abrirDetalhePreventivaPanel = function(id) {
         ${progHTML}
         
         <div class="drill-item-actions" style="margin-top: 2rem;">
-          <button type="button" class="btn-primary" onclick="abrirFormularioPreventiva('${r.id}'); fecharDrilldown();" style="width: 100%;">✏️ Editar Atividade</button>
+          <button type="button" class="btn-primary" onclick="${r.setor === 'frontend' ? 'abrirFormularioPreventivaFE' : 'abrirFormularioPreventiva'}('${r.id}'); fecharDrilldown();" style="width: 100%;">✏️ Editar Atividade</button>
         </div>
       </article>`;
 
@@ -2387,6 +2404,14 @@ $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
     setor: 'frontend',
     area_producao: 'FRONT-END',
   };
+  
+  if (!editandoPreventivaFE.mes && estadoPlanos.mes && (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06')) {
+    delete payload.id;
+    payload.mes = estadoPlanos.mes;
+    payload.linha = estadoPlanos.linha;
+    payload.plano_padrao = 'N';
+  }
+  
   try {
     await salvarPreventiva(payload);
     if (window.editedPlanoItemsFE) window.editedPlanoItemsFE.add(payload.id);
@@ -2868,3 +2893,6 @@ window.exportarMaquinaExcel = function() {
     link.click();
   });
 };
+
+window.renderMachineList = renderMachineList;
+

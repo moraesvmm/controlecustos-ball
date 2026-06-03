@@ -1986,3 +1986,9 @@ body.light-mode #geralSetorFilter { background: #ffffff !important; color: #0f17
 
 body.light-mode #btnExportarLinhaExcel { color: #0284c7 !important; border-color: rgba(2, 132, 199, 0.4) !important; }
 
+
+.machine-list-item { cursor: pointer; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.9rem; transition: all 0.2s; border-bottom: 1px dashed var(--border); margin-bottom: 0.3rem; color: var(--text); }
+.machine-list-item:hover { background: rgba(255,255,255,0.06); }
+body.light-mode .machine-list-item:hover { background: rgba(0,0,0,0.04); }
+.machine-list-item.active { background: rgba(212,175,55,0.15) !important; font-weight: bold; color: var(--primary); border-bottom-color: transparent; }
+
