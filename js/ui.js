@@ -98,7 +98,7 @@ export function valorCelula(r, col) {
   return String(v);
 }
 
-export async function exportarExcel(registros, nome = 'controle-rc') {
+export async function exportarExcel(registros, nome = 'controle-rc', customCols = null) {
   if (typeof ExcelJS === 'undefined') {
     alert('Biblioteca ExcelJS não carregada. Atualize a página ou verifique sua conexão.');
     return;
@@ -107,7 +107,7 @@ export async function exportarExcel(registros, nome = 'controle-rc') {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet('Dados');
 
-  const cols = COLUNAS_TABELA;
+  const cols = customCols || COLUNAS_TABELA;
 
   // 1. Cabeçalho formatado
   const headerRow = ws.addRow(cols.map(c => c.label));
@@ -133,7 +133,7 @@ export async function exportarExcel(registros, nome = 'controle-rc') {
     // 3. Formatação das células (moeda, datas)
     row.eachCell((cell, colNumber) => {
       const col = cols[colNumber - 1];
-      cell.alignment = { vertical: 'middle' };
+      cell.alignment = { vertical: 'middle', wrapText: true };
       
       if (col.isCurrency && typeof cell.value === 'number') {
         cell.numFmt = '"R$" #,##0.00';

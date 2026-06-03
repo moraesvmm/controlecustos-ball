@@ -96,7 +96,7 @@
         </div>
 
         <div>
-          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Planos de Manutenção</div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo Preventiva</div>
 
           <!-- Accordion: Navegador Geral -->
           <div class="nav-accordion">
@@ -109,7 +109,7 @@
             </div>
           </div>
 
-          <button type="button" data-tab="por-maquina" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Máquinas &amp; Templates</button>
+          <button type="button" data-tab="por-maquina" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Plano Padrão</button>
 
           <!-- Accordion: Gerador de Planos -->
           <div class="nav-accordion">
@@ -200,8 +200,8 @@
           <label><span>Status</span><select id="filtroStatus"><option value="TODOS">TODOS</option></select></label>
           <label><span>Criticidade</span><select id="filtroCriticidade"><option value="TODOS">TODOS</option></select></label>
           <label><span>Linha</span><select id="filtroLinha"><option value="TODOS">TODOS</option></select></label>
-          <label><span>Máquina</span><select id="filtroMaquina"><option value="TODOS">TODOS</option></select></label>
-          <label><span>Fornecedor</span><select id="filtroFornecedor"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Máquina</span><input id="filtroMaquina" list="listaMaquinasFiltro" value="TODOS" autocomplete="off" onfocus="if(this.value==='TODOS')this.value=''" onblur="if(this.value==='')this.value='TODOS'"><datalist id="listaMaquinasFiltro"></datalist></label>
+          <label><span>Fornecedor</span><input id="filtroFornecedor" list="listaFornecedoresFiltro" value="TODOS" autocomplete="off" onfocus="if(this.value==='TODOS')this.value=''" onblur="if(this.value==='')this.value='TODOS'"><datalist id="listaFornecedoresFiltro"></datalist></label>
           <button type="button" class="btn btn-ghost" id="btnLimparFiltros">Limpar filtros</button>
         </section>
       </div>
@@ -344,7 +344,13 @@
 
             <!-- Dashboard e Seleção de Máquina -->
             <section id="step-maquina-section" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
-              <h3 id="linha-dashboard-title" style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 id="linha-dashboard-title" style="margin: 0; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
+                <button type="button" class="btn btn-outline" id="btnExportarLinhaExcel" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                  Exportar Linha Inteira (Excel)
+                </button>
+              </div>
               
               <!-- Gráficos/KPIs -->
               <div class="kpi-grid" style="margin-bottom: 2rem;">
@@ -567,7 +573,11 @@
           <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <h3 id="machineTitle" style="margin:0;">Selecione uma máquina</h3>
             <div style="display: flex; gap: 1rem; align-items: center;">
-              <button type="button" class="btn btn-outline" onclick="exportarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+              <button type="button" class="btn btn-outline" id="btnImportarPlano" onclick="importarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(110,231,183,0.4); color: #6ee7b7;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Importar Excel
+              </button>
+              <button type="button" class="btn btn-outline" id="btnExportarPlano" onclick="exportarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
                 Exportar Excel
               </button>
@@ -1281,6 +1291,6 @@
 
   <div id="toast" class="toast"></div>
   </div>
-  <script type="module" src="js/app.js?v=57"></script>
+  <script type="module" src="js/app.js?v=58"></script>
 </body>
 </html>

@@ -1977,3 +1977,12 @@ body.light-mode .cal-cell.empty {
 #login-container * {
   /* login sempre dark â€” nÃ£o afetado pelo light-mode */
 }
+
+/* Correções para botões de importação/exportação e filtros em light mode no Plano Padrão */
+body.light-mode #btnImportarPlano { color: #059669 !important; border-color: rgba(5, 150, 105, 0.4) !important; }
+body.light-mode #btnExportarPlano { color: #0284c7 !important; border-color: rgba(2, 132, 199, 0.4) !important; }
+body.light-mode #geralSetorFilter { background: #ffffff !important; color: #0f172a !important; border-color: #cbd5e1 !important; }
+
+
+body.light-mode #btnExportarLinhaExcel { color: #0284c7 !important; border-color: rgba(2, 132, 199, 0.4) !important; }
+

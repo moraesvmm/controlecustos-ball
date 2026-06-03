@@ -124,8 +124,20 @@ function renderFiltros() {
     if (!el) return;
     const cur = el.value;
     const opts = [...extra, ...opcoesUnicas(registros, campo)];
-    el.innerHTML = opts.map((o) => `<option value="${o}">${o}</option>`).join('');
-    if (opts.includes(cur)) el.value = cur;
+    if (el.tagName === 'INPUT' && el.getAttribute('list')) {
+      const listEl = $('#' + el.getAttribute('list'));
+      if (listEl) {
+        listEl.innerHTML = opts.map((o) => `<option value="${o}">`).join('');
+      }
+      if (cur && opts.includes(cur)) {
+        el.value = cur;
+      } else {
+        el.value = extra[0] || 'TODOS';
+      }
+    } else {
+      el.innerHTML = opts.map((o) => `<option value="${o}">${o}</option>`).join('');
+      if (opts.includes(cur)) el.value = cur;
+    }
   };
   setSelect('#filtroNatureza', 'natureza', ['TODOS']);
   setSelect('#filtroLinha', 'linha');
@@ -198,9 +210,9 @@ function renderMachineActivities() {
   }
 
   if (selectedMachineId === 'GERAL') {
-    acts = sourceActs.slice();
+    acts = sourceActs.filter(r => !r.mes || r.mes === '');
   } else {
-    acts = sourceActs.filter(r => r.maquina && r.maquina.toUpperCase() === selectedMachineId.toUpperCase());
+    acts = sourceActs.filter(r => r.maquina && r.maquina.toUpperCase() === selectedMachineId.toUpperCase() && (!r.mes || r.mes === ''));
   }
 
   acts.sort((a, b) => {
@@ -1212,9 +1224,68 @@ async function init() {
     }
   });
 
+  const COLUNAS_PREVENTIVA = [
+    { key: 'identificador', label: 'Identificador', width: 15 },
+    { key: 'maquina', label: 'Máquina', width: 25 },
+    { key: 'linha', label: 'Linha', width: 10 },
+    { key: 'mes', label: 'Mês', width: 15 },
+    { key: 'atividades_descricoes', label: 'Descrição/Atividade', width: 50 },
+    { key: 'duracao_horas', label: 'Duração (h)', width: 12 },
+    { key: 'hh_mec', label: 'HH Mec', width: 10 },
+    { key: 'hh_eletrico', label: 'HH Elétrico', width: 10 },
+    { key: 'previsao_custos', label: 'Custo Previsto', width: 15 },
+    { key: 'status_auditoria', label: 'Status/Auditoria', width: 15 }
+  ];
+
   $('#btnNovo').addEventListener('click', () => abrirModal(null));
   $('#btnExport').addEventListener('click', () => exportarExcel(getFiltrados(), viewAtual));
-  $('#btnExportPreventiva')?.addEventListener('click', () => exportarExcel(aplicarFiltrosPreventiva(), 'preventiva'));
+  $('#btnExportPreventiva')?.addEventListener('click', () => {
+    const data = aplicarFiltrosPreventiva().map(r => ({
+      ...r,
+      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || '')
+    }));
+    exportarExcel(data, 'preventiva-backend', COLUNAS_PREVENTIVA);
+  });
+  $('#btnExportPreventivaFE')?.addEventListener('click', () => {
+    const data = aplicarFiltrosFrontend().map(r => ({
+      ...r,
+      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || '')
+    }));
+    exportarExcel(data, 'preventiva-frontend', COLUNAS_PREVENTIVA);
+  });
+  
+  $('#btnExportarLinhaExcel')?.addEventListener('click', () => {
+    let data = [];
+    let prefix = '';
+    
+    if (estadoPlanos.setor === 'backend') {
+      filtrosPreventiva.mes = estadoPlanos.mes;
+      filtrosPreventiva.linha = estadoPlanos.linha;
+      filtrosPreventiva.busca = ''; 
+      data = aplicarFiltrosPreventiva();
+      prefix = 'linha-backend';
+    } else {
+      filtrosPreventivaFE.mes = estadoPlanos.mes;
+      filtrosPreventivaFE.linha = estadoPlanos.linha;
+      filtrosPreventivaFE.busca = '';
+      data = aplicarFiltrosFrontend();
+      prefix = 'linha-frontend';
+    }
+
+    data.sort((a, b) => {
+      const idA = String(a.identificador || '');
+      const idB = String(b.identificador || '');
+      return idA.localeCompare(idB, undefined, {numeric: true});
+    });
+
+    const formattedData = data.map(r => ({
+      ...r,
+      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || '')
+    }));
+
+    const filename = `${prefix}-${estadoPlanos.linha}-${estadoPlanos.mes}`;
+    exportarExcel(formattedData, filename, COLUNAS_PREVENTIVA);
+  });
   $('#btnLimparFiltros').addEventListener('click', () => {
     filtros = { natureza: 'TODOS', status: 'TODOS', criticidade: 'TODOS', linha: 'TODOS', maquina: 'TODOS', fornecedor: 'TODOS', busca: '' };
     document.querySelectorAll('.filters select, .filters input').forEach((el) => {
@@ -1460,13 +1531,8 @@ function renderFiltrosPreventiva() {
 }
 
 function aplicarFiltrosPreventiva() {
-  return registrosPreventiva.filter(r => {
-    if (filtrosPreventiva.plano !== 'TODOS' && r.plano_padrao !== filtrosPreventiva.plano) return false;
+  const base = registrosPreventiva.filter(r => {
     if (filtrosPreventiva.status !== 'TODOS' && r.status_auditoria !== filtrosPreventiva.status) return false;
-    if (filtrosPreventiva.mes) {
-      const rMes = r.mes || 'MARÇO';
-      if (rMes !== filtrosPreventiva.mes) return false;
-    }
     if (filtrosPreventiva.busca) {
       const q = filtrosPreventiva.busca.toLowerCase();
       const mach = String(r.maquina || '').toLowerCase();
@@ -1475,6 +1541,33 @@ function aplicarFiltrosPreventiva() {
     }
     return true;
   });
+
+  const map = new Map();
+  for (const r of base) {
+    const key = `${r.maquina}_${r.identificador}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(r);
+  }
+
+  const finalResults = [];
+  for (const records of map.values()) {
+    let selected = null;
+    if (filtrosPreventiva.mes && filtrosPreventiva.linha) {
+      selected = records.find(r => r.mes === filtrosPreventiva.mes && r.linha === filtrosPreventiva.linha);
+    } else if (filtrosPreventiva.mes) {
+      selected = records.find(r => r.mes === filtrosPreventiva.mes);
+    }
+    
+    if (!selected) {
+      selected = records.find(r => !r.mes || r.mes === '');
+    }
+
+    if (selected) {
+      if (filtrosPreventiva.plano !== 'TODOS' && selected.plano_padrao !== filtrosPreventiva.plano) continue;
+      finalResults.push(selected);
+    }
+  }
+  return finalResults;
 }
 
 $('#filtroBuscaPreventiva')?.addEventListener('input', (e) => {
@@ -1843,6 +1936,8 @@ window.selecionarMaquinaPlanos = function(maquinaId, maquinaNome) {
   
   // Set filters for the renderTabelaPreventiva
   filtrosPreventiva.busca = maquinaNome; // Using busca to filter by machine for now
+  filtrosPreventiva.mes = estadoPlanos.mes;
+  filtrosPreventiva.linha = estadoPlanos.linha;
   
   renderFiltrosPreventiva();
   renderTabelaPreventiva();
@@ -1850,14 +1945,18 @@ window.selecionarMaquinaPlanos = function(maquinaId, maquinaNome) {
 
 // Initialize Preventiva Import
 initExcelImportPreventiva(getClient(), toast, async () => {
-  registrosPreventiva = await carregarPreventiva();
-  if (viewAtual === 'preventiva-l06-backend') { renderFiltrosPreventiva(); renderTabelaPreventiva(); }
+  const todos = await carregarPreventiva();
+  registrosPreventivaFrontend = todos.filter(r => r.setor === 'frontend');
+  registrosPreventiva = todos.filter(r => r.setor !== 'frontend');
+  if (viewAtual === 'preventiva-l06-backend' || viewAtual === 'planos-manutencao') { renderFiltrosPreventiva(); renderTabelaPreventiva(); }
   if (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06') renderControlePreventiva();
+  if (viewAtual === 'por-maquina') { renderMachineList(); renderMachineActivities(); }
 });
 
 // View Detalhes Panel para Preventiva
 window.abrirDetalhePreventivaPanel = function(id) {
-  const r = registrosPreventiva.find((x) => String(x.id) === String(id));
+  let r = registrosPreventiva.find((x) => String(x.id) === String(id));
+  if (!r) r = registrosPreventivaFrontend.find((x) => String(x.id) === String(id));
   if (!r) return;
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
@@ -1978,6 +2077,10 @@ initExcelImportPreventivaFrontend(getClient(), toast, async () => {
   if (viewAtual === 'planos-manutencao-frontend' || viewAtual === 'plano-preventiva-frontend') {
     renderTabelaPreventivaFE();
   }
+  if (viewAtual === 'por-maquina') {
+    renderMachineList();
+    renderMachineActivities();
+  }
 });
 
 // ==========================================
@@ -2084,11 +2187,13 @@ window.selecionarMaquinaPlanosFrontend = function(maquinaNome) {
   $('#step-linha-fe').style.display = 'none';
   $('#step-atividades-fe').style.display = 'block';
   filtrosPreventivaFE.busca = maquinaNome;
+  filtrosPreventivaFE.mes = estadoPlanosFrontend.mes;
+  filtrosPreventivaFE.linha = estadoPlanosFrontend.linha;
   renderTabelaPreventivaFE();
 };
 
 function aplicarFiltrosFrontend() {
-  return registrosPreventivaFrontend.filter(r => {
+  const base = registrosPreventivaFrontend.filter(r => {
     if (filtrosPreventivaFE.status !== 'TODOS' && r.status_auditoria !== filtrosPreventivaFE.status) return false;
     if (filtrosPreventivaFE.busca) {
       const q = filtrosPreventivaFE.busca.toLowerCase();
@@ -2098,6 +2203,32 @@ function aplicarFiltrosFrontend() {
     }
     return true;
   });
+
+  const map = new Map();
+  for (const r of base) {
+    const key = `${r.maquina}_${r.identificador}`;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(r);
+  }
+
+  const finalResults = [];
+  for (const records of map.values()) {
+    let selected = null;
+    if (filtrosPreventivaFE.mes && filtrosPreventivaFE.linha) {
+      selected = records.find(r => r.mes === filtrosPreventivaFE.mes && r.linha === filtrosPreventivaFE.linha);
+    } else if (filtrosPreventivaFE.mes) {
+      selected = records.find(r => r.mes === filtrosPreventivaFE.mes);
+    }
+    
+    if (!selected) {
+      selected = records.find(r => !r.mes || r.mes === '');
+    }
+
+    if (selected) {
+      finalResults.push(selected);
+    }
+  }
+  return finalResults;
 }
 
 function renderTabelaPreventivaFE() {
@@ -2651,6 +2782,35 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
     });
   }
 })();
+
+window.importarMaquinaExcel = async function() {
+  const result = await Swal.fire({
+    title: 'Importar Excel',
+    text: 'Qual base de dados de Planos Preventivos você deseja atualizar?',
+    icon: 'question',
+    showCancelButton: true,
+    showDenyButton: true,
+    confirmButtonText: 'Back-end',
+    denyButtonText: 'Front-end',
+    cancelButtonText: 'Cancelar',
+    confirmButtonColor: '#38bdf8',
+    denyButtonColor: '#6ee7b7',
+    background: '#161f33',
+    color: '#f8fafc',
+    customClass: {
+      popup: 'border border-[rgba(255,255,255,0.1)] rounded-xl',
+      confirmButton: 'btn btn-primary',
+      denyButton: 'btn btn-primary',
+      cancelButton: 'btn btn-ghost'
+    }
+  });
+
+  if (result.isConfirmed) {
+    document.getElementById('btnImportarPreventivaOnly')?.click();
+  } else if (result.isDenied) {
+    document.getElementById('btnImportarPreventivaSomenteFE')?.click();
+  }
+};
 
 window.exportarMaquinaExcel = function() {
   const table = document.getElementById('machineActivitiesTable');
