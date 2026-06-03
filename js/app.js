@@ -983,10 +983,8 @@ function abrirModal(id) {
     'valor', 'previsao_entrega', 'data_recebimento', 'comentario',
   ];
   fields.forEach((name) => {
-    const input = f.elements[name];
-    if (!input) return;
-    const v = editando[name];
-    input.value = v ?? '';
+    const input = f.querySelector(`[name="${name}"]`);
+    if (input) input.value = editando[name] ?? '';
   });
 
   const irmas = editando.item_id != null ? registrosDoMesmoItem(registros, editando.item_id) : [];
@@ -1022,7 +1020,7 @@ async function salvarForm(e) {
     sinal: f.sinal.value || null,
     item_id: f.item_id.value ? parseInt(f.item_id.value, 10) : null,
     natureza: normalizarNatureza(f.natureza.value),
-    item: f.item.value,
+    item: f.querySelector('[name="item"]').value,
     descricao_falha: f.descricao_falha.value,
     solicitante: f.solicitante.value,
     criticidade: f.criticidade.value || null,
