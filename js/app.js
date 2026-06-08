@@ -3188,7 +3188,7 @@ function exportarRelatorioCheckins() {
   
   // HTML do PDF
   let html = `
-    <div style="padding: 40px; background-color: #ffffff; min-height: 1100px; display: flex; flex-direction: column;">
+    <div style="padding: 10px; background-color: #ffffff; display: flex; flex-direction: column;">
       
       <!-- CABEÇALHO CORPORATIVO -->
       <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #10b981; padding-bottom: 15px; margin-bottom: 30px;">
@@ -3313,11 +3313,11 @@ function exportarRelatorioCheckins() {
   el.innerHTML = html;
   
   const opt = {
-    margin:       [0, 0, 0, 0], // Removendo margens nativas para usar o padding do div
+    margin:       10,
     filename:     `Relatorio_Gerencial_Preventivas_${mes}.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true, windowWidth: 790 },
-    jsPDF:        { unit: 'px', format: [790, 1120], orientation: 'portrait' } // Formato aproximado A4 em pixels
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
   };
   
   document.body.appendChild(el);
