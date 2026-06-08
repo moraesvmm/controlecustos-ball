@@ -1493,7 +1493,23 @@ function renderFornecedoresSLA() {
       tr.addEventListener('click', () => {
         const forn = tr.dataset.forn;
         const apenasDesteForn = registros.filter(r => r.fornecedor === forn);
-        const atrasadosForn = registrosAtrasados(apenasDesteForn);
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+
+        const atrasadosForn = apenasDesteForn.filter(r => {
+          if (r.data_recebimento && r.previsao_entrega) {
+            const dataRec = new Date(r.data_recebimento);
+            const dataPrev = new Date(r.previsao_entrega);
+            const diffTime = dataRec - dataPrev;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return diffDays > 0;
+          }
+          const st = r.status || calcularStatus(r);
+          if (st !== 'ENTREGUE' && r.previsao_entrega) {
+            return new Date(r.previsao_entrega) < hoje;
+          }
+          return false;
+        });
         
         if (atrasadosForn.length === 0) {
            toast('Este fornecedor não possui itens em atraso.', 'info');
@@ -1502,11 +1518,11 @@ function renderFornecedoresSLA() {
 
         const total = atrasadosForn.reduce((s, r) => s + (Number(r.valor) || 0), 0);
         abrirDrilldown({
-          titulo: `Atrasados: ${forn}`,
-          subtitulo: `${atrasadosForn.length} registro(s) com previsão de entrega vencida`,
+          titulo: `Atrasados/Gargalos: ${forn}`,
+          subtitulo: `${atrasadosForn.length} registro(s) entregues com atraso ou vencidos`,
           registros: atrasadosForn,
           meta: {
-            insight: `Valor total em atraso: ${fmtMoeda(total)}. Itens pendentes na conta deste fornecedor.`
+            insight: `Valor total (estimado): ${fmtMoeda(total)}. Histórico de itens que impactam o SLA deste fornecedor.`
           }
         });
       });
