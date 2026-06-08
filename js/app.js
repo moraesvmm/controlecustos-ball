@@ -1922,6 +1922,9 @@ window.selecionarMesPlanos = function(mes) {
   $('#step-mes').style.display = 'none';
   $('#step-linha').style.display = 'block';
   $('#step-maquina-section').style.display = 'none';
+  const calSec = $('#calendario-preventiva-section');
+  if (calSec) calSec.style.display = 'flex';
+  carregarCheckinsPreventiva(mes).then(() => renderCalendarioPreventiva(mes, false));
   $('#step-atividades').style.display = 'none';
 };
 
@@ -1930,6 +1933,8 @@ window.selecionarLinhaPlanos = async function(linha) {
   $('#bc-linha').textContent = `Linha ${linha.replace('L','')}`;
   $('#linha-dashboard-title').textContent = `Dashboard - Linha ${linha.replace('L','')}`;
   
+  const calSec2 = $('#calendario-preventiva-section');
+  if (calSec2) calSec2.style.display = 'none';
   $('#step-maquina-section').style.display = 'block';
   
   // Buscar máquinas para exibir no grid (Apenas do plano de preventiva)
@@ -2185,6 +2190,9 @@ window.selecionarMesPlansosFrontend = function(mes) {
   $('#step-mes-fe').style.display = 'none';
   $('#step-linha-fe').style.display = 'block';
   $('#step-maquina-section-fe').style.display = 'none';
+  const calSecFE = $('#calendario-preventiva-section-fe');
+  if (calSecFE) calSecFE.style.display = 'flex';
+  carregarCheckinsPreventiva(mes).then(() => renderCalendarioPreventiva(mes, true));
   $('#step-atividades-fe').style.display = 'none';
 };
 
@@ -2195,6 +2203,8 @@ window.selecionarLinhaPlanosFrontend = function(linha) {
   const titleEl = $('#linha-dashboard-title-fe');
   if (titleEl) titleEl.textContent = `Dashboard — ${linhaLabel} · Front-end`;
 
+  const calSecFE2 = $('#calendario-preventiva-section-fe');
+  if (calSecFE2) calSecFE2.style.display = 'none';
   $('#step-maquina-section-fe').style.display = 'block';
 
   // KPIs
@@ -3064,3 +3074,87 @@ document.getElementById('formContatoFornecedor')?.addEventListener('submit', asy
 
 // Chamar ao carregar a página para os botões do SLA
 document.addEventListener('DOMContentLoaded', carregarFornecedoresContatos);
+
+// ==========================================
+// CALENDÁRIO CHECK-IN DE PREVENTIVA
+// ==========================================
+let checkinsPreventiva = [];
+
+async function carregarCheckinsPreventiva(mes) {
+  if (!mes) return;
+  try {
+    const { data, error } = await getClient()
+      .from('preventiva_checkins')
+      .select('*')
+      .eq('mes', mes);
+    if (!error && data) {
+      checkinsPreventiva = data.map(d => Number(d.dia));
+    } else {
+      checkinsPreventiva = [];
+    }
+  } catch (err) {
+    console.error(err);
+    checkinsPreventiva = [];
+  }
+}
+
+async function toggleCheckinPreventiva(mes, dia) {
+  const isChecked = checkinsPreventiva.includes(dia);
+  try {
+    if (isChecked) {
+      await getClient().from('preventiva_checkins').delete().match({ mes: mes, dia: dia });
+      checkinsPreventiva = checkinsPreventiva.filter(d => d !== dia);
+    } else {
+      await getClient().from('preventiva_checkins').insert([{ mes: mes, dia: dia }]);
+      checkinsPreventiva.push(dia);
+    }
+    renderCalendarioPreventiva(mes);
+  } catch (err) {
+    toast('Erro ao atualizar check-in.', 'error');
+  }
+}
+
+function renderCalendarioPreventiva(mes, isFrontend = false) {
+  const containerId = isFrontend ? 'preventiva-checkin-grid-fe' : 'preventiva-checkin-grid';
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  
+  // Pegar ano atual ou arbitrário para saber número de dias do mês
+  const anoStr = new Date().getFullYear();
+  const mesesArr = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+  let monthIdx = mesesArr.indexOf(mes.toUpperCase());
+  if (monthIdx === -1) monthIdx = new Date().getMonth(); // Fallback
+  
+  const diasNoMes = new Date(anoStr, monthIdx + 1, 0).getDate();
+  
+  let html = '';
+  for (let i = 1; i <= diasNoMes; i++) {
+    const isChecked = checkinsPreventiva.includes(i);
+    const bg = isChecked ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg)';
+    const color = isChecked ? '#10b981' : 'var(--text)';
+    const border = isChecked ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid var(--border)';
+    
+    html += `
+      <div onclick="toggleCheckinPreventiva('${mes}', ${i})" style="
+        background: ${bg};
+        border: ${border};
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        aspect-ratio: 1;
+        cursor: pointer;
+        color: ${color};
+        font-weight: ${isChecked ? 'bold' : 'normal'};
+        transition: all 0.2s;
+        font-size: 1rem;
+      " onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='none'">
+        ${i}
+      </div>
+    `;
+  }
+  
+  container.innerHTML = html;
+}
+
+window.toggleCheckinPreventiva = toggleCheckinPreventiva;

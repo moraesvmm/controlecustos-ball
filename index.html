@@ -336,6 +336,17 @@
               </div>
             </aside>
 
+            <section id="calendario-preventiva-section" style="flex: 1; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                  <h3 style="margin: 0; font-size: 1.5rem; color: var(--text);">Check-in de Preventivas</h3>
+                  <p style="margin: 0.25rem 0 0 0; color: var(--muted); font-size: 0.9rem;">Marque os dias em que houve atividades</p>
+                </div>
+              </div>
+              <div id="preventiva-checkin-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; flex: 1;">
+              </div>
+            </section>
+
             <!-- Dashboard e Seleção de Máquina -->
             <section id="step-maquina-section" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
@@ -485,6 +496,17 @@
               <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Selecione a Linha</h3>
               <div id="linhas-list-fe" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
             </aside>
+            <section id="calendario-preventiva-section-fe" style="flex: 1; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                  <h3 style="margin: 0; font-size: 1.5rem; color: var(--text);">Check-in de Preventivas</h3>
+                  <p style="margin: 0.25rem 0 0 0; color: var(--muted); font-size: 0.9rem;">Marque os dias em que houve atividades</p>
+                </div>
+              </div>
+              <div id="preventiva-checkin-grid-fe" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; flex: 1;">
+              </div>
+            </section>
+
             <section id="step-maquina-section-fe" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
               <h3 id="linha-dashboard-title-fe" style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
               <div class="kpi-grid" style="margin-bottom: 2rem;">
