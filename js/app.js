@@ -3119,37 +3119,51 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
   const container = document.getElementById(containerId);
   if (!container) return;
   
-  // Pegar ano atual ou arbitrário para saber número de dias do mês
   const anoStr = new Date().getFullYear();
   const mesesArr = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
   let monthIdx = mesesArr.indexOf(mes.toUpperCase());
-  if (monthIdx === -1) monthIdx = new Date().getMonth(); // Fallback
+  if (monthIdx === -1) monthIdx = new Date().getMonth();
   
   const diasNoMes = new Date(anoStr, monthIdx + 1, 0).getDate();
+  const primeiroDiaSemana = new Date(anoStr, monthIdx, 1).getDay();
   
   let html = '';
+  
+  const diasDaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  diasDaSemana.forEach(d => {
+    html += `<div style="text-align: center; font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0.25rem;">${d}</div>`;
+  });
+
+  for (let empty = 0; empty < primeiroDiaSemana; empty++) {
+    html += `<div style="visibility: hidden;"></div>`;
+  }
+  
   for (let i = 1; i <= diasNoMes; i++) {
     const isChecked = checkinsPreventiva.includes(i);
-    const bg = isChecked ? 'rgba(16, 185, 129, 0.2)' : 'var(--bg)';
+    const bg = isChecked ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.3) 100%)' : 'var(--bg2)';
     const color = isChecked ? '#10b981' : 'var(--text)';
-    const border = isChecked ? '1px solid rgba(16, 185, 129, 0.5)' : '1px solid var(--border)';
+    const border = isChecked ? '1px solid rgba(16, 185, 129, 0.6)' : '1px solid rgba(255,255,255,0.05)';
+    const shadow = isChecked ? 'box-shadow: 0 4px 12px rgba(16,185,129,0.15), inset 0 0 0 1px rgba(16,185,129,0.2);' : 'box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
     
     html += `
       <div onclick="toggleCheckinPreventiva('${mes}', ${i})" style="
         background: ${bg};
         border: ${border};
-        border-radius: 6px;
+        border-radius: 8px;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
         aspect-ratio: 1;
         cursor: pointer;
         color: ${color};
         font-weight: ${isChecked ? 'bold' : 'normal'};
-        transition: all 0.2s;
-        font-size: 1rem;
-      " onmouseover="this.style.filter='brightness(1.2)'" onmouseout="this.style.filter='none'">
-        ${i}
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        ${shadow}
+      " onmouseover="this.style.transform='translateY(-2px) scale(1.03)'; this.style.borderColor=this.style.borderColor.includes('185') ? 'rgba(16,185,129,0.8)' : 'rgba(255,255,255,0.2)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.2)';" 
+         onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.borderColor='${isChecked ? 'rgba(16, 185, 129, 0.6)' : 'rgba(255,255,255,0.05)'}'; this.style.boxShadow='${isChecked ? '0 4px 12px rgba(16,185,129,0.15), inset 0 0 0 1px rgba(16,185,129,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'}';">
+        <span style="font-size: 1.15rem;">${i}</span>
+        ${isChecked ? '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="margin-top: 4px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
       </div>
     `;
   }
