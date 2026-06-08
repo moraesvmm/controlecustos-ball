@@ -14,7 +14,7 @@ import {
   agregarFornecedores,
 } from './logic.js';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
-import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, createMachineActivity } from './db.js';
+import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, createMachineActivity, getFornecedoresContatos, upsertFornecedorContato } from './db.js';
 import { renderDashboardCharts } from './charts.js?v=4';
 import {
   COLUNAS_TABELA,
@@ -32,6 +32,7 @@ import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF } from './pdf_report.j
 
 let registros = [];
 let registrosPreventiva = [];
+window.fornecedoresContatosData = [];
 let filtros = {
   natureza: 'TODOS',
   status: 'TODOS',
@@ -426,7 +427,7 @@ function setupPlanoPreventivaUI() {
         const mat = (Array.isArray(a.material) ? a.material.join('\n') : String(a.material || '')).replace(/"/g, '&quot;');
         const isEdited = window.editedPlanoItems && window.editedPlanoItems.has(a.identificador);
         return `<tr ondblclick="abrirModalAtividadePlano(${idx})" style="cursor:pointer; ${isEdited ? 'background-color: rgba(212,175,55,0.08); border-left: 3px solid var(--primary);' : ''}">
-          <td><strong>${a.identificador || '-'}</strong></td>
+          <td style="position: relative;">${isEdited ? '<div class="floatFadeCard">Salvo</div>' : ''}<strong>${a.identificador || '-'}</strong></td>
           <td title="${descFull}">${descResumo}</td>
           <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${mat}">${a.material ? String(a.material).split('\n')[0].substring(0, 40) + (String(a.material).length > 40 ? '...' : '') : '-'}</td>
           <td>${a.plano_padrao || '-'}</td>
@@ -1121,6 +1122,8 @@ function atualizarBotaoEdicao() {
 
 async function init() {
   try {
+    try { window.fornecedoresContatosData = await getFornecedoresContatos(); } catch(e) { console.warn('Contacts table not ready'); }
+    preencherDatalistFornecedoresContatos();
     registros = await carregarRegistros();
     try {
       const todosPreventiva = await carregarPreventiva();
@@ -1528,6 +1531,8 @@ function renderFornecedoresSLA() {
           subtitulo: `${atrasadosForn.length} registro(s) entregues com atraso ou vencidos`,
           registros: atrasadosForn,
           meta: {
+            isSupplierSLA: true,
+            supplierName: forn,
             insight: `Valor total (estimado): ${fmtMoeda(total)}. Histórico de itens que impactam o SLA deste fornecedor.`
           }
         });
@@ -2281,7 +2286,7 @@ function renderTabelaPreventivaFE() {
   tbody.innerHTML = filtrados.map((r, i) => {
     const isEdited = window.editedPlanoItemsFE && window.editedPlanoItemsFE.has(r.id);
     return `<tr ondblclick="abrirFormularioPreventivaFE('${r.id}')" style="cursor:pointer; ${isEdited ? 'background-color: rgba(110,231,183,0.08); border-left: 3px solid #6ee7b7;' : ''}">
-      <td><strong>${i + 1}</strong></td>
+      <td style="position: relative;">${isEdited ? '<div class="floatFadeCard" style="border-color:#6ee7b7;color:#6ee7b7;box-shadow:0 0 10px rgba(110,231,183,0.3)">Salvo</div>' : ''}<strong>${i + 1}</strong></td>
       <td>${r.maquina || '—'}</td>
       <td style="max-width:280px; white-space:normal; line-height:1.4;">${(r.atividades_descricoes?.[0] || r.descricao || '—').slice(0, 100)}${(r.atividades_descricoes?.[0] || r.descricao || '').length > 100 ? '…' : ''}</td>
       <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
@@ -2520,7 +2525,7 @@ function setupPlanoPreventivaUIFrontend() {
     tbody.innerHTML = currentActivitiesFE.map((a, i) => {
       const isEdited = window.editedPlanoItemsFE && window.editedPlanoItemsFE.has(a.id);
       return `<tr ondblclick="abrirFormularioPreventivaFE('${a.id}')" style="cursor:pointer; ${isEdited ? 'background-color: rgba(110,231,183,0.08); border-left: 3px solid #6ee7b7;' : ''}">
-        <td>${i + 1}</td>
+        <td style="position: relative;">${isEdited ? '<div class="floatFadeCard" style="border-color:#6ee7b7;color:#6ee7b7;box-shadow:0 0 10px rgba(110,231,183,0.3)">Salvo</div>' : ''}${i + 1}</td>
         <td>${a.maquina || '—'}</td>
         <td style="max-width:260px;white-space:normal;line-height:1.4;">${(a.atividades_descricoes?.[0] || a.descricao || '—').slice(0, 100)}</td>
         <td>${a.duracao_horas ?? '—'}</td>
@@ -2918,3 +2923,131 @@ window.exportarMaquinaExcel = function() {
 
 window.renderMachineList = renderMachineList;
 
+function preencherDatalistFornecedoresContatos() {
+  const datalist = $('#listaContatosFornecedores');
+  if (!datalist) return;
+  const names = new Set();
+  registros.forEach(r => { if(r.fornecedor) names.add(r.fornecedor.toUpperCase()); });
+  if(window.fornecedoresContatosData) {
+    window.fornecedoresContatosData.forEach(c => { if(c.fornecedor_nome) names.add(c.fornecedor_nome.toUpperCase()); });
+  }
+  datalist.innerHTML = Array.from(names).sort().map(n => `<option value="${n}"></option>`).join('');
+}
+
+$('#contatoFornecedorNome')?.addEventListener('change', (e) => {
+  const val = e.target.value.trim().toUpperCase();
+  const contato = window.fornecedoresContatosData.find(c => c.fornecedor_nome.toUpperCase() === val);
+  if(contato) {
+    $('#contatoEmail').value = contato.email || '';
+    $('#contatoTelefone').value = contato.telefone || '';
+    $('#contatoMensagem').value = contato.mensagem_padrao || '';
+  } else {
+    $('#contatoEmail').value = '';
+    $('#contatoTelefone').value = '';
+    $('#contatoMensagem').value = '';
+  }
+});
+
+$('#formContatoFornecedor')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const payload = {
+    fornecedor_nome: $('#contatoFornecedorNome').value.trim().toUpperCase(),
+    email: $('#contatoEmail').value.trim(),
+    telefone: $('#contatoTelefone').value.trim(),
+    mensagem_padrao: $('#contatoMensagem').value.trim()
+  };
+  try {
+    const salvo = await upsertFornecedorContato(payload);
+    const idx = window.fornecedoresContatosData.findIndex(c => c.fornecedor_nome === salvo.fornecedor_nome);
+    if(idx >= 0) window.fornecedoresContatosData[idx] = salvo;
+    else window.fornecedoresContatosData.push(salvo);
+    toast('Contato do fornecedor salvo com sucesso!', 'success');
+    $('#modalFornecedorContato').classList.remove('open');
+  } catch(err) {
+    toast('Erro ao salvar contato: ' + err.message, 'error');
+  }
+});
+
+
+// ==========================================
+// LÓGICA DE CONTATOS DE FORNECEDORES
+// ==========================================
+window.fornecedoresContatosData = [];
+
+async function carregarFornecedoresContatos() {
+  try {
+    const { data, error } = await supabaseClient.from('fornecedores_contatos').select('*');
+    if (error) throw error;
+    window.fornecedoresContatosData = data || [];
+  } catch (err) {
+    console.error('Erro ao carregar contatos:', err);
+  }
+}
+
+document.getElementById('btnConfigContatos')?.addEventListener('click', async () => {
+  const modal = document.getElementById('modalFornecedorContato');
+  const select = document.getElementById('contatoFornecedorNome');
+  
+  // Extrair fornecedores únicos usando as variáveis globais do app
+  const uniqueForns = [...new Set(registros.map(r => r.fornecedor).filter(Boolean))].sort();
+  
+  select.innerHTML = '<option value="">Selecione o fornecedor...</option>';
+  uniqueForns.forEach(f => {
+    const fSafe = f.replace(/"/g, '&quot;');
+    select.innerHTML += `<option value="${fSafe}">${f}</option>`;
+  });
+  
+  await carregarFornecedoresContatos();
+  modal.classList.add('open');
+});
+
+document.getElementById('contatoFornecedorNome')?.addEventListener('change', (e) => {
+  const f = e.target.value;
+  const c = window.fornecedoresContatosData.find(x => x.fornecedor_nome === f);
+  if (c) {
+    document.getElementById('contatoEmail').value = c.email || '';
+    document.getElementById('contatoTelefone').value = c.telefone || '';
+    document.getElementById('contatoMensagem').value = c.mensagem_padrao || '';
+  } else {
+    document.getElementById('contatoEmail').value = '';
+    document.getElementById('contatoTelefone').value = '';
+    document.getElementById('contatoMensagem').value = '';
+  }
+});
+
+document.getElementById('formContatoFornecedor')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  const fNome = document.getElementById('contatoFornecedorNome').value;
+  const obj = {
+    fornecedor_nome: fNome,
+    email: document.getElementById('contatoEmail').value,
+    telefone: document.getElementById('contatoTelefone').value,
+    mensagem_padrao: document.getElementById('contatoMensagem').value
+  };
+
+  try {
+    const { data: exist } = await supabaseClient.from('fornecedores_contatos').select('id').eq('fornecedor_nome', fNome).maybeSingle();
+    if (exist) {
+      await supabaseClient.from('fornecedores_contatos').update(obj).eq('id', exist.id);
+    } else {
+      await supabaseClient.from('fornecedores_contatos').insert([obj]);
+    }
+    toast('Contato salvo com sucesso!');
+    await carregarFornecedoresContatos();
+    document.getElementById('modalFornecedorContato').classList.remove('open');
+  } catch (err) {
+    console.error(err);
+    toast('Erro ao salvar contato', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Salvar Contato';
+  }
+});
+
+// Chamar ao carregar a página para os botões do SLA
+document.addEventListener('DOMContentLoaded', carregarFornecedoresContatos);

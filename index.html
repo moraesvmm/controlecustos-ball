@@ -232,13 +232,6 @@
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div></div>
           <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartMes"></canvas></div></div>
           <div class="chart-box chart-wide"><div class="chart-canvas-wrap chart-tall"><canvas id="chartMaquina"></canvas></div></div>
-        </div>
-        <h3 style="margin: 1.5rem 0 0.25rem; color: var(--text);">Status de Retorno por Natureza (dias em aberto)</h3>
-        <p class="section-hint" style="margin-bottom: 0.75rem;">Clique nas fatias para detalhar itens em aberto por tempo de saída.</p>
-        <div class="charts-grid charts-grid-prazos">
-          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartConsertoDias"></canvas></div></div>
-          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartComprasDias"></canvas></div></div>
-        </div>
       </div>
       <aside id="secaoAlertas" class="alertas-panel panel">
         <h3>⚠ Itens atrasados</h3>
@@ -929,7 +922,11 @@
       <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem;">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
           <h2>Relatório de Fornecedores (SLA)</h2>
-          <div class="tooltip-container">
+          <div class="tooltip-container" style="display: flex; gap: 1rem; align-items: center;">
+            <button type="button" class="btn btn-outline" id="btnConfigContatos" onclick="document.getElementById('modalFornecedorContato').classList.add('open')" style="font-size: 0.85rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              Contatos
+            </button>
             <button type="button" class="btn btn-primary" id="btnExportSlaPdf">Gerar Relatório SLA (PDF)</button>
             <div class="tooltip-card">
               <strong style="color: var(--text); font-size: 0.95rem; display: block; margin-bottom: 0.5rem; text-align: left;">Conteúdo do Relatório SLA:</strong>
@@ -1285,11 +1282,47 @@
       </form>
     </div>
   </div>
+
+  <!-- MODAL CONTATO FORNECEDOR -->
+  <div id="modalFornecedorContato" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <header>
+        <h2>Contatos do Fornecedor</h2>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalFornecedorContato').classList.remove('open')">✕</button>
+      </header>
+      <form id="formContatoFornecedor">
+        <div class="form-section">
+          <div class="form-grid" style="grid-template-columns: 1fr;">
+            <label><span>Fornecedor (Selecione)</span>
+              <select name="fornecedor_nome" id="contatoFornecedorNome" required>
+                <option value="">Carregando fornecedores...</option>
+              </select>
+            </label>
+            <label><span>E-mail</span><input type="email" name="email" id="contatoEmail" placeholder="vendas@fornecedor.com" /></label>
+            <label><span>WhatsApp (com DDD)</span><input type="tel" name="telefone" id="contatoTelefone" placeholder="11999999999" /></label>
+            <label class="full"><span>Mensagem de Introdução</span>
+              <textarea name="mensagem_padrao" id="contatoMensagem" rows="3" placeholder="Olá, seguem abaixo as peças que constam em atraso no nosso sistema. Qual a previsão de entrega?"></textarea>
+              <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--gold); background: rgba(212,175,55,0.1); padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3);">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <span>A lista de peças e RCs atrasados será gerada e anexada automaticamente no final desta mensagem.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <footer class="form-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('modalFornecedorContato').classList.remove('open')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Contato</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
   <div id="lightboxOverlay" class="lightbox-overlay">
     <img id="lightboxImg" class="lightbox-img" alt="Foto RC Ampliada" />
   </div>
 
   <div id="toast" class="toast"></div>
+  </div>
   </div>
   <script type="module" src="js/app.js?v=60"></script>
 </body>

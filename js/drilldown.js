@@ -51,7 +51,36 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
     .join('');
 
   if (meta.insight) {
-    document.getElementById('drillInsight').innerHTML = `<p>${meta.insight}</p>`;
+    let insightHtml = `<p>${meta.insight}</p>`;
+    if (meta.isSupplierSLA && window.fornecedoresContatosData) {
+      const contato = window.fornecedoresContatosData.find(c => c.fornecedor_nome.toUpperCase() === meta.supplierName.toUpperCase());
+      if (contato) {
+        const itensText = registros.map(r => `RC: ${r.rc || '-'} / Item: ${r.item || '-'} / Atraso: ${r._diasAtraso} dias`).join('\n');
+        const baseMsg = contato.mensagem_padrao || 'Olá, seguem abaixo as peças que constam em atraso no nosso sistema. Qual a previsão de entrega?';
+        const msg = `${baseMsg}\n\n*Itens em atraso:*\n${itensText}`;
+        
+        let actions = '<div style="margin-top: 10px; display: flex; gap: 10px;">';
+        if (contato.email) {
+          const mailto = `mailto:${encodeURIComponent(contato.email)}?subject=${encodeURIComponent('Cobrança de Atraso')}&body=${encodeURIComponent(msg)}`;
+          actions += `<a href="${mailto}" target="_blank" class="btn btn-outline" style="border-color: #38bdf8; color: #38bdf8; font-size: 0.8rem; padding: 0.4rem 0.8rem;">📩 Enviar E-mail</a>`;
+        }
+        if (contato.telefone) {
+          const fone = contato.telefone.replace(/\D/g, '');
+          const wa = `https://wa.me/55${fone}?text=${encodeURIComponent(msg)}`;
+          actions += `<a href="${wa}" target="_blank" class="btn btn-outline" style="border-color: #10b981; color: #10b981; font-size: 0.8rem; padding: 0.4rem 0.8rem;">📱 Enviar WhatsApp</a>`;
+        }
+        actions += '</div>';
+        
+        if (contato.email || contato.telefone) {
+          insightHtml += actions;
+        } else {
+          insightHtml += `<p style="font-size: 0.8rem; color: var(--gold); margin-top: 10px;">⚠️ Fornecedor cadastrado, mas sem e-mail ou telefone configurado.</p>`;
+        }
+      } else {
+         insightHtml += `<p style="font-size: 0.8rem; color: var(--muted); margin-top: 10px;">💡 Dica: Configure os contatos deste fornecedor (Painel SLA) para cobrar em 1 clique.</p>`;
+      }
+    }
+    document.getElementById('drillInsight').innerHTML = insightHtml;
     document.getElementById('drillInsight').style.display = 'block';
   } else {
     document.getElementById('drillInsight').style.display = 'none';
