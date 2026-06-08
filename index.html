@@ -23,18 +23,14 @@
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
     <style>
-      /* Estilização Dourada para o spin button dos inputs de dia */
+      /* Remove as setinhas dos inputs de dia */
       input[type="number"].preventiva-dia-input::-webkit-inner-spin-button,
       input[type="number"].preventiva-dia-input::-webkit-outer-spin-button {
-        opacity: 1;
-        cursor: pointer;
-        /* Hack visual para transformar os ícones do navegador em dourado */
-        filter: sepia(100%) saturate(300%) hue-rotate(5deg) brightness(1.2);
-        background-color: transparent;
+        -webkit-appearance: none;
+        margin: 0;
       }
       input[type="number"].preventiva-dia-input {
-        -moz-appearance: number-input;
-        padding-right: 0px !important;
+        -moz-appearance: textfield;
       }
     </style>
 </head>
