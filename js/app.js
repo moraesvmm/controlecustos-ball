@@ -3007,11 +3007,13 @@ document.getElementById('contatoFornecedorNome')?.addEventListener('change', (e)
   if (c) {
     document.getElementById('contatoEmail').value = c.email || '';
     document.getElementById('contatoTelefone').value = c.telefone || '';
-    document.getElementById('contatoMensagem').value = c.mensagem_padrao || '';
+    const defMsg = 'Olá, bom dia! Tudo bem?\n\nSegue abaixo itens para verificação de atraso.';
+    document.getElementById('contatoMensagem').value = c.mensagem_padrao || defMsg;
   } else {
+    const defMsg = 'Olá, bom dia! Tudo bem?\n\nSegue abaixo itens para verificação de atraso.';
     document.getElementById('contatoEmail').value = '';
     document.getElementById('contatoTelefone').value = '';
-    document.getElementById('contatoMensagem').value = '';
+    document.getElementById('contatoMensagem').value = defMsg;
   }
 });
 
