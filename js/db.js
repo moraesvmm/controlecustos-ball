@@ -295,3 +295,28 @@ export async function createMachineActivity(machineId, activity) {
   if (error) throw error;
   return data;
 }
+
+// =============================
+// FORNECEDORES CONTATOS
+// =============================
+
+export async function getFornecedoresContatos() {
+  const client = getClient();
+  const { data, error } = await client.from('fornecedores_contatos').select('*');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function upsertFornecedorContato(payload) {
+  const client = getClient();
+  // upsert requires the row to match the PK or unique constraint
+  // We match on fornecedor_nome which is UNIQUE
+  const { data, error } = await client.from('fornecedores_contatos').upsert({
+    fornecedor_nome: payload.fornecedor_nome,
+    email: payload.email,
+    telefone: payload.telefone,
+    mensagem_padrao: payload.mensagem_padrao
+  }, { onConflict: 'fornecedor_nome' }).select().single();
+  if (error) throw error;
+  return data;
+}

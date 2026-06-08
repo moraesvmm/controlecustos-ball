@@ -324,6 +324,8 @@ export function renderDashboardCharts(registros) {
     chartInstances.push(ch3);
   }
 
+
+
   // --- Gráficos de Pizza (Prazos de Retorno) ---
   const prazosColors = {
     'Em dias': '#34d399',

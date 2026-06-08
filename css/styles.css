@@ -1992,3 +1992,32 @@ body.light-mode #btnExportarLinhaExcel { color: #0284c7 !important; border-color
 body.light-mode .machine-list-item:hover { background: rgba(0,0,0,0.04); }
 .machine-list-item.active { background: rgba(212,175,55,0.15) !important; font-weight: bold; color: var(--primary); border-bottom-color: transparent; }
 
+
+@keyframes floatFadeCardAnim {
+  0% { opacity: 0; transform: translateY(10px) scale(0.95); box-shadow: 0 0 0 rgba(212,175,55,0); }
+  20% { opacity: 1; transform: translateY(0) scale(1.02); box-shadow: 0 0 15px rgba(212,175,55,0.5); }
+  40% { transform: scale(1); box-shadow: 0 0 10px rgba(212,175,55,0.3); }
+  80% { opacity: 1; transform: translateY(0) scale(1); box-shadow: 0 0 5px rgba(212,175,55,0.1); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+.floatFadeCard {
+  position: absolute;
+  background: rgba(20, 20, 20, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  pointer-events: none;
+  animation: floatFadeCardAnim 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.floatFadeCard::before {
+  content: "✨";
+}
