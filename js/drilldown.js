@@ -56,7 +56,7 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
       const contato = window.fornecedoresContatosData.find(c => c.fornecedor_nome.toUpperCase() === meta.supplierName.toUpperCase());
       if (contato) {
         const itensText = registros.map(r => `RC: ${r.rc || '-'} / Item: ${r.item || '-'} / Atraso: ${r._diasAtraso} dias`).join('\n');
-        const baseMsg = contato.mensagem_padrao || 'Olá, bom dia! Segue abaixo a lista de itens em atraso para verificação.';
+        const baseMsg = contato.mensagem_padrao || 'Olá, bom dia! Tudo bem?\n\nSegue abaixo itens para verificação de atraso.';
         const msg = `${baseMsg}\n\n*Itens em atraso:*\n${itensText}`;
         
         let actions = '<div style="margin-top: 10px; display: flex; gap: 10px;">';
