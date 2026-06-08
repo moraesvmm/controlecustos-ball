@@ -21,7 +21,24 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
   <link rel="stylesheet" href="css/sweetalert2-dark.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+
+    <style>
+      /* Estilização Dourada para o spin button dos inputs de dia */
+      input[type="number"].preventiva-dia-input::-webkit-inner-spin-button,
+      input[type="number"].preventiva-dia-input::-webkit-outer-spin-button {
+        opacity: 1;
+        cursor: pointer;
+        /* Hack visual para transformar os ícones do navegador em dourado */
+        filter: sepia(100%) saturate(300%) hue-rotate(5deg) brightness(1.2);
+        background-color: transparent;
+      }
+      input[type="number"].preventiva-dia-input {
+        -moz-appearance: number-input;
+        padding-right: 0px !important;
+      }
+    </style>
 </head>
+
 <body>
   <div class="app-bg"></div>
 
@@ -336,7 +353,7 @@
               </div>
             </aside>
 
-            <section id="calendario-preventiva-section" style="flex: 1; max-width: 600px; background: var(--surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
+            <section id="calendario-preventiva-section" style="flex: 1; max-width: 600px; margin: 0 auto; background: var(--surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <div>
                   <h3 style="margin: 0; font-size: 1.5rem; color: var(--text);">Check-in de Preventivas</h3>
@@ -496,7 +513,7 @@
               <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Selecione a Linha</h3>
               <div id="linhas-list-fe" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
             </aside>
-            <section id="calendario-preventiva-section-fe" style="flex: 1; max-width: 600px; background: var(--surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
+            <section id="calendario-preventiva-section-fe" style="flex: 1; max-width: 600px; margin: 0 auto; background: var(--surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <div>
                   <h3 style="margin: 0; font-size: 1.5rem; color: var(--text);">Check-in de Preventivas</h3>
