@@ -1914,18 +1914,27 @@ window.selecionarMesPlanos = function(mes) {
   
   // Render linhas
   const linhas = ['L04', 'L05', 'L06', 'L07', 'L08', 'L09'];
-  const html = linhas.map(l => `
-    <button class="btn btn-outline" style="text-align: left; justify-content: flex-start;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
-  `).join('');
-  $('#linhas-list').innerHTML = html;
-  
   $('#step-mes').style.display = 'none';
   $('#step-linha').style.display = 'block';
   $('#step-maquina-section').style.display = 'none';
   const calSec = $('#calendario-preventiva-section');
   if (calSec) calSec.style.display = 'flex';
-  carregarCheckinsPreventiva(mes).then(() => renderCalendarioPreventiva(mes, false));
   $('#step-atividades').style.display = 'none';
+
+  carregarCheckinsPreventiva(mes).then(() => {
+    const html = linhas.map(l => {
+      const checked = checkinsPreventiva.find(c => c.linha === l);
+      const diaVal = checked ? checked.dia : '';
+      return `<div style="display:flex; gap:0.5rem; align-items:stretch; margin-bottom: 0.5rem;">
+        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
+        <div style="position:relative;">
+          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:60px; height:100%; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:1rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+        </div>
+      </div>`;
+    }).join('');
+    $('#linhas-list').innerHTML = html;
+    renderCalendarioPreventiva(mes, false);
+  });
 };
 
 window.selecionarLinhaPlanos = async function(linha) {
@@ -2182,18 +2191,28 @@ window.selecionarMesPlansosFrontend = function(mes) {
   const label = $('#step-linha-mes-label-fe');
   if (label) label.textContent = mes;
   const linhas = ['L04', 'L05', 'L06', 'L07', 'L08', 'L09'];
-  const html = linhas.map(l =>
-    `<button class="btn btn-outline" style="text-align:left; justify-content:flex-start;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L', '')}</button>`
-  ).join('');
-  const el = $('#linhas-list-fe');
-  if (el) el.innerHTML = html;
   $('#step-mes-fe').style.display = 'none';
   $('#step-linha-fe').style.display = 'block';
   $('#step-maquina-section-fe').style.display = 'none';
   const calSecFE = $('#calendario-preventiva-section-fe');
   if (calSecFE) calSecFE.style.display = 'flex';
-  carregarCheckinsPreventiva(mes).then(() => renderCalendarioPreventiva(mes, true));
   $('#step-atividades-fe').style.display = 'none';
+
+  carregarCheckinsPreventiva(mes).then(() => {
+    const html = linhas.map(l => {
+      const checked = checkinsPreventiva.find(c => c.linha === l);
+      const diaVal = checked ? checked.dia : '';
+      return `<div style="display:flex; gap:0.5rem; align-items:stretch; margin-bottom: 0.5rem;">
+        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L','')}</button>
+        <div style="position:relative;">
+          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:60px; height:100%; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:1rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+        </div>
+      </div>`;
+    }).join('');
+    const el = $('#linhas-list-fe');
+    if (el) el.innerHTML = html;
+    renderCalendarioPreventiva(mes, true);
+  });
 };
 
 window.selecionarLinhaPlanosFrontend = function(linha) {
@@ -3084,11 +3103,11 @@ async function carregarCheckinsPreventiva(mes) {
   if (!mes) return;
   try {
     const { data, error } = await getClient()
-      .from('preventiva_checkins')
+      .from('preventiva_linhas_checkin')
       .select('*')
       .eq('mes', mes);
     if (!error && data) {
-      checkinsPreventiva = data.map(d => Number(d.dia));
+      checkinsPreventiva = data.map(d => ({ linha: d.linha, dia: Number(d.dia) }));
     } else {
       checkinsPreventiva = [];
     }
@@ -3098,21 +3117,27 @@ async function carregarCheckinsPreventiva(mes) {
   }
 }
 
-async function toggleCheckinPreventiva(mes, dia) {
-  const isChecked = checkinsPreventiva.includes(dia);
+async function salvarDiaLinhaPreventiva(mes, linha, diaStr) {
+  const dia = parseInt(diaStr);
   try {
-    if (isChecked) {
-      await getClient().from('preventiva_checkins').delete().match({ mes: mes, dia: dia });
-      checkinsPreventiva = checkinsPreventiva.filter(d => d !== dia);
+    if (!dia || isNaN(dia) || dia < 1 || dia > 31) {
+      await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
+      checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
     } else {
-      await getClient().from('preventiva_checkins').insert([{ mes: mes, dia: dia }]);
-      checkinsPreventiva.push(dia);
+      await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
+      await getClient().from('preventiva_linhas_checkin').insert([{ mes, linha, dia }]);
+      checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
+      checkinsPreventiva.push({ linha, dia });
     }
-    renderCalendarioPreventiva(mes);
-  } catch (err) {
-    toast('Erro ao atualizar check-in.', 'error');
+    renderCalendarioPreventiva(mes, false);
+    renderCalendarioPreventiva(mes, true);
+    toast('Dia salvo com sucesso.', 'success');
+  } catch(err) {
+    console.error(err);
+    toast('Erro ao salvar dia.', 'error');
   }
 }
+window.salvarDiaLinhaPreventiva = salvarDiaLinhaPreventiva;
 
 function renderCalendarioPreventiva(mes, isFrontend = false) {
   const containerId = isFrontend ? 'preventiva-checkin-grid-fe' : 'preventiva-checkin-grid';
@@ -3139,14 +3164,22 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
   }
   
   for (let i = 1; i <= diasNoMes; i++) {
-    const isChecked = checkinsPreventiva.includes(i);
-    const bg = isChecked ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(16, 185, 129, 0.3) 100%)' : 'var(--bg2)';
-    const color = isChecked ? '#10b981' : 'var(--text)';
-    const border = isChecked ? '1px solid rgba(16, 185, 129, 0.6)' : '1px solid rgba(255,255,255,0.05)';
-    const shadow = isChecked ? 'box-shadow: 0 4px 12px rgba(16,185,129,0.15), inset 0 0 0 1px rgba(16,185,129,0.2);' : 'box-shadow: 0 2px 4px rgba(0,0,0,0.1);';
+    const linesOnThisDay = checkinsPreventiva.filter(c => c.dia === i).map(c => c.linha.replace('L',''));
+    const isChecked = linesOnThisDay.length > 0;
+    const bg = isChecked ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'transparent';
+    const color = isChecked ? '#10b981' : 'var(--muted)';
+    const border = isChecked ? '1px solid rgba(16, 185, 129, 0.5)' : '1px dashed rgba(255,255,255,0.1)';
+    const shadow = isChecked ? 'box-shadow: inset 0 0 0 1px rgba(16,185,129,0.1);' : '';
+    
+    let subHtml = '';
+    if (isChecked) {
+       subHtml = `<div style="display:flex; gap:2px; margin-top:2px; flex-wrap:wrap; justify-content:center; padding: 0 2px;">
+         ${linesOnThisDay.map(l => `<span style="font-size:0.6rem; font-weight:bold; background:rgba(16,185,129,0.2); color:#10b981; padding:1px 3px; border-radius:3px;">L${l}</span>`).join('')}
+       </div>`;
+    }
     
     html += `
-      <div onclick="toggleCheckinPreventiva('${mes}', ${i})" style="
+      <div style="
         background: ${bg};
         border: ${border};
         border-radius: 8px;
@@ -3155,15 +3188,12 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
         align-items: center;
         justify-content: center;
         aspect-ratio: 1;
-        cursor: pointer;
         color: ${color};
-        font-weight: ${isChecked ? 'bold' : 'normal'};
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.3s ease;
         ${shadow}
-      " onmouseover="this.style.transform='translateY(-2px) scale(1.03)'; this.style.borderColor=this.style.borderColor.includes('185') ? 'rgba(16,185,129,0.8)' : 'rgba(255,255,255,0.2)'; this.style.boxShadow='0 6px 16px rgba(0,0,0,0.2)';" 
-         onmouseout="this.style.transform='translateY(0) scale(1)'; this.style.borderColor='${isChecked ? 'rgba(16, 185, 129, 0.6)' : 'rgba(255,255,255,0.05)'}'; this.style.boxShadow='${isChecked ? '0 4px 12px rgba(16,185,129,0.15), inset 0 0 0 1px rgba(16,185,129,0.2)' : '0 2px 4px rgba(0,0,0,0.1)'}';">
-        <span style="font-size: 1.15rem;">${i}</span>
-        ${isChecked ? '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" style="margin-top: 4px; filter: drop-shadow(0 2px 2px rgba(0,0,0,0.2));"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+      ">
+        <span style="font-size: 1rem; font-weight: ${isChecked ? '600' : '400'};">${i}</span>
+        ${subHtml}
       </div>
     `;
   }
@@ -3171,4 +3201,4 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
   container.innerHTML = html;
 }
 
-window.toggleCheckinPreventiva = toggleCheckinPreventiva;
+
