@@ -1925,10 +1925,13 @@ window.selecionarMesPlanos = function(mes) {
     const html = linhas.map(l => {
       const checked = checkinsPreventiva.find(c => c.linha === l);
       const diaVal = checked ? checked.dia : '';
-      return `<div style="display:flex; gap:0.5rem; align-items:stretch; margin-bottom: 0.5rem;">
-        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
-        <div style="position:relative;">
-          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:60px; height:100%; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:1rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+      return `<div style="display:flex; gap:0.25rem; align-items:stretch; margin-bottom: 0.5rem;">
+        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
+        <div style="display:flex; gap:2px;">
+          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+          <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Excluir dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
         </div>
       </div>`;
     }).join('');
@@ -2202,10 +2205,13 @@ window.selecionarMesPlansosFrontend = function(mes) {
     const html = linhas.map(l => {
       const checked = checkinsPreventiva.find(c => c.linha === l);
       const diaVal = checked ? checked.dia : '';
-      return `<div style="display:flex; gap:0.5rem; align-items:stretch; margin-bottom: 0.5rem;">
-        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L','')}</button>
-        <div style="position:relative;">
-          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:60px; height:100%; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:1rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+      return `<div style="display:flex; gap:0.25rem; align-items:stretch; margin-bottom: 0.5rem;">
+        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L','')}</button>
+        <div style="display:flex; gap:2px;">
+          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+          <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Excluir dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
         </div>
       </div>`;
     }).join('');
@@ -3159,47 +3165,47 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
   
   let html = '';
   
-  const diasDaSemana = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
+  const diasDaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
   diasDaSemana.forEach(d => {
-    html += `<div style="text-align: center; font-size: 0.85rem; color: var(--muted); font-weight: 400; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 0.5rem;">${d}</div>`;
+    html += `<div style="text-align: center; font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; padding-bottom: 0.25rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0.25rem;">${d}</div>`;
   });
 
   for (let empty = 0; empty < primeiroDiaSemana; empty++) {
-    html += `<div></div>`;
+    html += `<div style="visibility: hidden;"></div>`;
   }
   
   for (let i = 1; i <= diasNoMes; i++) {
     const linesOnThisDay = checkinsPreventiva.filter(c => c.dia === i).map(c => c.linha.replace('L',''));
     const isChecked = linesOnThisDay.length > 0;
     
-    // Minimalist aesthetics
-    const color = isChecked ? '#fff' : 'var(--muted)';
-    const fontWeight = isChecked ? '500' : '300';
-    const bgCircle = isChecked ? 'rgba(255,255,255,0.05)' : 'transparent';
+    const bg = isChecked ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'var(--surface)';
+    const color = isChecked ? '#10b981' : 'var(--text)';
+    const border = isChecked ? '1px solid rgba(16, 185, 129, 0.5)' : '1px dashed rgba(255,255,255,0.05)';
+    const shadow = isChecked ? 'box-shadow: inset 0 0 0 1px rgba(16,185,129,0.1);' : '';
     
     let subHtml = '';
     if (isChecked) {
-       subHtml = `<div style="display:flex; gap:3px; margin-top:4px; flex-wrap:wrap; justify-content:center;">
-         ${linesOnThisDay.map(l => `<span style="width: 4px; height: 4px; border-radius: 50%; background: #10b981; display: inline-block;" title="Linha ${l}"></span>`).join('')}
+       subHtml = `<div style="display:flex; gap:2px; margin-top:2px; flex-wrap:wrap; justify-content:center; padding: 0 2px;">
+         ${linesOnThisDay.map(l => `<span style="font-size:0.55rem; font-weight:bold; background:rgba(16,185,129,0.2); color:#10b981; padding:1px 3px; border-radius:3px;">L${l}</span>`).join('')}
        </div>`;
     }
     
     html += `
       <div style="
+        background: ${bg};
+        border: ${border};
+        border-radius: 6px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: flex-start;
+        justify-content: center;
         aspect-ratio: 1;
-        padding-top: 10px;
         color: ${color};
-        font-weight: ${fontWeight};
-        font-size: 1.1rem;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
+        padding: 2px;
+        ${shadow}
       ">
-        <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: ${bgCircle};">
-          ${i}
-        </div>
+        <span style="font-size: 0.85rem; font-weight: ${isChecked ? '600' : '400'};">${i}</span>
         ${subHtml}
       </div>
     `;
