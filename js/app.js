@@ -268,11 +268,8 @@ function renderMachineActivities() {
     const descLines = (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0)
       ? a.atividades_descricoes
       : (a.descricao ? [a.descricao] : []);
-    const descStr = String(descLines[0] || '');
-    const descResumo = descStr ? descStr.substring(0, 80) + (descStr.length > 80 || descLines.length > 1 ? '...' : '') : '-';
-    
-    const matStr = Array.isArray(a.material) ? a.material.join(' | ') : String(a.material || '');
-    const matDisplay = matStr ? matStr.substring(0,50) + (matStr.length > 50 ? '...' : '') : '-';
+    const descDisplay = descLines.length > 0 ? descLines.join('<br>') : '-';
+    const matDisplay = Array.isArray(a.material) ? a.material.join('<br>') : String(a.material || '-');
     
     const selCls = String(a.id) === String(window.linhaSelecionadaPreventivaId) ? ' row-selected' : '';
     let trHtml = `<tr data-id="${a.id}" class="${selCls}" style="cursor:pointer;" onclick="abrirDetalhePreventivaPanel('${a.id}')">`;
@@ -283,8 +280,8 @@ function renderMachineActivities() {
     
     trHtml += `
       <td><strong>${a.identificador || '-'}</strong></td>
-      <td title="${(descLines.join(' | ')).replace(/"/g, '&quot;')}">${descResumo}</td>
-      <td style="max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${matStr.replace(/"/g, '&quot;')}">${matDisplay}</td>
+      <td style="min-width: 350px; white-space: normal; line-height: 1.5; padding: 12px; color: var(--text);">${descDisplay}</td>
+      <td style="min-width: 200px; white-space: normal; line-height: 1.5; padding: 12px; color: var(--text);">${matDisplay}</td>
       <td><span class="badge ${a.plano_padrao === 'S' ? 'badge-success' : 'badge-warning'}">${a.plano_padrao || '-'}</span></td>
       <td>${a.duracao_horas || '-'}</td>
       <td>${a.hh_mec || '-'}</td>
