@@ -3129,14 +3129,15 @@ async function salvarDiaLinhaPreventiva(mes, linha, diaStr) {
   
   try {
     if (!isValid) {
-      await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
+      const { error } = await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
+      if (error) throw error;
       checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
-      // Reseta visualmente todos os inputs que invalidaram
       document.querySelectorAll(`.preventiva-dia-input[data-linha="${linha}"]`).forEach(el => el.value = '');
       toast('Marcação removida/limpa.', 'info');
     } else {
       await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
-      await getClient().from('preventiva_linhas_checkin').insert([{ mes, linha, dia }]);
+      const { error } = await getClient().from('preventiva_linhas_checkin').insert([{ mes, linha, dia }]);
+      if (error) throw error;
       checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
       checkinsPreventiva.push({ linha, dia });
       toast('Dia registrado.', 'success');
