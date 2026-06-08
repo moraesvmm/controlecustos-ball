@@ -422,15 +422,13 @@ function setupPlanoPreventivaUI() {
         const descLines = descricaoLinhas(a);
         const descFull = descLines.join(' | ').replace(/"/g, '&quot;');
         const descStr = String(descLines[0] || '');
-        const descResumo = descStr
-          ? descStr.substring(0, 60) + (descStr.length > 60 || descLines.length > 1 ? '...' : '')
-          : '-';
-        const mat = (Array.isArray(a.material) ? a.material.join('\n') : String(a.material || '')).replace(/"/g, '&quot;');
+        const descDisplay = descLines.length > 0 ? descLines.join('<br>') : '-';
+        const mat = Array.isArray(a.material) ? a.material.join('<br>') : String(a.material || '-');
         const isEdited = window.editedPlanoItems && window.editedPlanoItems.has(a.identificador);
         return `<tr ondblclick="abrirModalAtividadePlano(${idx})" style="cursor:pointer; ${isEdited ? 'background-color: rgba(212,175,55,0.08); border-left: 3px solid var(--primary);' : ''}">
           <td style="position: relative;">${isEdited ? '<div class="floatFadeCard">Salvo</div>' : ''}<strong>${a.identificador || '-'}</strong></td>
-          <td title="${descFull}">${descResumo}</td>
-          <td style="max-width:150px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${mat}">${a.material ? String(a.material).split('\n')[0].substring(0, 40) + (String(a.material).length > 40 ? '...' : '') : '-'}</td>
+          <td style="min-width: 300px; white-space: normal; line-height: 1.5; padding: 12px; color: var(--text);">${descDisplay}</td>
+          <td style="min-width: 200px; white-space: normal; line-height: 1.5; padding: 12px; color: var(--text);">${mat}</td>
           <td>${a.plano_padrao || '-'}</td>
           <td>${a.duracao_horas ?? '-'}</td>
           <td>${a.hh_mec ?? '-'}</td>
@@ -2329,7 +2327,7 @@ function renderTabelaPreventivaFE() {
     return `<tr ondblclick="abrirFormularioPreventivaFE('${r.id}')" style="cursor:pointer; ${isEdited ? 'background-color: rgba(110,231,183,0.08); border-left: 3px solid #6ee7b7;' : ''}">
       <td style="position: relative;">${isEdited ? '<div class="floatFadeCard" style="border-color:#6ee7b7;color:#6ee7b7;box-shadow:0 0 10px rgba(110,231,183,0.3)">Salvo</div>' : ''}<strong>${i + 1}</strong></td>
       <td>${r.maquina || '—'}</td>
-      <td style="max-width:280px; white-space:normal; line-height:1.4;">${(r.atividades_descricoes?.[0] || r.descricao || '—').slice(0, 100)}${(r.atividades_descricoes?.[0] || r.descricao || '').length > 100 ? '…' : ''}</td>
+      <td style="min-width:350px; white-space:normal; line-height:1.5; padding: 12px; color: var(--text);">${(r.atividades_descricoes ? r.atividades_descricoes.join('<br>') : r.descricao || '-')}</td>
       <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
       <td>${r.hh_mec || '—'}</td>
       <td>${r.hh_eletrico || '—'}</td>
@@ -2573,7 +2571,7 @@ function setupPlanoPreventivaUIFrontend() {
       return `<tr ondblclick="abrirFormularioPreventivaFE('${a.id}')" style="cursor:pointer; ${isEdited ? 'background-color: rgba(110,231,183,0.08); border-left: 3px solid #6ee7b7;' : ''}">
         <td style="position: relative;">${isEdited ? '<div class="floatFadeCard" style="border-color:#6ee7b7;color:#6ee7b7;box-shadow:0 0 10px rgba(110,231,183,0.3)">Salvo</div>' : ''}${i + 1}</td>
         <td>${a.maquina || '—'}</td>
-        <td style="max-width:260px;white-space:normal;line-height:1.4;">${(a.atividades_descricoes?.[0] || a.descricao || '—').slice(0, 100)}</td>
+        <td style="min-width:350px; white-space:normal; line-height:1.5; padding: 12px; color: var(--text);">${(a.atividades_descricoes ? a.atividades_descricoes.join('<br>') : a.descricao || '-')}</td>
         <td>${a.duracao_horas ?? '—'}</td>
         <td>${a.hh_mec || '—'}</td>
         <td>${a.hh_eletrico || '—'}</td>
