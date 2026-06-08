@@ -3167,11 +3167,12 @@ function exportarRelatorioCheckins() {
   }
 
   const el = document.createElement('div');
-  el.style.padding = '40px';
+  el.style.padding = '30px';
   el.style.backgroundColor = '#111827'; 
   el.style.color = '#f3f4f6';
   el.style.fontFamily = 'Outfit, sans-serif';
-  el.style.width = '800px';
+  el.style.width = '740px';
+  el.style.boxSizing = 'border-box';
 
   let html = `
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #374151; padding-bottom:20px; margin-bottom:30px;">
