@@ -30,4 +30,19 @@ echo ========================================================
 pause >nul
 
 :: Remove a letra de disco temporaria ao fechar
+:: 1. Desconecta o servidor PowerShell (porta %PORT%) que "prende" o disco
+for /f "tokens=5" %%a in ('netstat -aon ^| find ":%PORT%" ^| find "LISTENING"') do taskkill /f /pid %%a >nul 2>&1
+
+:: 2. Aguarda 1 segundo para o sistema operacional liberar a trava do disco
+timeout /t 1 /nobreak >nul
+
+:: 3. Executa o popd original para tentar a remocao padrao
 popd
+
+:: 4. [Garantia extra] Remove qualquer letra de rede temporaria (T: a Z:) presa no servidor
+for %%D in (T U V W X Y Z) do (
+    net use %%D: 2>nul | find /I "britufps01" >nul
+    if not errorlevel 1 (
+        net use %%D: /delete /y >nul 2>&1
+    )
+)
