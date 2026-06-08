@@ -62,12 +62,12 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
         let actions = '<div style="margin-top: 10px; display: flex; gap: 10px;">';
         if (contato.email) {
           const mailto = `mailto:${encodeURIComponent(contato.email)}?subject=${encodeURIComponent('Cobrança de Atraso')}&body=${encodeURIComponent(msg)}`;
-          actions += `<a href="${mailto}" target="_blank" class="btn btn-outline" style="border-color: #38bdf8; color: #38bdf8; font-size: 0.8rem; padding: 0.4rem 0.8rem;">📩 Enviar E-mail</a>`;
+          actions += `<button type="button" onclick="window.open('${mailto}', '_blank')" class="btn btn-outline" style="border-color: #38bdf8; color: #38bdf8; font-size: 0.8rem; padding: 0.4rem 0.8rem;">📩 Enviar E-mail</button>`;
         }
         if (contato.telefone) {
           const fone = contato.telefone.replace(/\D/g, '');
           const wa = `https://wa.me/55${fone}?text=${encodeURIComponent(msg)}`;
-          actions += `<a href="${wa}" target="_blank" class="btn btn-outline" style="border-color: #10b981; color: #10b981; font-size: 0.8rem; padding: 0.4rem 0.8rem;">📱 Enviar WhatsApp</a>`;
+          actions += `<button type="button" onclick="window.open('${wa}', '_blank')" class="btn btn-outline" style="border-color: #10b981; color: #10b981; font-size: 0.8rem; padding: 0.4rem 0.8rem;">📱 Enviar WhatsApp</button>`;
         }
         actions += '</div>';
         
