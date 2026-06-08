@@ -24,7 +24,7 @@ import {
   confirmar,
   fmtMoeda,
 } from './ui.js?v=3';
-import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler } from './drilldown.js?v=5';
+import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler } from './drilldown.js?v=6';
 import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=2';
@@ -1496,20 +1496,26 @@ function renderFornecedoresSLA() {
         const hoje = new Date();
         hoje.setHours(0, 0, 0, 0);
 
-        const atrasadosForn = apenasDesteForn.filter(r => {
+        const atrasadosForn = apenasDesteForn.reduce((acc, r) => {
           if (r.data_recebimento && r.previsao_entrega) {
             const dataRec = new Date(r.data_recebimento);
             const dataPrev = new Date(r.previsao_entrega);
             const diffTime = dataRec - dataPrev;
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return diffDays > 0;
+            if (diffDays > 0) acc.push({ ...r, _diasAtraso: diffDays });
+          } else {
+            const st = r.status || calcularStatus(r);
+            if (st !== 'ENTREGUE' && r.previsao_entrega) {
+              const dataPrev = new Date(r.previsao_entrega);
+              if (dataPrev < hoje) {
+                const diffTime = hoje - dataPrev;
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                acc.push({ ...r, _diasAtraso: diffDays });
+              }
+            }
           }
-          const st = r.status || calcularStatus(r);
-          if (st !== 'ENTREGUE' && r.previsao_entrega) {
-            return new Date(r.previsao_entrega) < hoje;
-          }
-          return false;
-        });
+          return acc;
+        }, []);
         
         if (atrasadosForn.length === 0) {
            toast('Este fornecedor não possui itens em atraso.', 'info');

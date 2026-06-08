@@ -67,9 +67,9 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
         const mesAtraso = calcularMesOriginalAtraso(r);
         const isAtrasado = !!mesAtraso;
         const atrasadoClass = isAtrasado ? ' drill-item--atrasado' : '';
-        const atrasadoBadge = isAtrasado
-          ? `<span class="badge-atraso">🚨 Atrasado do mês ${mesAtraso}</span>`
-          : (r._diasAtraso ? `<span class="badge-atraso" style="background: var(--danger); color: white;">🚨 Atrasou ${r._diasAtraso} dias</span>` : '');
+        const atrasadoBadge = r._diasAtraso
+          ? `<span class="badge-atraso" style="background: var(--danger); color: white;">🚨 ${r.data_recebimento ? 'Entregue com atraso de' : 'Atrasado há'} ${r._diasAtraso} dias</span>`
+          : (isAtrasado ? `<span class="badge-atraso">🚨 Atrasado do mês ${mesAtraso}</span>` : '');
 
         const hasFoto = !!r.foto_url;
         const fotoHtml = `
