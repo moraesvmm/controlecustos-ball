@@ -274,7 +274,8 @@ function renderMachineActivities() {
     const matStr = Array.isArray(a.material) ? a.material.join(' | ') : String(a.material || '');
     const matDisplay = matStr ? matStr.substring(0,50) + (matStr.length > 50 ? '...' : '') : '-';
     
-    let trHtml = `<tr data-id="${a.id}" style="cursor:pointer;" onclick="abrirDetalhePreventivaPanel('${a.id}')">`;
+    const selCls = String(a.id) === String(window.linhaSelecionadaPreventivaId) ? ' row-selected' : '';
+    let trHtml = `<tr data-id="${a.id}" class="${selCls}" style="cursor:pointer;" onclick="abrirDetalhePreventivaPanel('${a.id}')">`;
     
     if (selectedMachineId === 'GERAL') {
       trHtml += `<td>${a.maquina || '-'}</td>`;
@@ -2002,6 +2003,11 @@ window.abrirDetalhePreventivaPanel = function(id) {
   let r = registrosPreventiva.find((x) => String(x.id) === String(id));
   if (!r) r = registrosPreventivaFrontend.find((x) => String(x.id) === String(id));
   if (!r) return;
+  window.linhaSelecionadaPreventivaId = id;
+  document.querySelectorAll('#machineActivitiesTable tbody tr').forEach(tr => {
+    tr.classList.toggle('row-selected', String(tr.dataset.id) === String(id));
+  });
+
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
   if (!panel) return;
@@ -2457,6 +2463,11 @@ $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
 window.abrirDetalhePreventivaFEPanel = function(id) {
   const r = registrosPreventivaFrontend.find(x => String(x.id) === String(id));
   if (!r) return;
+  window.linhaSelecionadaPreventivaId = id;
+  document.querySelectorAll('#machineActivitiesTable tbody tr').forEach(tr => {
+    tr.classList.toggle('row-selected', String(tr.dataset.id) === String(id));
+  });
+
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
   if (!panel) return;
