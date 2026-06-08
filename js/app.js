@@ -3154,71 +3154,158 @@ window.salvarDiaLinhaPreventiva = salvarDiaLinhaPreventiva;
 // EXPORTAÇÃO PDF DO CALENDÁRIO
 // ==========================================
 function exportarRelatorioCheckins() {
-  const mes = estadoPlanos.mes || estadoPlanosFrontend.mes;
-  if (!mes) {
-    toast('Selecione um mês primeiro.', 'warning');
+  const mes = estadoPlanos.mes || estadoPlanosFrontend.mes || new Date().toLocaleString('pt-BR', {month: 'long'}).toUpperCase();
+  
+  if (!checkinsPreventiva || checkinsPreventiva.length === 0) {
+    toast('Não há preventivas marcadas para gerar relatório.', 'warning');
     return;
   }
 
   const linhasUnicas = [...new Set(checkinsPreventiva.map(c => c.linha))].sort();
-  if (linhasUnicas.length === 0) {
-    toast('Não há preventivas marcadas neste mês para exportar.', 'warning');
-    return;
+  const totalIntervencoes = checkinsPreventiva.length;
+  
+  const diasCount = {};
+  checkinsPreventiva.forEach(c => {
+    diasCount[c.dia] = (diasCount[c.dia] || 0) + 1;
+  });
+  let peakDay = '-';
+  let maxInterv = 0;
+  for (const d in diasCount) {
+    if (diasCount[d] > maxInterv) {
+      maxInterv = diasCount[d];
+      peakDay = d;
+    }
   }
+  const peakDayText = maxInterv > 0 ? `Dia ${peakDay}` : '-';
 
   const el = document.createElement('div');
-  el.style.padding = '30px';
-  el.style.backgroundColor = '#111827'; 
-  el.style.color = '#f3f4f6';
-  el.style.fontFamily = 'Outfit, sans-serif';
-  el.style.width = '740px';
+  // Formato A4 corporativo em pixels (aprox 794px width).
+  el.style.width = '790px';
+  el.style.backgroundColor = '#ffffff'; 
+  el.style.color = '#333333';
+  el.style.fontFamily = 'Arial, sans-serif'; // Fontes padrão de sistema corporativo
   el.style.boxSizing = 'border-box';
-
-  let html = `
-    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #374151; padding-bottom:20px; margin-bottom:30px;">
-      <div>
-         <h1 style="margin:0; font-size:24px; color:#10b981;">Controle RC</h1>
-         <h2 style="margin:5px 0 0 0; font-size:18px; font-weight:400; color:#9ca3af;">Relatório de Execução de Preventivas</h2>
-      </div>
-      <div style="text-align:right;">
-         <h3 style="margin:0; font-size:20px; color:#f3f4f6;">MÊS: ${mes.toUpperCase()}</h3>
-         <p style="margin:5px 0 0 0; font-size:12px; color:#6b7280;">Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
-      </div>
-    </div>
-  `;
   
-  html += `<table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
-    <thead>
-      <tr>
-        <th style="text-align:left; padding:10px; border-bottom:2px solid #374151; color:#9ca3af;">LINHA DE PRODUÇÃO</th>
-        <th style="text-align:left; padding:10px; border-bottom:2px solid #374151; color:#9ca3af;">DIAS EXECUTADOS</th>
-      </tr>
-    </thead>
-    <tbody>
+  // HTML do PDF
+  let html = `
+    <div style="padding: 40px; background-color: #ffffff; min-height: 1100px; display: flex; flex-direction: column;">
+      
+      <!-- CABEÇALHO CORPORATIVO -->
+      <div style="display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 3px solid #10b981; padding-bottom: 15px; margin-bottom: 30px;">
+        <div>
+          <h1 style="margin: 0; font-size: 26px; color: #111827; font-weight: 800; letter-spacing: -0.5px;">RELATÓRIO GERENCIAL</h1>
+          <h2 style="margin: 5px 0 0 0; font-size: 16px; font-weight: 500; color: #4b5563; text-transform: uppercase;">Manutenção Preventiva - Check-ins</h2>
+        </div>
+        <div style="text-align: right;">
+          <h3 style="margin: 0; font-size: 18px; color: #10b981; font-weight: bold;">MÊS REFERÊNCIA: ${mes.toUpperCase()}</h3>
+          <p style="margin: 4px 0 0 0; font-size: 11px; color: #6b7280;">Documento gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+          <p style="margin: 2px 0 0 0; font-size: 11px; color: #6b7280;">SISTEMA CONTROLE RC</p>
+        </div>
+      </div>
+
+      <!-- RESUMO EXECUTIVO -->
+      <h3 style="font-size: 14px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase;">1. Resumo Executivo</h3>
+      <div style="display: flex; gap: 15px; margin-bottom: 35px;">
+        <div style="flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-left: 4px solid #10b981; padding: 15px; border-radius: 4px;">
+          <p style="margin: 0 0 5px 0; font-size: 12px; color: #6b7280; text-transform: uppercase;">Total de Intervenções</p>
+          <p style="margin: 0; font-size: 24px; font-weight: bold; color: #111827;">${totalIntervencoes}</p>
+        </div>
+        <div style="flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-left: 4px solid #3b82f6; padding: 15px; border-radius: 4px;">
+          <p style="margin: 0 0 5px 0; font-size: 12px; color: #6b7280; text-transform: uppercase;">Linhas Atendidas</p>
+          <p style="margin: 0; font-size: 24px; font-weight: bold; color: #111827;">${linhasUnicas.length}</p>
+        </div>
+        <div style="flex: 1; background: #f9fafb; border: 1px solid #e5e7eb; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 4px;">
+          <p style="margin: 0 0 5px 0; font-size: 12px; color: #6b7280; text-transform: uppercase;">Pico de Manutenção</p>
+          <p style="margin: 0; font-size: 24px; font-weight: bold; color: #111827;">${peakDayText}</p>
+        </div>
+      </div>
+
+      <!-- TABELA ANALÍTICA -->
+      <h3 style="font-size: 14px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase;">2. Detalhamento por Linha de Produção</h3>
+      <table style="width: 100%; border-collapse: collapse; margin-bottom: 40px; font-size: 13px;">
+        <thead>
+          <tr style="background-color: #f3f4f6;">
+            <th style="text-align: left; padding: 10px 12px; border: 1px solid #d1d5db; color: #374151; width: 30%;">LINHA DE PRODUÇÃO</th>
+            <th style="text-align: left; padding: 10px 12px; border: 1px solid #d1d5db; color: #374151; width: 55%;">DIAS EXECUTADOS</th>
+            <th style="text-align: center; padding: 10px 12px; border: 1px solid #d1d5db; color: #374151; width: 15%;">QTD DIAS</th>
+          </tr>
+        </thead>
+        <tbody>
   `;
 
-  linhasUnicas.forEach(l => {
+  linhasUnicas.forEach((l, index) => {
     const dias = checkinsPreventiva.filter(c => c.linha === l).map(c => c.dia).sort((a,b) => a - b);
-    const diasFormatados = dias.map(d => `<span style="display:inline-block; background:rgba(16,185,129,0.2); color:#10b981; padding:4px 8px; border-radius:4px; margin-right:5px; font-weight:bold; font-size: 14px;">Dia ${d}</span>`).join('');
+    const bgClass = index % 2 === 0 ? '#ffffff' : '#f9fafb';
+    const diasFormatados = dias.map(d => `<span style="display:inline-block; border: 1px solid #10b981; background:#ecfdf5; color:#065f46; padding:2px 6px; border-radius:4px; margin: 2px; font-weight:600; font-size: 11px;">Dia ${d}</span>`).join('');
     
     html += `
-      <tr>
-        <td style="padding:15px 10px; border-bottom:1px solid #1f2937; font-weight:bold; font-size:18px;">Linha ${l.replace('L','')}</td>
-        <td style="padding:15px 10px; border-bottom:1px solid #1f2937;">${diasFormatados}</td>
+      <tr style="background-color: ${bgClass};">
+        <td style="padding: 10px 12px; border: 1px solid #d1d5db; font-weight: bold; color: #1f2937;">Linha ${l.replace('L','')}</td>
+        <td style="padding: 10px 12px; border: 1px solid #d1d5db;">${diasFormatados}</td>
+        <td style="padding: 10px 12px; border: 1px solid #d1d5db; text-align: center; font-weight: 600;">${dias.length}</td>
       </tr>
     `;
   });
 
-  html += `</tbody></table>`;
-  
   html += `
-    <div style="background:#1f2937; padding:20px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-      <div>
-         <p style="margin:0; color:#9ca3af; font-size:14px;">Total de Linhas Atendidas no Mês</p>
-         <p style="margin:5px 0 0 0; color:#10b981; font-size:28px; font-weight:bold;">${linhasUnicas.length}</p>
+        </tbody>
+      </table>
+  `;
+
+  // MAPA VISUAL DO MÊS (CALENDÁRIO CLEAR)
+  html += `
+      <h3 style="font-size: 14px; color: #374151; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 15px; text-transform: uppercase; page-break-before: auto;">3. Mapa Visual do Mês</h3>
+      <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: #f3f4f6; border: 1px solid #d1d5db; padding: 10px; border-radius: 6px; margin-bottom: auto;">
+  `;
+
+  const anoStr = new Date().getFullYear();
+  const mesesArr = ['JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO','JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'];
+  let monthIdx = mesesArr.indexOf(mes.toUpperCase());
+  if (monthIdx === -1) monthIdx = new Date().getMonth();
+  const diasNoMes = new Date(anoStr, monthIdx + 1, 0).getDate();
+  const primeiroDiaSemana = new Date(anoStr, monthIdx, 1).getDay();
+
+  const diasDaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  diasDaSemana.forEach(d => {
+    html += `<div style="text-align: center; font-size: 11px; color: #4b5563; font-weight: bold; padding: 4px 0;">${d}</div>`;
+  });
+
+  for (let empty = 0; empty < primeiroDiaSemana; empty++) {
+    html += `<div></div>`;
+  }
+
+  for (let i = 1; i <= diasNoMes; i++) {
+    const linesOnThisDay = checkinsPreventiva.filter(c => c.dia === i).map(c => c.linha.replace('L',''));
+    const isChecked = linesOnThisDay.length > 0;
+    const bg = isChecked ? '#10b981' : '#ffffff';
+    const color = isChecked ? '#ffffff' : '#6b7280';
+    const border = isChecked ? '1px solid #059669' : '1px solid #e5e7eb';
+    
+    html += `
+      <div style="background: ${bg}; color: ${color}; border: ${border}; border-radius: 4px; padding: 6px 2px; text-align: center; font-size: 13px; font-weight: ${isChecked ? 'bold' : 'normal'}; min-height: 40px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+        ${i}
+        ${isChecked ? `<span style="font-size: 9px; font-weight: normal; margin-top: 2px;">${linesOnThisDay.length} interv.</span>` : ''}
       </div>
-      <div style="text-align:right;">
-         <p style="margin:0; color:#9ca3af; font-size:12px;">Sistema Controle RC - Módulo de Preventivas</p>
+    `;
+  }
+  
+  html += `</div>`; // Fim Grid
+
+  // RODAPÉ / ASSINATURAS
+  html += `
+      <div style="margin-top: 50px; display: flex; justify-content: space-around; padding-top: 30px;">
+        <div style="text-align: center; width: 40%;">
+          <div style="border-top: 1px solid #374151; padding-top: 10px;">
+            <p style="margin: 0; font-size: 12px; font-weight: bold; color: #111827;">Responsável Técnico / Planejamento</p>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #6b7280;">Assinatura</p>
+          </div>
+        </div>
+        <div style="text-align: center; width: 40%;">
+          <div style="border-top: 1px solid #374151; padding-top: 10px;">
+            <p style="margin: 0; font-size: 12px; font-weight: bold; color: #111827;">Gerência de Manutenção</p>
+            <p style="margin: 2px 0 0 0; font-size: 11px; color: #6b7280;">Aprovação</p>
+          </div>
+        </div>
       </div>
     </div>
   `;
@@ -3226,11 +3313,11 @@ function exportarRelatorioCheckins() {
   el.innerHTML = html;
   
   const opt = {
-    margin:       10,
-    filename:     `Relatorio_Preventivas_${mes}.pdf`,
+    margin:       [0, 0, 0, 0], // Removendo margens nativas para usar o padding do div
+    filename:     `Relatorio_Gerencial_Preventivas_${mes}.pdf`,
     image:        { type: 'jpeg', quality: 0.98 },
-    html2canvas:  { scale: 2, useCORS: true },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    html2canvas:  { scale: 2, useCORS: true, windowWidth: 790 },
+    jsPDF:        { unit: 'px', format: [790, 1120], orientation: 'portrait' } // Formato aproximado A4 em pixels
   };
   
   document.body.appendChild(el);
@@ -3241,9 +3328,10 @@ function exportarRelatorioCheckins() {
     return;
   }
   
+  toast('Gerando documento corporativo. Aguarde...', 'info');
   html2pdf().set(opt).from(el).save().then(() => {
     document.body.removeChild(el);
-    toast('Relatório exportado em PDF!', 'success');
+    toast('Relatório Corporativo exportado!', 'success');
   }).catch(err => {
     console.error(err);
     document.body.removeChild(el);
@@ -3251,6 +3339,7 @@ function exportarRelatorioCheckins() {
   });
 }
 window.exportarRelatorioCheckins = exportarRelatorioCheckins;
+
 
 
 function renderCalendarioPreventiva(mes, isFrontend = false) {
