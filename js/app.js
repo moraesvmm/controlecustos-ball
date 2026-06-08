@@ -3119,22 +3119,27 @@ async function carregarCheckinsPreventiva(mes) {
 
 async function salvarDiaLinhaPreventiva(mes, linha, diaStr) {
   const dia = parseInt(diaStr);
+  const isValid = !isNaN(dia) && dia >= 1 && dia <= 31;
+  
   try {
-    if (!dia || isNaN(dia) || dia < 1 || dia > 31) {
+    if (!isValid) {
       await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
       checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
+      // Reseta visualmente todos os inputs que invalidaram
+      document.querySelectorAll(`.preventiva-dia-input[data-linha="${linha}"]`).forEach(el => el.value = '');
+      toast('Marcação removida/limpa.', 'info');
     } else {
       await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
       await getClient().from('preventiva_linhas_checkin').insert([{ mes, linha, dia }]);
       checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
       checkinsPreventiva.push({ linha, dia });
+      toast('Dia registrado.', 'success');
     }
     renderCalendarioPreventiva(mes, false);
     renderCalendarioPreventiva(mes, true);
-    toast('Dia salvo com sucesso.', 'success');
   } catch(err) {
     console.error(err);
-    toast('Erro ao salvar dia.', 'error');
+    toast('Erro ao atualizar dia.', 'error');
   }
 }
 window.salvarDiaLinhaPreventiva = salvarDiaLinhaPreventiva;
@@ -3154,45 +3159,47 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
   
   let html = '';
   
-  const diasDaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+  const diasDaSemana = ['D', 'S', 'T', 'Q', 'Q', 'S', 'S'];
   diasDaSemana.forEach(d => {
-    html += `<div style="text-align: center; font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 0.25rem;">${d}</div>`;
+    html += `<div style="text-align: center; font-size: 0.85rem; color: var(--muted); font-weight: 400; padding-bottom: 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 0.5rem;">${d}</div>`;
   });
 
   for (let empty = 0; empty < primeiroDiaSemana; empty++) {
-    html += `<div style="visibility: hidden;"></div>`;
+    html += `<div></div>`;
   }
   
   for (let i = 1; i <= diasNoMes; i++) {
     const linesOnThisDay = checkinsPreventiva.filter(c => c.dia === i).map(c => c.linha.replace('L',''));
     const isChecked = linesOnThisDay.length > 0;
-    const bg = isChecked ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.2) 100%)' : 'transparent';
-    const color = isChecked ? '#10b981' : 'var(--muted)';
-    const border = isChecked ? '1px solid rgba(16, 185, 129, 0.5)' : '1px dashed rgba(255,255,255,0.1)';
-    const shadow = isChecked ? 'box-shadow: inset 0 0 0 1px rgba(16,185,129,0.1);' : '';
+    
+    // Minimalist aesthetics
+    const color = isChecked ? '#fff' : 'var(--muted)';
+    const fontWeight = isChecked ? '500' : '300';
+    const bgCircle = isChecked ? 'rgba(255,255,255,0.05)' : 'transparent';
     
     let subHtml = '';
     if (isChecked) {
-       subHtml = `<div style="display:flex; gap:2px; margin-top:2px; flex-wrap:wrap; justify-content:center; padding: 0 2px;">
-         ${linesOnThisDay.map(l => `<span style="font-size:0.6rem; font-weight:bold; background:rgba(16,185,129,0.2); color:#10b981; padding:1px 3px; border-radius:3px;">L${l}</span>`).join('')}
+       subHtml = `<div style="display:flex; gap:3px; margin-top:4px; flex-wrap:wrap; justify-content:center;">
+         ${linesOnThisDay.map(l => `<span style="width: 4px; height: 4px; border-radius: 50%; background: #10b981; display: inline-block;" title="Linha ${l}"></span>`).join('')}
        </div>`;
     }
     
     html += `
       <div style="
-        background: ${bg};
-        border: ${border};
-        border-radius: 8px;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         aspect-ratio: 1;
+        padding-top: 10px;
         color: ${color};
-        transition: all 0.3s ease;
-        ${shadow}
+        font-weight: ${fontWeight};
+        font-size: 1.1rem;
+        transition: all 0.2s ease;
       ">
-        <span style="font-size: 1rem; font-weight: ${isChecked ? '600' : '400'};">${i}</span>
+        <div style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: ${bgCircle};">
+          ${i}
+        </div>
         ${subHtml}
       </div>
     `;
