@@ -3199,13 +3199,13 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        aspect-ratio: 1;
+        min-height: 70px;
         color: ${color};
         transition: all 0.3s ease;
-        padding: 2px;
+        padding: 4px 2px;
         ${shadow}
       ">
-        <span style="font-size: 0.85rem; font-weight: ${isChecked ? '600' : '400'};">${i}</span>
+        <span style="font-size: 0.9rem; font-weight: ${isChecked ? '600' : '400'}; margin-bottom: 2px;">${i}</span>
         ${subHtml}
       </div>
     `;
