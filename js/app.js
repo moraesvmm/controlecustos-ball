@@ -2976,7 +2976,7 @@ window.fornecedoresContatosData = [];
 
 async function carregarFornecedoresContatos() {
   try {
-    const { data, error } = await supabaseClient.from('fornecedores_contatos').select('*');
+    const { data, error } = await getClient().from('fornecedores_contatos').select('*');
     if (error) throw error;
     window.fornecedoresContatosData = data || [];
   } catch (err) {
@@ -3031,11 +3031,11 @@ document.getElementById('formContatoFornecedor')?.addEventListener('submit', asy
   };
 
   try {
-    const { data: exist } = await supabaseClient.from('fornecedores_contatos').select('id').eq('fornecedor_nome', fNome).maybeSingle();
+    const { data: exist } = await getClient().from('fornecedores_contatos').select('id').eq('fornecedor_nome', fNome).maybeSingle();
     if (exist) {
-      await supabaseClient.from('fornecedores_contatos').update(obj).eq('id', exist.id);
+      await getClient().from('fornecedores_contatos').update(obj).eq('id', exist.id);
     } else {
-      await supabaseClient.from('fornecedores_contatos').insert([obj]);
+      await getClient().from('fornecedores_contatos').insert([obj]);
     }
     toast('Contato salvo com sucesso!');
     await carregarFornecedoresContatos();
