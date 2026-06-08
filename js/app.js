@@ -3180,7 +3180,7 @@ function exportarRelatorioCheckins() {
 
   const el = document.createElement('div');
   // Formato A4 corporativo em pixels (aprox 794px width).
-  el.style.width = '790px';
+  el.style.width = '710px';
   el.style.backgroundColor = '#ffffff'; 
   el.style.color = '#333333';
   el.style.fontFamily = 'Arial, sans-serif'; // Fontes padrão de sistema corporativo
