@@ -3150,6 +3150,108 @@ async function salvarDiaLinhaPreventiva(mes, linha, diaStr) {
 }
 window.salvarDiaLinhaPreventiva = salvarDiaLinhaPreventiva;
 
+// ==========================================
+// EXPORTAÇÃO PDF DO CALENDÁRIO
+// ==========================================
+function exportarRelatorioCheckins() {
+  const mes = estadoPlanos.mes || estadoPlanosFrontend.mes;
+  if (!mes) {
+    toast('Selecione um mês primeiro.', 'warning');
+    return;
+  }
+
+  const linhasUnicas = [...new Set(checkinsPreventiva.map(c => c.linha))].sort();
+  if (linhasUnicas.length === 0) {
+    toast('Não há preventivas marcadas neste mês para exportar.', 'warning');
+    return;
+  }
+
+  const el = document.createElement('div');
+  el.style.padding = '40px';
+  el.style.backgroundColor = '#111827'; 
+  el.style.color = '#f3f4f6';
+  el.style.fontFamily = 'Outfit, sans-serif';
+  el.style.width = '800px';
+
+  let html = `
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #374151; padding-bottom:20px; margin-bottom:30px;">
+      <div>
+         <h1 style="margin:0; font-size:24px; color:#10b981;">Controle RC</h1>
+         <h2 style="margin:5px 0 0 0; font-size:18px; font-weight:400; color:#9ca3af;">Relatório de Execução de Preventivas</h2>
+      </div>
+      <div style="text-align:right;">
+         <h3 style="margin:0; font-size:20px; color:#f3f4f6;">MÊS: ${mes.toUpperCase()}</h3>
+         <p style="margin:5px 0 0 0; font-size:12px; color:#6b7280;">Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')}</p>
+      </div>
+    </div>
+  `;
+  
+  html += `<table style="width:100%; border-collapse:collapse; margin-bottom:30px;">
+    <thead>
+      <tr>
+        <th style="text-align:left; padding:10px; border-bottom:2px solid #374151; color:#9ca3af;">LINHA DE PRODUÇÃO</th>
+        <th style="text-align:left; padding:10px; border-bottom:2px solid #374151; color:#9ca3af;">DIAS EXECUTADOS</th>
+      </tr>
+    </thead>
+    <tbody>
+  `;
+
+  linhasUnicas.forEach(l => {
+    const dias = checkinsPreventiva.filter(c => c.linha === l).map(c => c.dia).sort((a,b) => a - b);
+    const diasFormatados = dias.map(d => `<span style="display:inline-block; background:rgba(16,185,129,0.2); color:#10b981; padding:4px 8px; border-radius:4px; margin-right:5px; font-weight:bold; font-size: 14px;">Dia ${d}</span>`).join('');
+    
+    html += `
+      <tr>
+        <td style="padding:15px 10px; border-bottom:1px solid #1f2937; font-weight:bold; font-size:18px;">Linha ${l.replace('L','')}</td>
+        <td style="padding:15px 10px; border-bottom:1px solid #1f2937;">${diasFormatados}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+  
+  html += `
+    <div style="background:#1f2937; padding:20px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+         <p style="margin:0; color:#9ca3af; font-size:14px;">Total de Linhas Atendidas no Mês</p>
+         <p style="margin:5px 0 0 0; color:#10b981; font-size:28px; font-weight:bold;">${linhasUnicas.length}</p>
+      </div>
+      <div style="text-align:right;">
+         <p style="margin:0; color:#9ca3af; font-size:12px;">Sistema Controle RC - Módulo de Preventivas</p>
+      </div>
+    </div>
+  `;
+
+  el.innerHTML = html;
+  
+  const opt = {
+    margin:       10,
+    filename:     `Relatorio_Preventivas_${mes}.pdf`,
+    image:        { type: 'jpeg', quality: 0.98 },
+    html2canvas:  { scale: 2, useCORS: true },
+    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  };
+  
+  document.body.appendChild(el);
+  
+  if (typeof html2pdf === 'undefined') {
+    toast('Biblioteca PDF não carregada', 'error');
+    document.body.removeChild(el);
+    return;
+  }
+  
+  html2pdf().set(opt).from(el).save().then(() => {
+    document.body.removeChild(el);
+    toast('Relatório exportado em PDF!', 'success');
+  }).catch(err => {
+    console.error(err);
+    document.body.removeChild(el);
+    toast('Erro ao gerar PDF.', 'error');
+  });
+}
+window.exportarRelatorioCheckins = exportarRelatorioCheckins;
+
+
 function renderCalendarioPreventiva(mes, isFrontend = false) {
   const containerId = isFrontend ? 'preventiva-checkin-grid-fe' : 'preventiva-checkin-grid';
   const container = document.getElementById(containerId);
