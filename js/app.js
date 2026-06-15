@@ -3836,6 +3836,7 @@ document.getElementById('formNovaTarefaDelegada')?.addEventListener('submit', as
     await criarTarefaDelegada(payload);
     tarefasDelegadas = await getTarefasDelegadas();
     renderGestaoTarefas();
+    renderMinhasTarefas();
     
     document.getElementById('modalNovaTarefaDelegada')?.classList.remove('open');
     document.getElementById('formNovaTarefaDelegada').reset();
