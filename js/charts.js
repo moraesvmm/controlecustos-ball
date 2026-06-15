@@ -105,6 +105,7 @@ function makeClickHandler(chartId) {
       subtitulo: chartKey === 'prazos' ? `${regs.length} iten(s) nesta faixa` : `${regs.length} registro(s) · Total ${fmtMoeda(total)}`,
       registros: regs,
       meta: {
+        isPrazosCard: chartKey === 'prazos',
         insight:
           chartKey === 'status'
             ? `Este status representa ${((total / (registrosRef.reduce((a, r) => a + (Number(r.valor) || 0), 0) || 1)) * 100).toFixed(1)}% do valor filtrado no dashboard.`

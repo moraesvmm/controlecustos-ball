@@ -405,3 +405,204 @@ export async function gerarRelatorioSLAPDF(registros) {
     console.error('Erro na exportacao:', err);
   }
 }
+
+export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
+  if (typeof html2pdf === 'undefined') {
+    alert('A biblioteca PDF não foi carregada.');
+    return;
+  }
+
+  const porMaquina = {};
+  atividades.forEach(a => {
+    const maq = a.maquina || 'Geral';
+    if (!porMaquina[maq]) porMaquina[maq] = [];
+    porMaquina[maq].push(a);
+  });
+
+  const maquinas = Object.keys(porMaquina).sort();
+  const container = document.createElement('div');
+  container.className = 'pdf-report-container';
+
+  let htmlContent = `
+    ${getPDFStyles()}
+    <style>
+      .pdf-report-container {
+        width: 710px !important;
+      }
+      .machine-section {
+        margin-bottom: 30px;
+      }
+      .chk-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .chk-box {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #64748b;
+        border-radius: 3px;
+        vertical-align: middle;
+      }
+      .chk-table {
+        margin-bottom: 20px;
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .chk-table th, .chk-table td {
+        border: 1px solid #e2e8f0;
+        padding: 8px 10px;
+        font-size: 11px;
+      }
+      .chk-table th {
+        background: #f8fafc;
+        color: #334155;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+      .signature-block {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 50px;
+        page-break-inside: avoid;
+      }
+      .signature-line {
+        width: 30%;
+        border-top: 1px solid #cbd5e1;
+        text-align: center;
+        padding-top: 5px;
+        font-size: 11px;
+        color: #475569;
+      }
+      .activity-card {
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 15px;
+        margin-bottom: 15px;
+        page-break-inside: avoid;
+      }
+      .activity-header {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        border-bottom: 1px solid #e2e8f0;
+        padding-bottom: 8px;
+      }
+      .activity-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: #0f172a;
+      }
+      .activity-meta {
+        font-size: 10px;
+        color: #64748b;
+      }
+    </style>
+    ${buildHeader(`Checklist de Preventiva: Linha ${linha} - ${mes}`)}
+  `;
+
+  if (maquinas.length === 0) {
+    htmlContent += `<p style="text-align:center; padding: 20px;">Nenhuma atividade programada.</p>`;
+  }
+
+  maquinas.forEach(maq => {
+    let totalHhMec = 0;
+    let totalHhElet = 0;
+    let totalDuracao = 0;
+    
+    porMaquina[maq].forEach(a => {
+      totalHhMec += parseFloat(a.hh_mec) || 0;
+      totalHhElet += parseFloat(a.hh_eletrico) || 0;
+      totalDuracao += parseFloat(a.duracao_horas) || 0;
+    });
+
+    htmlContent += `
+      <div class="machine-section">
+      <div class="pdf-section-title" style="margin-top: 25px; margin-bottom: 5px; color: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: baseline;">
+        <span>MÁQUINA: ${maq}</span>
+        <span style="font-size: 11px; font-weight: normal; color: #64748b;">
+          Total HH Mec: ${totalHhMec.toFixed(1)}h | Total HH Elét: ${totalHhElet.toFixed(1)}h | Duração Est.: ${totalDuracao.toFixed(1)}h
+        </span>
+      </div>
+      <table class="chk-table" style="margin-bottom: 5px;">
+        <thead>
+          <tr>
+            <th style="width: 30px;">[ ]</th>
+            <th style="width: 120px;">ID DA ATIVIDADE</th>
+            <th>DESCRIÇÃO DA ATIVIDADE</th>
+            <th style="width: 20%;">MATERIAIS NECESSÁRIOS</th>
+            <th style="width: 25%;">OBSERVAÇÕES DO TÉCNICO</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    porMaquina[maq].forEach(a => {
+      let descricoes = [];
+      if (Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0) {
+        descricoes = a.atividades_descricoes;
+      } else if (a.descricao) {
+        descricoes = [a.descricao];
+      } else {
+        descricoes = ['(Sem descrição detalhada)'];
+      }
+
+      const idText = a.identificador || 'S/ ID';
+
+      let printMat = '';
+      if (Array.isArray(a.material) && a.material.length > 0) {
+        const matList = a.material.filter(Boolean);
+        if (matList.length > 0) {
+          printMat = matList.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="display:inline-block; min-width:10px; height:10px; border:1px solid #94a3b8; margin-top:2px;"></span><span style="font-size: 9px; white-space: pre-wrap;">${m}</span></div>`).join('');
+        }
+      }
+
+      descricoes.forEach((d, idx) => {
+        const borderStyle = idx === 0 ? 'border-top: 2px solid #cbd5e1;' : 'border-top: 1px solid #e2e8f0;';
+        const printId = idx === 0 ? `<div style="font-weight:700; color:#0f172a;">${idText}</div><div style="font-size:9px; color:#64748b; margin-top:2px;">HH M:${a.hh_mec||0} | E:${a.hh_eletrico||0}</div>` : '';
+        const matColumn = idx === 0 ? printMat : '';
+        
+        htmlContent += `
+          <tr style="${borderStyle}">
+            <td style="text-align: center;"><div class="chk-box"></div></td>
+            <td style="vertical-align: top; background: #f8fafc;">${printId}</td>
+            <td style="vertical-align: top;">${d}</td>
+            <td style="vertical-align: top; background: #f8fafc;">${matColumn}</td>
+            <td></td>
+          </tr>
+        `;
+      });
+    });
+
+    htmlContent += `
+        </tbody>
+      </table>
+      </div>
+    `;
+  });
+
+  htmlContent += `
+    <div class="signature-block">
+      <div class="signature-line">Assinatura do Técnico / Executante</div>
+      <div class="signature-line">Assinatura do Supervisor</div>
+      <div class="signature-line">Data de Execução</div>
+    </div>
+  `;
+
+  container.innerHTML = htmlContent;
+
+  const opt = {
+    margin:       0.4,
+    filename:     `Checklist_Preventiva_${linha}_${mes}.pdf`,
+    image:        { type: 'jpeg', quality: 1.0 },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['css', 'legacy'] }
+  };
+
+  try {
+    await html2pdf().set(opt).from(container.outerHTML).save();
+  } catch (err) {
+    console.error('Erro na exportacao PDF:', err);
+  }
+}

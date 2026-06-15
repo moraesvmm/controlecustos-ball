@@ -76,16 +76,23 @@ export async function initExcelImportPreventiva(supabase, toast, atualizarDadosG
           r[headers[i]] = row[i];
         }
 
-        let identificador = findVal(r, 'IDENTIFICADOR');
+        let identificador = findVal(r, 'IDENTIFICADOR', 'ID', 'CÓDIGO', 'CODIGO');
+        let maquina = findVal(r, 'MAQUINA', 'MÁQUINA');
+        
         if (identificador) {
           lastIdentificador = identificador;
         } else {
-          identificador = lastIdentificador;
+          // Se tem máquina nova sem identificador explícito, gera um AUTO-ID
+          if (maquina) {
+            identificador = 'AUTO_' + crypto.randomUUID().split('-')[0].toUpperCase();
+            lastIdentificador = identificador;
+          } else {
+            identificador = lastIdentificador;
+          }
         }
         
         if (!identificador) continue;
 
-        let maquina = findVal(r, 'MAQUINA', 'MÁQUINA');
         if (maquina) {
           lastMaquina = maquina;
         } else {
@@ -163,7 +170,13 @@ export async function initExcelImportPreventiva(supabase, toast, atualizarDadosG
       const { data: backupData } = await supabase.from('preventiva_registros').select('*');
 
       try {
-        const { error: deleteError } = await supabase.from('preventiva_registros').delete().not('id', 'is', null);
+        // Apaga apenas o Plano Padrão (onde linha e mes são nulos) para não excluir as atividades já aplicadas!
+        const { error: deleteError } = await supabase.from('preventiva_registros')
+          .delete()
+          .is('linha', null)
+          .is('mes', null)
+          .neq('setor', 'frontend'); // protege também as de frontend que têm linha nula
+
         if (deleteError) throw deleteError;
 
         const batchSize = 50;

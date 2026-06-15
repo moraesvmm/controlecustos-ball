@@ -374,10 +374,16 @@
             <section id="step-maquina-section" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                 <h3 id="linha-dashboard-title" style="margin: 0; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
-                <button type="button" class="btn btn-outline" id="btnExportarLinhaExcel" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
-                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
-                  Exportar Linha Inteira (Excel)
-                </button>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaExcel" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Exportar Linha Inteira (Excel)
+                  </button>
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaPDF" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(239,68,68,0.4); color: #ef4444;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Gerar Checklist (PDF)
+                  </button>
+                </div>
               </div>
               
               <!-- Gráficos/KPIs -->
@@ -535,7 +541,19 @@
             </section>
 
             <section id="step-maquina-section-fe" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
-              <h3 id="linha-dashboard-title-fe" style="margin-top: 0; margin-bottom: 1.5rem; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 id="linha-dashboard-title-fe" style="margin: 0; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaExcelFE" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Exportar Linha Inteira (Excel)
+                  </button>
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaPDFFE" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(239,68,68,0.4); color: #ef4444;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Gerar Checklist (PDF)
+                  </button>
+                </div>
+              </div>
               <div class="kpi-grid" style="margin-bottom: 2rem;">
                 <div class="kpi-card" style="background: rgba(110,231,183,0.1); border-color: rgba(110,231,183,0.2);">
                   <div class="label" style="color: #6ee7b7;">Atividades Previstas</div>
@@ -1392,6 +1410,6 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=60"></script>
+  <script type="module" src="js/app.js?v=81"></script>
 </body>
 </html>

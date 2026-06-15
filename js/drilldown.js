@@ -2,10 +2,15 @@ import { fmtMoeda, fmtData, badgeStatus, badgeCriticidade } from './ui.js?v=2';
 import { calcularStatus, calcularDiasFora, calcularValorPrevisto, calcularValorRecebido, calcularMesOriginalAtraso, MESES_CURTOS } from './logic.js?v=9';
 
 let onEditCallback = null;
+let onViewCallback = null;
 let onSavePhotoCallback = null;
 
 export function setDrilldownEditHandler(fn) {
   onEditCallback = fn;
+}
+
+export function setDrilldownViewHandler(fn) {
+  onViewCallback = fn;
 }
 
 export function setDrilldownPhotoHandler(fn) {
@@ -100,6 +105,35 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
           ? `<span class="badge-atraso" style="background: var(--danger); color: white;">🚨 ${r.data_recebimento ? 'Entregue com atraso de' : 'Atrasado há'} ${r._diasAtraso} dias</span>`
           : (isAtrasado ? `<span class="badge-atraso">🚨 Atrasado do mês ${mesAtraso}</span>` : '');
 
+        let prazosActions = '';
+        if (meta.isPrazosCard && r.fornecedor) {
+          const contato = window.fornecedoresContatosData ? window.fornecedoresContatosData.find(c => c.fornecedor_nome.toUpperCase() === r.fornecedor.toUpperCase()) : null;
+          
+          const noContactClick = `Swal.fire({icon: 'info', title: 'Contato não cadastrado', text: 'Este fornecedor ainda não tem contato configurado. Faça isto pela aba \\'SLA Fornecedores\\'.', confirmButtonColor: '#38bdf8', background: '#1e293b', color: '#f8fafc', customClass: { popup: 'swal-minimalist' }})`;
+
+          let emailClick = noContactClick;
+          let wppClick = noContactClick;
+
+          if (contato) {
+            const itemDelay = r._diasAtraso ? `${r._diasAtraso} dias` : 'Atrasado';
+            const baseMsg = contato.mensagem_padrao || 'Olá, bom dia! Tudo bem?\\n\\nSegue abaixo item para verificação de atraso.';
+            const msg = `${baseMsg}\\n\\n*Item em atraso:*\\nRC: ${r.rc || '-'} / Item: ${r.item || '-'} / Atraso: ${itemDelay}`;
+            
+            if (contato.email) {
+              const mailto = `mailto:${encodeURIComponent(contato.email)}?subject=${encodeURIComponent('Cobrança de Atraso - RC ' + (r.rc || ''))}&body=${encodeURIComponent(msg)}`;
+              emailClick = `window.open('${mailto}', '_blank')`;
+            }
+            if (contato.telefone) {
+              const fone = contato.telefone.replace(/\\D/g, '');
+              const wa = `https://wa.me/55${fone}?text=${encodeURIComponent(msg)}`;
+              wppClick = `window.open('${wa}', '_blank')`;
+            }
+          }
+
+          prazosActions += `<button type="button" onclick="${emailClick}" class="btn-ghost" style="color: #38bdf8;" title="Cobrar Fornecedor por E-mail">📩 E-mail</button>`;
+          prazosActions += `<button type="button" onclick="${wppClick}" class="btn-ghost" style="color: #10b981;" title="Cobrar Fornecedor por WhatsApp">📱 WhatsApp</button>`;
+        }
+
         const hasFoto = !!r.foto_url;
         const fotoHtml = `
         <div class="drill-item-foto" data-id="${r.id}">
@@ -138,6 +172,11 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
           <button type="button" class="btn-ghost btn-drill-edit" data-id="${r.id}">✏️ Editar RC</button>
           <button type="button" class="btn-ghost btn-drill-rc" data-id="${r.id}">👁 Ver RC</button>
         </div>
+        ${prazosActions ? `
+        <div class="drill-item-actions" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); justify-content: flex-end;">
+          <span style="font-size: 0.75rem; color: var(--muted); margin-right: auto; align-self: center;">Cobrar fornecedor:</span>
+          ${prazosActions}
+        </div>` : ''}
         ${r.last_modified_by ? `
         <div class="drill-item-footer" style="margin-top: 0.75rem; font-size: 0.65rem; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 0.5rem;">
           Última alteração por: <strong>${r.last_modified_by}</strong> em ${r.last_modified_at ? new Date(r.last_modified_at).toLocaleString('pt-BR') : '—'}
@@ -151,9 +190,16 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
       lista.innerHTML += `<p class="drill-more">+ ${registros.length - 50} registros. Refine o filtro ou exporte CSV.</p>`;
     }
 
-    lista.querySelectorAll('.btn-drill-edit, .btn-drill-rc').forEach((btn) => {
+    lista.querySelectorAll('.btn-drill-edit').forEach((btn) => {
       btn.addEventListener('click', () => {
         if (onEditCallback) onEditCallback(btn.dataset.id);
+        fecharDrilldown();
+      });
+    });
+
+    lista.querySelectorAll('.btn-drill-rc').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (onViewCallback) onViewCallback(btn.dataset.id);
         fecharDrilldown();
       });
     });

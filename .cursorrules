@@ -8,3 +8,15 @@ O projeto do Controle Global agora é desenvolvido e mantido TOTALMENTE nesta pa
 1. Todo e qualquer desenvolvimento, alteração de código ou push deve ser feito operando sob este diretório de rede.
 2. Evite trabalhar no diretório local obsoleto (`C:\Users\VMORAES1\controle-rc-system`).
 3. Ao ser invocado, sempre verifique em qual diretório você se encontra. Se não for a pasta de rede acima, avise o usuário.
+
+## Credenciais Globais e Supabase
+- **URL do Banco**: `https://nnbzcukmuziyrobdqlnh.supabase.co`
+- **Chave Pública (Anon)**: `sb_publishable_XQxDmGp9Iz0bmNOTiDKKug_6Byxau2e`
+- **String de Conexão Postgres**: `postgresql://postgres:[YOUR-PASSWORD]@db.nnbzcukmuziyrobdqlnh.supabase.co:5432/postgres`
+
+**Comandos Supabase CLI do Projeto:**
+```bash
+supabase login
+supabase init
+supabase link --project-ref nnbzcukmuziyrobdqlnh
+```

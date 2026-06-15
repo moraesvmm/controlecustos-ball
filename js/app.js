@@ -24,11 +24,11 @@ import {
   confirmar,
   fmtMoeda,
 } from './ui.js?v=3';
-import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler } from './drilldown.js?v=6';
+import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=7';
 import { initExcelImport } from './import_excel.js?v=8';
 
-import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=2';
-import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF } from './pdf_report.js';
+import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
+import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=7';
 
 let registros = [];
 let registrosPreventiva = [];
@@ -1148,6 +1148,38 @@ async function init() {
 
   renderFiltros();
   setDrilldownEditHandler((id) => abrirModal(id));
+  setDrilldownViewHandler((id) => {
+    const r = registros.find((x) => String(x.id) === String(id));
+    if (!r) return;
+    
+    // Switch to the correct view based on Natureza
+    const navMap = {
+      'CONSERTO': 'consertos',
+      'COMPRA': 'compras',
+      'FABRICACAO': 'fabricacao'
+    };
+    const targetView = navMap[r.natureza] || 'rc';
+    
+    // Clear filters and set search string
+    filtros = { natureza: 'TODOS', status: 'TODOS', criticidade: 'TODOS', linha: 'TODOS', maquina: 'TODOS', fornecedor: 'TODOS', busca: '' };
+    document.querySelectorAll('.filters select').forEach((el) => {
+      el.value = 'TODOS';
+    });
+    
+    const searchInput = $('#filtroBusca');
+    if (searchInput) {
+      searchInput.value = r.rc ? String(r.rc) : (r.item || '');
+      filtros.busca = searchInput.value;
+    }
+    
+    showView(targetView);
+    selecionarLinha(id);
+    
+    setTimeout(() => {
+      const tr = document.querySelector(`tr[data-id="${id}"]`);
+      if (tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  });
   setDrilldownPhotoHandler(async (id, dataUrl) => {
     const r = registros.find((x) => String(x.id) === String(id));
     if (!r) return;
@@ -1269,21 +1301,54 @@ async function init() {
     exportarExcel(data, 'preventiva-frontend', COLUNAS_PREVENTIVA);
   });
   
-  $('#btnExportarLinhaExcel')?.addEventListener('click', () => {
+  function mergeLinhaData(baseArray, linha, mes) {
+    const map = new Map();
+    for (const r of baseArray) {
+      const key = `${r.maquina}_${r.identificador}`;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(r);
+    }
+    
+    const finalResults = [];
+    const outrasLinhas = ['L04', 'L05', 'L06', 'L07', 'L08', 'L09'].filter(l => l !== linha);
+
+    for (const records of map.values()) {
+      let selected = records.find(r => r.mes === mes && r.linha === linha);
+      
+      if (!selected) {
+        selected = records.find(r => !r.mes || r.mes === '' || String(r.mes).toUpperCase() === 'TODOS' || String(r.mes) === 'null' || String(r.linha).toUpperCase() === 'PADRAO');
+      }
+      
+      if (!selected && records.length > 0) {
+        selected = records.find(r => r.linha === 'L06') || records[0];
+      }
+      
+      if (selected) {
+        const maq = String(selected.maquina || '').toUpperCase();
+        let isDeOutraLinha = false;
+        for (const out of outrasLinhas) {
+          if (maq.includes(out)) {
+            isDeOutraLinha = true;
+            break;
+          }
+        }
+        if (!isDeOutraLinha) {
+          finalResults.push(selected);
+        }
+      }
+    }
+    return finalResults;
+  }
+
+  function getLinhaDataParaExportacao() {
     let data = [];
     let prefix = '';
     
     if (estadoPlanos.setor === 'backend') {
-      filtrosPreventiva.mes = estadoPlanos.mes;
-      filtrosPreventiva.linha = estadoPlanos.linha;
-      filtrosPreventiva.busca = ''; 
-      data = aplicarFiltrosPreventiva();
+      data = mergeLinhaData(registrosPreventiva, estadoPlanos.linha, estadoPlanos.mes);
       prefix = 'linha-backend';
     } else {
-      filtrosPreventivaFE.mes = estadoPlanos.mes;
-      filtrosPreventivaFE.linha = estadoPlanos.linha;
-      filtrosPreventivaFE.busca = '';
-      data = aplicarFiltrosFrontend();
+      data = mergeLinhaData(registrosPreventivaFrontend, estadoPlanos.linha, estadoPlanos.mes);
       prefix = 'linha-frontend';
     }
 
@@ -1293,6 +1358,11 @@ async function init() {
       return idA.localeCompare(idB, undefined, {numeric: true});
     });
 
+    return { data, prefix };
+  }
+
+  const handleExportExcelLinha = () => {
+    const { data, prefix } = getLinhaDataParaExportacao();
     const formattedData = data.map(r => ({
       ...r,
       atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || '')
@@ -1300,7 +1370,17 @@ async function init() {
 
     const filename = `${prefix}-${estadoPlanos.linha}-${estadoPlanos.mes}`;
     exportarExcel(formattedData, filename, COLUNAS_PREVENTIVA);
-  });
+  };
+
+  const handleExportPDFLinha = () => {
+    const { data } = getLinhaDataParaExportacao();
+    gerarChecklistLinhaPDF(estadoPlanos.linha, estadoPlanos.mes, data);
+  };
+
+  $('#btnExportarLinhaExcel')?.addEventListener('click', handleExportExcelLinha);
+  $('#btnExportarLinhaExcelFE')?.addEventListener('click', handleExportExcelLinha);
+  $('#btnExportarLinhaPDF')?.addEventListener('click', handleExportPDFLinha);
+  $('#btnExportarLinhaPDFFE')?.addEventListener('click', handleExportPDFLinha);
   $('#btnLimparFiltros').addEventListener('click', () => {
     filtros = { natureza: 'TODOS', status: 'TODOS', criticidade: 'TODOS', linha: 'TODOS', maquina: 'TODOS', fornecedor: 'TODOS', busca: '' };
     document.querySelectorAll('.filters select, .filters input').forEach((el) => {
@@ -1929,7 +2009,7 @@ window.selecionarMesPlanos = function(mes) {
       return `<div style="display:flex; flex-direction:column; margin-bottom: 0.5rem;">
         <div style="display:flex; gap:0.25rem; align-items:stretch;">
           <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
-          <div style="display:flex; gap:2px;">
+          <div class="linha-dia-inputs" style="display:flex; gap:2px;">
             <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="" placeholder="+" title="Adicionar dia" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
             <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Remover último dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -1952,6 +2032,8 @@ window.selecionarLinhaPlanos = async function(linha) {
   const calSec2 = $('#calendario-preventiva-section');
   if (calSec2) calSec2.style.display = 'none';
   $('#step-maquina-section').style.display = 'block';
+
+  document.querySelectorAll('#linhas-list .linha-dia-inputs').forEach(el => el.style.display = 'none');
   
   // Buscar máquinas para exibir no grid (Apenas do plano de preventiva)
   let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
@@ -1974,9 +2056,11 @@ window.selecionarLinhaPlanos = async function(linha) {
   $('#kpi-linha-hh').textContent = totalHH.toFixed(1) + 'h';
   $('#kpi-linha-custo').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totalCusto);
   // Buscar máquinas para exibir no grid (Apenas do plano de preventiva)
-  try {    const html = maquinasArray.map(m => `
-      <div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanos('${m}', '${m}')" style="cursor:pointer; padding: 1rem; border-color: rgba(255,255,255,0.05); transition: background 0.2s;">
-        <div style="font-weight: 500; font-size: 0.95rem;">${m}</div>
+  try {
+    const html = maquinasArray.map(m => `
+      <div class="kpi-card" tabindex="0" onclick="selecionarMaquinaPlanos('${m}', '${m}')" style="cursor:pointer; padding:1rem; border-color:rgba(110,231,183,0.15); transition:background 0.2s;">
+        <div style="font-weight:500; font-size:0.95rem;">${m}</div>
+        <div style="font-size:0.75rem; color:var(--muted); margin-top:0.25rem;">${regs.filter(r => r.maquina === m).length} atividades</div>
       </div>
     `).join('');
     $('#maquinas-grid-planos').innerHTML = html;
@@ -2212,7 +2296,7 @@ window.selecionarMesPlansosFrontend = function(mes) {
       return `<div style="display:flex; flex-direction:column; margin-bottom: 0.5rem;">
         <div style="display:flex; gap:0.25rem; align-items:stretch;">
           <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L','')}</button>
-          <div style="display:flex; gap:2px;">
+          <div class="linha-dia-inputs" style="display:flex; gap:2px;">
             <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="" placeholder="+" title="Adicionar dia" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
             <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Remover último dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
               <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
@@ -2238,6 +2322,8 @@ window.selecionarLinhaPlanosFrontend = function(linha) {
   const calSecFE2 = $('#calendario-preventiva-section-fe');
   if (calSecFE2) calSecFE2.style.display = 'none';
   $('#step-maquina-section-fe').style.display = 'block';
+
+  document.querySelectorAll('#linhas-list-fe .linha-dia-inputs').forEach(el => el.style.display = 'none');
 
   // KPIs
   const regs = registrosPreventivaFrontend;
