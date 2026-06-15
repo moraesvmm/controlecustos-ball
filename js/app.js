@@ -952,7 +952,7 @@ function showView(name) {
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
-                     'planos-manutencao-frontend', 'plano-preventiva-frontend'].includes(name);
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'gestao-tarefas', 'minhas-tarefas'].includes(name);
 
   // Seção tabela (toolbar + tabela de RCs) - Hide for preventiva since it has its own
   $('#secaoTabela')?.classList.toggle('hidden', !['rc', 'consertos', 'compras', 'fabricacao'].includes(name));
