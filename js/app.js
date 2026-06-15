@@ -1169,9 +1169,14 @@ async function init() {
           renderGestaoTarefas();
           renderMinhasTarefas();
           
-          // Show toast if a new task is assigned to current user
+          // Show Modal se a task is assigned to current user
           if (payload.eventType === 'INSERT' && payload.new.atribuido_para === window.currentUser?.username) {
-            toast(`Você tem uma nova atividade de ${payload.new.atribuido_por}: ${payload.new.titulo}. Assim que finalizada, por favor, marque a caixa de seleção`, 'info');
+            document.getElementById('ntrTitulo').textContent = payload.new.titulo;
+            document.getElementById('ntrDe').innerHTML = `DELEGADO POR: <span style="color: var(--text); font-weight: bold;">${payload.new.atribuido_por}</span>`;
+            document.getElementById('ntrDescricao').textContent = payload.new.descricao || 'Sem descrição detalhada.';
+            document.getElementById('modalNovaTarefaRecebida')?.classList.add('open');
+            
+            toast(`Nova tarefa atribuída por ${payload.new.atribuido_por}!`, 'info');
           }
         });
       });
