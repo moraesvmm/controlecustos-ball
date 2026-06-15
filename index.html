@@ -1448,23 +1448,30 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <!-- MODAL: NOVA TAREFA DELEGADA -->
   <div id="modalNovaTarefaDelegada" class="modal-overlay">
     <div class="modal-content" style="max-width: 500px;">
-      <h2>Atribuir Nova Tarefa</h2>
+      <header>
+        <h2>Atribuir Nova Tarefa</h2>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalNovaTarefaDelegada').classList.remove('open')">×</button>
+      </header>
       <form id="formNovaTarefaDelegada">
-        <label>
-          <span>Título da Atividade *</span>
-          <input type="text" id="ntdTitulo" required placeholder="Ex: Verificar lubrificação da Prensa 02" />
-        </label>
-        <label>
-          <span>Descrição / Instruções</span>
-          <textarea id="ntdDescricao" rows="3" placeholder="Detalhes adicionais..."></textarea>
-        </label>
-        <label>
-          <span>Atribuir para (Pupilo) *</span>
-          <select id="ntdAtribuidoPara" required>
-            <!-- Preenchido via JS -->
-          </select>
-        </label>
-        <div class="form-actions" style="margin-top: 1.5rem;">
+        <div class="form-section">
+          <div class="form-grid" style="grid-template-columns: 1fr;">
+            <label>
+              <span>Título da Atividade *</span>
+              <input type="text" id="ntdTitulo" required placeholder="Ex: Verificar lubrificação da Prensa 02" />
+            </label>
+            <label>
+              <span>Descrição / Instruções</span>
+              <textarea id="ntdDescricao" rows="3" placeholder="Detalhes adicionais..."></textarea>
+            </label>
+            <label>
+              <span>Atribuir para (Pupilo) *</span>
+              <select id="ntdAtribuidoPara" required>
+                <!-- Preenchido via JS -->
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
           <button type="button" class="btn btn-outline" id="btnCancelarTarefaDelegada">Cancelar</button>
           <button type="submit" class="btn">Atribuir Tarefa</button>
         </div>

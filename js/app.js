@@ -3669,20 +3669,30 @@ function renderGestaoTarefas(onlyUpdateTimers = false) {
       <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.5rem;">
         <h3 style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">👤 ${pupil} <span class="badge badge-info">${tasks.length}</span></h3>
         ${tasks.length === 0 ? '<p style="color:var(--muted); font-size:0.9rem;">Nenhuma tarefa delegada.</p>' : ''}
-        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:1rem;">
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1.25rem;">
           ${tasks.map(t => `
-            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:1rem; position:relative;">
-              <div style="position:absolute; top:1rem; right:1rem;">
-                <span class="badge ${t.status === 'FINALIZADA' ? 'badge-success' : t.status === 'EM_ANDAMENTO' ? 'badge-warning' : ''}">${t.status}</span>
-              </div>
-              <h4 style="margin-bottom:0.5rem; padding-right:80px;">${t.titulo}</h4>
-              <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1rem;">${t.descricao || 'Sem descrição'}</p>
+            <div style="background:var(--surface); border:1px solid ${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--border)'}; border-radius:12px; padding:1.25rem; position:relative; overflow:hidden; transition: transform 0.2s;">
+              ${t.status === 'EM_ANDAMENTO' ? '<div style="position:absolute; top:0; left:0; bottom:0; width:4px; background:var(--primary);"></div>' : ''}
+              ${t.status === 'FINALIZADA' ? '<div style="position:absolute; top:0; left:0; bottom:0; width:4px; background:var(--success);"></div>' : ''}
               
-              <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.75rem; font-size:0.8rem;">
-                <span style="color:var(--muted)">De: ${t.atribuido_por}</span>
-                <span style="font-family:monospace; font-size:1.1rem; color:var(--text); font-weight:bold;" class="task-timer" data-id="${t.id}">
-                  ${getTaskDuration(t)}
-                </span>
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem;">
+                <h4 style="margin:0; font-size:1.05rem; padding-right:80px; line-height:1.4;">${t.titulo}</h4>
+                <span style="position:absolute; top:1.25rem; right:1.25rem;" class="badge ${t.status === 'FINALIZADA' ? 'badge-success' : t.status === 'EM_ANDAMENTO' ? 'badge-warning' : ''}">${t.status}</span>
+              </div>
+              
+              <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.25rem; line-height:1.5; background:rgba(0,0,0,0.1); padding:0.75rem; border-radius:6px;">${t.descricao || '<span style="opacity:0.5;font-style:italic;">Sem detalhes adicionais</span>'}</p>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:1rem; font-size:0.8rem;">
+                <div style="display:flex; flex-direction:column;">
+                  <span style="color:var(--muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;">Delegado por</span>
+                  <span style="color:var(--text); font-weight:500;">${t.atribuido_por}</span>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:flex-end;">
+                  <span style="color:var(--muted); font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em;">Tempo</span>
+                  <span style="font-family:monospace; font-size:1.2rem; color:${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--text)'}; font-weight:bold;" class="task-timer" data-id="${t.id}">
+                    ${getTaskDuration(t)}
+                  </span>
+                </div>
               </div>
             </div>
           `).join('')}
@@ -3720,23 +3730,36 @@ function renderMinhasTarefas(onlyUpdateTimers = false) {
   }
 
   container.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1rem;">
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1.5rem;">
       ${myTasks.map(t => `
-        <div style="background:var(--surface); border:1px solid ${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--border)'}; border-radius:12px; padding:1.25rem; position:relative; box-shadow: ${t.status === 'EM_ANDAMENTO' ? '0 0 15px rgba(59,130,246,0.1)' : 'none'};">
-          <div style="position:absolute; top:1.25rem; right:1.25rem;">
+        <div style="background:var(--surface); border:1px solid ${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--border)'}; border-radius:16px; padding:1.5rem; position:relative; overflow:hidden; box-shadow: ${t.status === 'EM_ANDAMENTO' ? '0 0 20px rgba(59,130,246,0.15)' : '0 4px 6px rgba(0,0,0,0.1)'}; transition: transform 0.2s;">
+          ${t.status === 'EM_ANDAMENTO' ? '<div style="position:absolute; top:0; left:0; right:0; height:4px; background:var(--primary);"></div>' : ''}
+          ${t.status === 'FINALIZADA' ? '<div style="position:absolute; top:0; left:0; right:0; height:4px; background:var(--success);"></div>' : ''}
+          
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
+            <div style="flex:1; padding-right:1rem;">
+              <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:600;">De: ${t.atribuido_por}</span>
+              <h3 style="margin:0.25rem 0 0 0; font-size:1.15rem; color:var(--text); line-height:1.4;">${t.titulo}</h3>
+            </div>
             <span class="badge ${t.status === 'FINALIZADA' ? 'badge-success' : t.status === 'EM_ANDAMENTO' ? 'badge-warning' : ''}">${t.status}</span>
           </div>
-          <h3 style="margin-bottom:0.5rem; padding-right:80px; font-size:1.1rem;">${t.titulo}</h3>
-          <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1.25rem;">${t.descricao || 'Sem descrição'}</p>
           
-          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-radius:6px; padding:0.75rem;">
-            <div style="font-family:monospace; font-size:1.4rem; color:${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--text)'}; font-weight:bold;" class="my-task-timer" data-id="${t.id}">
-              ${getTaskDuration(t)}
+          <div style="background:rgba(0,0,0,0.15); border-radius:8px; padding:1rem; margin-bottom:1.5rem; border:1px solid rgba(255,255,255,0.05);">
+            <p style="color:var(--text); font-size:0.9rem; margin:0; opacity:0.9; line-height:1.5;">${t.descricao || '<span style="color:var(--muted);font-style:italic;">Sem descrição detalhada.</span>'}</p>
+          </div>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div style="display:flex; flex-direction:column;">
+              <span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em;">Tempo</span>
+              <div style="font-family:monospace; font-size:1.5rem; color:${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--text)'}; font-weight:bold; letter-spacing:1px;" class="my-task-timer" data-id="${t.id}">
+                ${getTaskDuration(t)}
+              </div>
             </div>
             
-            <div style="display:flex; gap:0.5rem;">
-              ${t.status === 'PENDENTE' ? `<button class="btn btn-sm" onclick="window.iniciarTarefa('${t.id}')">▶ Iniciar</button>` : ''}
-              ${t.status === 'EM_ANDAMENTO' ? `<button class="btn btn-sm btn-outline" style="border-color:#6ee7b7; color:#6ee7b7;" onclick="window.finalizarTarefa('${t.id}')">✔ Finalizar</button>` : ''}
+            <div style="display:flex; gap:0.75rem;">
+              ${t.status === 'PENDENTE' ? `<button class="btn" style="padding:0.5rem 1.25rem; font-weight:600;" onclick="window.iniciarTarefa('${t.id}')">▶ Iniciar</button>` : ''}
+              ${t.status === 'EM_ANDAMENTO' ? `<button class="btn btn-outline" style="border-color:var(--success); color:var(--success); padding:0.5rem 1.25rem; font-weight:600;" onclick="window.finalizarTarefa('${t.id}')">✔ Finalizar</button>` : ''}
+              ${t.status === 'FINALIZADA' ? `<span style="color:var(--success); font-weight:600; display:flex; align-items:center; gap:0.25rem;">✔ Concluído</span>` : ''}
             </div>
           </div>
         </div>
