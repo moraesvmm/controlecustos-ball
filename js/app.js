@@ -3680,12 +3680,12 @@ function renderGestaoTarefas(onlyUpdateTimers = false) {
               ${t.status === 'EM_ANDAMENTO' ? '<div style="position:absolute; top:0; left:0; bottom:0; width:4px; background:var(--primary);"></div>' : ''}
               ${t.status === 'FINALIZADA' ? '<div style="position:absolute; top:0; left:0; bottom:0; width:4px; background:var(--success);"></div>' : ''}
               
-              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.5rem;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem;">
                 <h4 style="margin:0; font-size:1.05rem; padding-right:80px; line-height:1.4;">${t.titulo}</h4>
                 <span style="position:absolute; top:1.25rem; right:1.25rem;" class="badge ${t.status === 'FINALIZADA' ? 'badge-success' : t.status === 'EM_ANDAMENTO' ? 'badge-warning' : ''}">${t.status}</span>
               </div>
               
-              <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.25rem; line-height:1.5;">${t.descricao || '<span style="opacity:0.5;font-style:italic;">Sem detalhes adicionais</span>'}</p>
+              <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1.25rem; line-height:1.5; background:rgba(0,0,0,0.1); padding:0.75rem; border-radius:6px;">${t.descricao || '<span style="opacity:0.5;font-style:italic;">Sem detalhes adicionais</span>'}</p>
               
               <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:1rem; font-size:0.8rem;">
                 <div style="display:flex; flex-direction:column;">
@@ -3748,7 +3748,7 @@ function renderMinhasTarefas(onlyUpdateTimers = false) {
           ${t.status === 'EM_ANDAMENTO' ? '<div style="position:absolute; top:0; left:0; right:0; height:4px; background:var(--primary);"></div>' : ''}
           ${t.status === 'FINALIZADA' ? '<div style="position:absolute; top:0; left:0; right:0; height:4px; background:var(--success);"></div>' : ''}
           
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem;">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:1rem;">
             <div style="flex:1; padding-right:1rem;">
               <span style="font-size:0.75rem; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:600;">De: ${t.atribuido_por}</span>
               <h3 style="margin:0.25rem 0 0 0; font-size:1.15rem; color:var(--text); line-height:1.4;">${t.titulo}</h3>
@@ -3756,7 +3756,9 @@ function renderMinhasTarefas(onlyUpdateTimers = false) {
             <span class="badge ${t.status === 'FINALIZADA' ? 'badge-success' : t.status === 'EM_ANDAMENTO' ? 'badge-warning' : ''}">${t.status}</span>
           </div>
           
-          <p style="color:var(--muted); font-size:0.95rem; margin-bottom:1.5rem; line-height:1.5;">${t.descricao || '<span style="opacity:0.5;font-style:italic;">Sem descrição detalhada.</span>'}</p>
+          <div style="background:rgba(0,0,0,0.15); border-radius:8px; padding:1rem; margin-bottom:1.5rem; border:1px solid rgba(255,255,255,0.05);">
+            <p style="color:var(--text); font-size:0.9rem; margin:0; opacity:0.9; line-height:1.5;">${t.descricao || '<span style="color:var(--muted);font-style:italic;">Sem descrição detalhada.</span>'}</p>
+          </div>
           
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; flex-direction:column;">
