@@ -3750,10 +3750,10 @@ function renderMinhasTarefas(onlyUpdateTimers = false) {
           
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; flex-direction:column;">
-              <span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em;">Tempo</span>
-              <div style="font-family:monospace; font-size:1.5rem; color:${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--text)'}; font-weight:bold; letter-spacing:1px;" class="my-task-timer" data-id="${t.id}">
-                ${getTaskDuration(t)}
-              </div>
+              <span style="font-size:0.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.1em;">Ação Necessária</span>
+              <span style="font-size:0.9rem; color:var(--text); font-weight:500;">
+                ${t.status === 'PENDENTE' ? 'Aguardando Início' : t.status === 'EM_ANDAMENTO' ? 'Em Execução' : 'Atividade Entregue'}
+              </span>
             </div>
             
             <div style="display:flex; gap:0.75rem;">
