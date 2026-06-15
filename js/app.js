@@ -1723,10 +1723,15 @@ function renderTabelaPreventiva() {
     return;
   }
 
-  tbody.innerHTML = filtrados.map(r => `
+  tbody.innerHTML = filtrados.map((r, idx) => `
     <tr>
-      <td><strong>${r.identificador || '—'}</strong></td>
+      <td><strong>#${idx + 1}</strong></td>
       <td>${r.maquina || '—'}</td>
+      <td style="min-width:350px; white-space:normal; line-height:1.5; padding: 12px; color: var(--text);">
+        ${(r.atividades_descricoes && r.atividades_descricoes.length 
+          ? r.atividades_descricoes.map(d => `<div style="margin-bottom:0.5rem;">• ${d.replace(/\n/g, '<br>')}</div>`).join('') 
+          : (r.descricao ? r.descricao.replace(/\n/g, '<br>') : '-'))}
+      </td>
       <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
       <td>${r.hh_mec != null && r.hh_mec !== 0 ? r.hh_mec : '—'}</td>
       <td>${r.hh_eletrico != null && r.hh_eletrico !== 0 ? r.hh_eletrico : '—'}</td>
@@ -1895,7 +1900,8 @@ $('#formRegistroPreventiva')?.addEventListener('submit', async (e) => {
     previsao_custos: parseFloat(f.previsao_custos.value) || 0,
   };
   
-  if (!editandoPreventiva.mes && estadoPlanos.mes && (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06')) {
+  const isFallback = !editandoPreventiva.mes || editandoPreventiva.linha !== estadoPlanos.linha || editandoPreventiva.mes !== estadoPlanos.mes;
+  if (isFallback && estadoPlanos.mes && (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06')) {
     delete payload.id;
     payload.mes = estadoPlanos.mes;
     payload.linha = estadoPlanos.linha;
@@ -2420,9 +2426,13 @@ function renderTabelaPreventivaFE() {
   tbody.innerHTML = filtrados.map((r, i) => {
     const isEdited = window.editedPlanoItemsFE && window.editedPlanoItemsFE.has(r.id);
     return `<tr ondblclick="abrirFormularioPreventivaFE('${r.id}')" style="cursor:pointer; ${isEdited ? 'background-color: rgba(110,231,183,0.08); border-left: 3px solid #6ee7b7;' : ''}">
-      <td style="position: relative;">${isEdited ? '<div class="floatFadeCard" style="border-color:#6ee7b7;color:#6ee7b7;box-shadow:0 0 10px rgba(110,231,183,0.3)">Salvo</div>' : ''}<strong>${i + 1}</strong></td>
+      <td style="position: relative;">${isEdited ? '<div class="floatFadeCard" style="border-color:#6ee7b7;color:#6ee7b7;box-shadow:0 0 10px rgba(110,231,183,0.3)">Salvo</div>' : ''}<strong>#${i + 1}</strong></td>
       <td>${r.maquina || '—'}</td>
-      <td style="min-width:350px; white-space:normal; line-height:1.5; padding: 12px; color: var(--text);">${(r.atividades_descricoes ? r.atividades_descricoes.join('<br>') : r.descricao || '-')}</td>
+      <td style="min-width:350px; white-space:normal; line-height:1.5; padding: 12px; color: var(--text);">
+        ${(r.atividades_descricoes && r.atividades_descricoes.length 
+          ? r.atividades_descricoes.map(d => `<div style="margin-bottom:0.5rem;">• ${d.replace(/\n/g, '<br>')}</div>`).join('') 
+          : (r.descricao ? r.descricao.replace(/\n/g, '<br>') : '-'))}
+      </td>
       <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
       <td>${r.hh_mec || '—'}</td>
       <td>${r.hh_eletrico || '—'}</td>
@@ -2566,10 +2576,11 @@ $('#formEditarAtividadeFE')?.addEventListener('submit', async (e) => {
     area_producao: 'FRONT-END',
   };
   
-  if (!editandoPreventivaFE.mes && estadoPlanos.mes && (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06')) {
+  const isFallbackFE = !editandoPreventivaFE.mes || editandoPreventivaFE.linha !== estadoPlanosFrontend.linha || editandoPreventivaFE.mes !== estadoPlanosFrontend.mes;
+  if (isFallbackFE && estadoPlanosFrontend.mes && (viewAtual === 'controle-preventiva' || viewAtual === 'preventiva-l06' || viewAtual === 'planos-manutencao')) {
     delete payload.id;
-    payload.mes = estadoPlanos.mes;
-    payload.linha = estadoPlanos.linha;
+    payload.mes = estadoPlanosFrontend.mes;
+    payload.linha = estadoPlanosFrontend.linha;
     payload.plano_padrao = 'N';
   }
   
