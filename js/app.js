@@ -15,7 +15,7 @@ import {
 } from './logic.js';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
 import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, createMachineActivity, getFornecedoresContatos, upsertFornecedorContato } from './db.js';
-import { renderDashboardCharts } from './charts.js?v=4';
+import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=4';
 import {
   COLUNAS_TABELA,
   valorCelula,
@@ -873,6 +873,11 @@ function refresh() {
   renderTabela();
   if (viewAtual === 'dashboard') {
     requestAnimationFrame(() => renderDashboardCharts(getFiltrados()));
+  } else if (['consertos', 'compras', 'fabricacao'].includes(viewAtual)) {
+    const titulo = viewAtual === 'consertos' ? 'CONSERTOS - PREVISTOS X RECEBIDOS' : (viewAtual === 'compras' ? 'COMPRAS - PREVISTOS X RECEBIDOS' : 'FABRICAÇÃO - PREVISTOS X RECEBIDOS');
+    requestAnimationFrame(() => renderCrudMesChart(getFiltrados(), titulo));
+  } else {
+    destroyCrudMesChart();
   }
   renderAlertas();
 }
@@ -930,6 +935,7 @@ function showView(name) {
 
   // Seção tabela (toolbar + tabela de RCs) - Hide for preventiva since it has its own
   $('#secaoTabela')?.classList.toggle('hidden', !['rc', 'consertos', 'compras', 'fabricacao'].includes(name));
+  $('#secaoCrudGraficos')?.classList.toggle('hidden', !['consertos', 'compras', 'fabricacao'].includes(name));
 
   // KPIs e filtros — ocultos nas views especiais (ambos estão dentro do painel-fixo)
   $('#painel-fixo')?.classList.toggle('hidden', isSpecial);
@@ -1918,16 +1924,19 @@ window.selecionarMesPlanos = function(mes) {
 
   carregarCheckinsPreventiva(mes).then(() => {
     const html = linhas.map(l => {
-      const checked = checkinsPreventiva.find(c => c.linha === l);
-      const diaVal = checked ? checked.dia : '';
-      return `<div style="display:flex; gap:0.25rem; align-items:stretch; margin-bottom: 0.5rem;">
-        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
-        <div style="display:flex; gap:2px;">
-          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
-          <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Excluir dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
+      const diasGravados = checkinsPreventiva.filter(c => c.linha === l).map(c => c.dia).sort((a,b)=>a-b);
+      const labelDias = diasGravados.length > 0 ? `<div id="dias-label-${l}" style="font-size:0.75rem; color:var(--muted); text-align:right; margin-top:2px;">Dias: ${diasGravados.join(', ')}</div>` : `<div id="dias-label-${l}" style="font-size:0.75rem; color:var(--muted); text-align:right; margin-top:2px;"></div>`;
+      return `<div style="display:flex; flex-direction:column; margin-bottom: 0.5rem;">
+        <div style="display:flex; gap:0.25rem; align-items:stretch;">
+          <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanos('${l}')">Linha ${l.replace('L','')}</button>
+          <div style="display:flex; gap:2px;">
+            <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="" placeholder="+" title="Adicionar dia" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+            <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Remover último dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
         </div>
+        ${labelDias}
       </div>`;
     }).join('');
     $('#linhas-list').innerHTML = html;
@@ -2198,16 +2207,19 @@ window.selecionarMesPlansosFrontend = function(mes) {
 
   carregarCheckinsPreventiva(mes).then(() => {
     const html = linhas.map(l => {
-      const checked = checkinsPreventiva.find(c => c.linha === l);
-      const diaVal = checked ? checked.dia : '';
-      return `<div style="display:flex; gap:0.25rem; align-items:stretch; margin-bottom: 0.5rem;">
-        <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L','')}</button>
-        <div style="display:flex; gap:2px;">
-          <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="${diaVal}" placeholder="Dia" title="Dia da Preventiva" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
-          <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Excluir dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
-            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
+      const diasGravados = checkinsPreventiva.filter(c => c.linha === l).map(c => c.dia).sort((a,b)=>a-b);
+      const labelDias = diasGravados.length > 0 ? `<div id="dias-label-fe-${l}" style="font-size:0.75rem; color:var(--muted); text-align:right; margin-top:2px;">Dias: ${diasGravados.join(', ')}</div>` : `<div id="dias-label-fe-${l}" style="font-size:0.75rem; color:var(--muted); text-align:right; margin-top:2px;"></div>`;
+      return `<div style="display:flex; flex-direction:column; margin-bottom: 0.5rem;">
+        <div style="display:flex; gap:0.25rem; align-items:stretch;">
+          <button class="btn btn-outline" style="flex:1; text-align: left; justify-content: flex-start; font-size:0.9rem; padding: 0.4rem 0.6rem;" onclick="selecionarLinhaPlanosFrontend('${l}')">Linha ${l.replace('L','')}</button>
+          <div style="display:flex; gap:2px;">
+            <input type="number" min="1" max="31" class="preventiva-dia-input" data-linha="${l}" value="" placeholder="+" title="Adicionar dia" style="width:45px; border-radius:4px; border:1px solid rgba(255,255,255,0.1); background:rgba(0,0,0,0.2); color:var(--text); text-align:center; font-size:0.9rem;" onchange="salvarDiaLinhaPreventiva('${mes}', '${l}', this.value)" />
+            <button type="button" onclick="salvarDiaLinhaPreventiva('${mes}', '${l}', '')" title="Remover último dia" style="background:rgba(239,68,68,0.1); color:#ef4444; border:1px solid rgba(239,68,68,0.2); border-radius:4px; width:30px; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+          </div>
         </div>
+        ${labelDias}
       </div>`;
     }).join('');
     const el = $('#linhas-list-fe');
@@ -3108,7 +3120,22 @@ async function carregarCheckinsPreventiva(mes) {
       .select('*')
       .eq('mes', mes);
     if (!error && data) {
-      checkinsPreventiva = data.map(d => ({ linha: d.linha, dia: Number(d.dia) }));
+      checkinsPreventiva = [];
+      data.forEach(d => {
+        let val = Number(d.dia);
+        if (val < 0) {
+          // Bitmask invertido
+          let mask = -val;
+          for (let i = 0; i < 31; i++) {
+            if ((mask & (1 << i)) !== 0) {
+              checkinsPreventiva.push({ linha: d.linha, dia: i + 1 });
+            }
+          }
+        } else if (val > 0) {
+          // Legado
+          checkinsPreventiva.push({ linha: d.linha, dia: val });
+        }
+      });
     } else {
       checkinsPreventiva = [];
     }
@@ -3119,24 +3146,56 @@ async function carregarCheckinsPreventiva(mes) {
 }
 
 async function salvarDiaLinhaPreventiva(mes, linha, diaStr) {
-  const dia = parseInt(diaStr);
-  const isValid = !isNaN(dia) && dia >= 1 && dia <= 31;
+  const novoDia = parseInt(diaStr);
+  const isAdding = !isNaN(novoDia) && novoDia >= 1 && novoDia <= 31;
   
   try {
-    if (!isValid) {
-      const { error } = await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
-      if (error) throw error;
-      checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
-      document.querySelectorAll(`.preventiva-dia-input[data-linha="${linha}"]`).forEach(el => el.value = '');
-      toast('Marcação removida/limpa.', 'info');
+    // 1. Pegar dias atuais
+    let diasGravados = checkinsPreventiva.filter(c => c.linha === linha).map(c => c.dia).sort((a,b)=>a-b);
+    
+    if (!isAdding) {
+      // 2. Remover o maior dia se clicou no X
+      if (diasGravados.length > 0) {
+        const removido = diasGravados.pop();
+        toast(`Dia ${removido} removido.`, 'info');
+      }
     } else {
-      await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
-      const { error } = await getClient().from('preventiva_linhas_checkin').insert([{ mes, linha, dia }]);
-      if (error) throw error;
-      checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
-      checkinsPreventiva.push({ linha, dia });
-      toast('Dia registrado.', 'success');
+      // 3. Adicionar o novo dia se não existir
+      if (!diasGravados.includes(novoDia)) {
+        diasGravados.push(novoDia);
+        diasGravados.sort((a,b)=>a-b);
+        toast(`Dia ${novoDia} adicionado.`, 'success');
+      }
     }
+
+    // 4. Calcular o novo valor para o BD
+    await getClient().from('preventiva_linhas_checkin').delete().match({ mes, linha });
+    
+    if (diasGravados.length > 0) {
+      let bitmask = 0;
+      for (let d of diasGravados) {
+        bitmask |= (1 << (d - 1));
+      }
+      let diaDb = -bitmask; // Salva como número negativo para indicar bitmask
+      const { error } = await getClient().from('preventiva_linhas_checkin').insert([{ mes, linha, dia: diaDb }]);
+      if (error) throw error;
+    }
+
+    // 5. Atualizar estado local
+    checkinsPreventiva = checkinsPreventiva.filter(c => c.linha !== linha);
+    for (let d of diasGravados) {
+      checkinsPreventiva.push({ linha, dia: d });
+    }
+
+    // 6. Atualizar UI
+    document.querySelectorAll(`.preventiva-dia-input[data-linha="${linha}"]`).forEach(el => el.value = '');
+    
+    const labelText = diasGravados.length > 0 ? `Dias: ${diasGravados.join(', ')}` : '';
+    const lblBe = document.getElementById(`dias-label-${linha}`);
+    if (lblBe) lblBe.textContent = labelText;
+    const lblFe = document.getElementById(`dias-label-fe-${linha}`);
+    if (lblFe) lblFe.textContent = labelText;
+
     renderCalendarioPreventiva(mes, false);
     renderCalendarioPreventiva(mes, true);
   } catch(err) {
