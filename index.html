@@ -103,7 +103,17 @@
         
         <div>
           <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo RC</div>
-          <button type="button" data-tab="rc" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Controle Global</button>
+          <!-- Accordion: Controle Global -->
+          <div class="nav-accordion">
+            <button type="button" class="nav-accordion-trigger" data-accordion="nav-rc">
+              Controle Global <span class="nav-accordion-arrow">▾</span>
+            </button>
+            <div class="nav-sub-menu" id="nav-rc-sub">
+              <button type="button" data-tab="rc" class="nav-item nav-sub-item">↳ Visão Geral</button>
+              <button type="button" data-tab="gestao-tarefas" class="nav-item nav-sub-item">↳ Gestão de Equipe</button>
+              <button type="button" data-tab="minhas-tarefas" class="nav-item nav-sub-item">↳ Minhas Tarefas</button>
+            </div>
+          </div>
           <button type="button" data-tab="consertos" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Consertos</button>
           <button type="button" data-tab="compras" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Compras</button>
         </div>
@@ -262,6 +272,33 @@
     <div id="view-rc" class="view"></div>
     <div id="view-consertos" class="view"></div>
     <div id="view-compras" class="view"></div>
+    
+    <!-- VIEW: GESTÃO DE EQUIPE (Mestre) -->
+    <div id="view-gestao-tarefas" class="view">
+      <div class="view-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <h2>Gestão de Equipe & Delegação</h2>
+          <button type="button" class="btn" id="btnNovaTarefaDelegada">+ Nova Tarefa</button>
+        </div>
+      </div>
+      <div class="view-content">
+        <div id="dashboardGestaoTarefas" style="display:flex; flex-direction:column; gap:1.5rem;">
+          <!-- Master dashboard rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: MINHAS TAREFAS (Pupilo) -->
+    <div id="view-minhas-tarefas" class="view">
+      <div class="view-header">
+        <h2>Minhas Tarefas</h2>
+      </div>
+      <div class="view-content">
+        <div id="dashboardMinhasTarefas" style="display:flex; flex-direction:column; gap:1.5rem;">
+          <!-- Pupil dashboard rendered via JS -->
+        </div>
+      </div>
+    </div>
     
     <!-- NAVEGADOR GERAL DE PLANOS DE MANUTENÇÃO (Drill-Down) -->
     <div id="view-planos-manutencao" class="view">
@@ -1408,9 +1445,36 @@ Segue abaixo itens para verificação de atraso.</textarea>
     <img id="lightboxImg" class="lightbox-img" alt="Foto RC Ampliada" />
   </div>
 
+  <!-- MODAL: NOVA TAREFA DELEGADA -->
+  <div id="modalNovaTarefaDelegada" class="modal-overlay">
+    <div class="modal-content" style="max-width: 500px;">
+      <h2>Atribuir Nova Tarefa</h2>
+      <form id="formNovaTarefaDelegada">
+        <label>
+          <span>Título da Atividade *</span>
+          <input type="text" id="ntdTitulo" required placeholder="Ex: Verificar lubrificação da Prensa 02" />
+        </label>
+        <label>
+          <span>Descrição / Instruções</span>
+          <textarea id="ntdDescricao" rows="3" placeholder="Detalhes adicionais..."></textarea>
+        </label>
+        <label>
+          <span>Atribuir para (Pupilo) *</span>
+          <select id="ntdAtribuidoPara" required>
+            <!-- Preenchido via JS -->
+          </select>
+        </label>
+        <div class="form-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-outline" id="btnCancelarTarefaDelegada">Cancelar</button>
+          <button type="submit" class="btn">Atribuir Tarefa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=85"></script>
+  <script type="module" src="js/app.js?v=86"></script>
 </body>
 </html>

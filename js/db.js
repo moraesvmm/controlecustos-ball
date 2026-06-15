@@ -320,3 +320,52 @@ export async function upsertFornecedorContato(payload) {
   if (error) throw error;
   return data;
 }
+
+// =============================
+// GESTÃO DE TAREFAS DELEGADAS
+// =============================
+
+export async function getTarefasDelegadas() {
+  const client = getClient();
+  const { data, error } = await client.from('tarefas_delegadas').select('*').order('criado_em', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function criarTarefaDelegada(tarefa) {
+  const client = getClient();
+  const { data, error } = await client.from('tarefas_delegadas').insert(tarefa).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export async function atualizarStatusTarefa(id, status, typeTime) {
+  const client = getClient();
+  const payload = { status };
+  if (typeTime === 'start') {
+    payload.iniciado_em = new Date().toISOString();
+  } else if (typeTime === 'finish') {
+    payload.finalizado_em = new Date().toISOString();
+  }
+  const { data, error } = await client.from('tarefas_delegadas').update(payload).eq('id', id).select().single();
+  if (error) throw error;
+  return data;
+}
+
+export function subscribeTarefas(callback) {
+  const client = getClient();
+  if (!client) return null;
+  
+  const channel = client.channel('custom-tarefas-channel')
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'tarefas_delegadas' },
+      (payload) => {
+        callback(payload);
+      }
+    )
+    .subscribe();
+    
+  return channel;
+}
+

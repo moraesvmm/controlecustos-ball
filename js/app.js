@@ -14,7 +14,11 @@ import {
   agregarFornecedores,
 } from './logic.js';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
-import { carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, createMachineActivity, getFornecedoresContatos, upsertFornecedorContato } from './db.js';
+import { 
+carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
+getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
+createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas } from './db.js';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=4';
 import {
   COLUNAS_TABELA,
@@ -33,6 +37,23 @@ import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPD
 let registros = [];
 let registrosPreventiva = [];
 window.fornecedoresContatosData = [];
+
+// =============================
+// GESTÃO DE TAREFAS DELEGADAS
+// =============================
+let tarefasDelegadas = [];
+let intervalTarefas = null;
+
+const usersHierarchy = {
+  'Vitor Moraes': { role: 'ADM' }, 
+  'João Silva': { role: 'Master' },
+  'Vinicius Marques': { role: 'Master' },
+  'Gelcino Júnior': { role: 'Master' },
+  'Victor Mello': { role: 'Pupil' },
+  'Beatriz Moraes': { role: 'Pupil' },
+};
+const pupilosDisponiveis = ['Victor Mello', 'Beatriz Moraes'];
+// =============================
 let filtros = {
   natureza: 'TODOS',
   status: 'TODOS',
@@ -1132,6 +1153,31 @@ async function init() {
       registrosPreventiva = todosPreventiva.filter(r => r.setor !== 'frontend');
       registrosPreventivaFrontend = todosPreventiva.filter(r => r.setor === 'frontend');
     } catch (e) { console.warn('Preventiva table not ready yet', e.message); }
+    try {
+      tarefasDelegadas = await getTarefasDelegadas();
+      renderGestaoTarefas();
+      renderMinhasTarefas();
+      subscribeTarefas((payload) => {
+        // Reload tasks on any change
+        getTarefasDelegadas().then(data => {
+          tarefasDelegadas = data;
+          renderGestaoTarefas();
+          renderMinhasTarefas();
+          
+          // Show toast if a new task is assigned to current user
+          if (payload.eventType === 'INSERT' && payload.new.atribuido_para === window.currentUser?.username) {
+            toast(`Você tem uma nova atividade de ${payload.new.atribuido_por}: ${payload.new.titulo}. Assim que finalizada, por favor, marque a caixa de seleção`, 'info');
+          }
+        });
+      });
+      // Start interval for timers
+      if (!intervalTarefas) {
+        intervalTarefas = setInterval(() => {
+          renderGestaoTarefas(true);
+          renderMinhasTarefas(true);
+        }, 1000);
+      }
+    } catch (e) { console.warn('Tarefas table not ready yet', e.message); }
   } catch (e) {
     $('#appStatus').textContent = 'Erro: ' + e.message;
     return;
@@ -2794,6 +2840,7 @@ onAuthStateChange((user) => {
       
       const nomeUsuario = user.user_metadata?.username || user.email?.split('@')[0] || 'Usuário';
       greetingEl.textContent = `${saudacao}, ${nomeUsuario}!`;
+      window.currentUser = { id: user.id, email: user.email, username: user.user_metadata?.username || nomeUsuario };
     }
 
     document.getElementById('app-container').style.display = 'flex';
@@ -3557,5 +3604,210 @@ function renderCalendarioPreventiva(mes, isFrontend = false) {
   
   container.innerHTML = html;
 }
+
+// =============================
+// GESTÃO DE EQUIPE & DELEGAÇÃO DE TAREFAS
+// =============================
+
+function formatTime(ms) {
+  if (ms < 0) ms = 0;
+  const totalSecs = Math.floor(ms / 1000);
+  const h = Math.floor(totalSecs / 3600);
+  const m = Math.floor((totalSecs % 3600) / 60);
+  const s = totalSecs % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+}
+
+function getTaskDuration(t) {
+  if (t.status === 'PENDENTE') return '00:00:00';
+  if (t.status === 'EM_ANDAMENTO') {
+    if (!t.iniciado_em) return '00:00:00';
+    return formatTime(new Date() - new Date(t.iniciado_em));
+  }
+  if (t.status === 'FINALIZADA') {
+    if (!t.iniciado_em || !t.finalizado_em) return '00:00:00';
+    return formatTime(new Date(t.finalizado_em) - new Date(t.iniciado_em));
+  }
+  return '00:00:00';
+}
+
+function getPupilosDisponiveis() {
+  const currentUser = window.currentUser?.username;
+  if (!currentUser) return pupilosDisponiveis;
+  
+  const myRole = usersHierarchy[currentUser]?.role;
+  if (myRole === 'ADM') {
+    // ADM can assign to anyone except themselves
+    return Object.keys(usersHierarchy).filter(u => u !== currentUser);
+  }
+  // Masters can only assign to Pupils
+  return pupilosDisponiveis;
+}
+
+function renderGestaoTarefas(onlyUpdateTimers = false) {
+  const container = document.getElementById('dashboardGestaoTarefas');
+  if (!container) return;
+
+  // Render timers if only updating
+  if (onlyUpdateTimers) {
+    document.querySelectorAll('.task-timer').forEach(el => {
+      const id = el.dataset.id;
+      const t = tarefasDelegadas.find(x => x.id === id);
+      if (t) el.textContent = getTaskDuration(t);
+    });
+    return;
+  }
+
+  const dynamicPupilos = getPupilosDisponiveis();
+
+  // Generate HTML
+  // Group by pupil
+  const html = dynamicPupilos.map(pupil => {
+    const tasks = tarefasDelegadas.filter(t => t.atribuido_para === pupil);
+    
+    return `
+      <div style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:1.5rem;">
+        <h3 style="margin-bottom:1rem; display:flex; align-items:center; gap:0.5rem;">👤 ${pupil} <span class="badge badge-info">${tasks.length}</span></h3>
+        ${tasks.length === 0 ? '<p style="color:var(--muted); font-size:0.9rem;">Nenhuma tarefa delegada.</p>' : ''}
+        <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:1rem;">
+          ${tasks.map(t => `
+            <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:1rem; position:relative;">
+              <div style="position:absolute; top:1rem; right:1rem;">
+                <span class="badge ${t.status === 'FINALIZADA' ? 'badge-success' : t.status === 'EM_ANDAMENTO' ? 'badge-warning' : ''}">${t.status}</span>
+              </div>
+              <h4 style="margin-bottom:0.5rem; padding-right:80px;">${t.titulo}</h4>
+              <p style="color:var(--muted); font-size:0.85rem; margin-bottom:1rem;">${t.descricao || 'Sem descrição'}</p>
+              
+              <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid rgba(255,255,255,0.05); padding-top:0.75rem; font-size:0.8rem;">
+                <span style="color:var(--muted)">De: ${t.atribuido_por}</span>
+                <span style="font-family:monospace; font-size:1.1rem; color:var(--text); font-weight:bold;" class="task-timer" data-id="${t.id}">
+                  ${getTaskDuration(t)}
+                </span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+  
+  container.innerHTML = html;
+}
+
+function renderMinhasTarefas(onlyUpdateTimers = false) {
+  const container = document.getElementById('dashboardMinhasTarefas');
+  if (!container) return;
+
+  if (onlyUpdateTimers) {
+    document.querySelectorAll('.my-task-timer').forEach(el => {
+      const id = el.dataset.id;
+      const t = tarefasDelegadas.find(x => x.id === id);
+      if (t) el.textContent = getTaskDuration(t);
+    });
+    return;
+  }
+
+  const currentUser = window.currentUser?.username;
+  if (!currentUser) {
+    container.innerHTML = '<p>Usuário não identificado.</p>';
+    return;
+  }
+
+  const myTasks = tarefasDelegadas.filter(t => t.atribuido_para === currentUser);
+  if (myTasks.length === 0) {
+    container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--muted);"><h3>Tudo tranquilo por aqui!</h3><p>Você não tem tarefas atribuídas.</p></div>';
+    return;
+  }
+
+  container.innerHTML = `
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:1rem;">
+      ${myTasks.map(t => `
+        <div style="background:var(--surface); border:1px solid ${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--border)'}; border-radius:12px; padding:1.25rem; position:relative; box-shadow: ${t.status === 'EM_ANDAMENTO' ? '0 0 15px rgba(59,130,246,0.1)' : 'none'};">
+          <div style="position:absolute; top:1.25rem; right:1.25rem;">
+            <span class="badge ${t.status === 'FINALIZADA' ? 'badge-success' : t.status === 'EM_ANDAMENTO' ? 'badge-warning' : ''}">${t.status}</span>
+          </div>
+          <h3 style="margin-bottom:0.5rem; padding-right:80px; font-size:1.1rem;">${t.titulo}</h3>
+          <p style="color:var(--muted); font-size:0.9rem; margin-bottom:1.25rem;">${t.descricao || 'Sem descrição'}</p>
+          
+          <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(0,0,0,0.2); border-radius:6px; padding:0.75rem;">
+            <div style="font-family:monospace; font-size:1.4rem; color:${t.status === 'EM_ANDAMENTO' ? 'var(--primary)' : 'var(--text)'}; font-weight:bold;" class="my-task-timer" data-id="${t.id}">
+              ${getTaskDuration(t)}
+            </div>
+            
+            <div style="display:flex; gap:0.5rem;">
+              ${t.status === 'PENDENTE' ? `<button class="btn btn-sm" onclick="window.iniciarTarefa('${t.id}')">▶ Iniciar</button>` : ''}
+              ${t.status === 'EM_ANDAMENTO' ? `<button class="btn btn-sm btn-outline" style="border-color:#6ee7b7; color:#6ee7b7;" onclick="window.finalizarTarefa('${t.id}')">✔ Finalizar</button>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+window.iniciarTarefa = async function(id) {
+  try {
+    await atualizarStatusTarefa(id, 'EM_ANDAMENTO', 'start');
+    tarefasDelegadas = await getTarefasDelegadas();
+    renderMinhasTarefas();
+    renderGestaoTarefas();
+    toast('Tarefa iniciada!', 'success');
+  } catch(e) { toast('Erro ao iniciar tarefa: ' + e.message, 'error'); }
+};
+
+window.finalizarTarefa = async function(id) {
+  try {
+    await atualizarStatusTarefa(id, 'FINALIZADA', 'finish');
+    tarefasDelegadas = await getTarefasDelegadas();
+    renderMinhasTarefas();
+    renderGestaoTarefas();
+    toast('Tarefa finalizada com sucesso!', 'success');
+  } catch(e) { toast('Erro ao finalizar tarefa: ' + e.message, 'error'); }
+};
+
+// Modal handlers
+document.getElementById('btnNovaTarefaDelegada')?.addEventListener('click', () => {
+  const modal = document.getElementById('modalNovaTarefaDelegada');
+  const select = document.getElementById('ntdAtribuidoPara');
+  if (select) {
+    const dynamicPupilos = getPupilosDisponiveis();
+    select.innerHTML = '<option value="">Selecione um usuário...</option>' + 
+      dynamicPupilos.map(p => `<option value="${p}">${p}</option>`).join('');
+  }
+  modal?.classList.add('open');
+});
+
+document.getElementById('btnCancelarTarefaDelegada')?.addEventListener('click', () => {
+  document.getElementById('modalNovaTarefaDelegada')?.classList.remove('open');
+});
+
+document.getElementById('formNovaTarefaDelegada')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const titulo = document.getElementById('ntdTitulo').value;
+  const descricao = document.getElementById('ntdDescricao').value;
+  const pupilo = document.getElementById('ntdAtribuidoPara').value;
+  
+  if (!titulo || !pupilo) return;
+  
+  try {
+    const payload = {
+      titulo,
+      descricao,
+      atribuido_para: pupilo,
+      atribuido_por: window.currentUser?.username || 'Sistema',
+      status: 'PENDENTE'
+    };
+    
+    await criarTarefaDelegada(payload);
+    tarefasDelegadas = await getTarefasDelegadas();
+    renderGestaoTarefas();
+    
+    document.getElementById('modalNovaTarefaDelegada')?.classList.remove('open');
+    document.getElementById('formNovaTarefaDelegada').reset();
+    toast('Tarefa delegada com sucesso!', 'success');
+  } catch(err) {
+    toast('Erro ao delegar tarefa: ' + err.message, 'error');
+  }
+});
 
 
