@@ -3730,7 +3730,14 @@ function renderMinhasTarefas(onlyUpdateTimers = false) {
 
   const myTasks = tarefasDelegadas.filter(t => t.atribuido_para === currentUser);
   if (myTasks.length === 0) {
-    container.innerHTML = '<div style="text-align:center; padding:3rem; color:var(--muted);"><h3>Tudo tranquilo por aqui!</h3><p>Você não tem tarefas atribuídas.</p></div>';
+    container.innerHTML = `
+      <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 50vh; text-align: center; color: var(--muted); background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1); border-radius: 16px; margin: 2rem auto; max-width: 600px; padding: 3rem;">
+        <svg style="width: 64px; height: 64px; opacity: 0.5; margin-bottom: 1rem; color: var(--primary);" fill="none" stroke="currentColor" stroke-width="1" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <h3 style="margin: 0 0 0.75rem 0; font-size: 1.5rem; color: var(--text); font-weight: 500;">Tudo tranquilo por aqui!</h3>
+        <p style="margin: 0; font-size: 1rem; line-height: 1.6;">Você não tem tarefas atribuídas no momento.<br>Aproveite para tomar um café ou adiantar outras pendências.</p>
+      </div>`;
     return;
   }
 
