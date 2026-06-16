@@ -157,10 +157,12 @@ export function calcularDiasFora(row) {
 export function enriquecerRegistro(row) {
   const trimIfStr = (val) => (typeof val === 'string' ? val.trim() : val);
   const normLinha = (val) => {
-    let s = trimIfStr(val);
-    if (s && s.toUpperCase().startsWith('LINHAS ')) {
-      s = s.replace(/^LINHAS /i, 'LINHA ');
-    }
+    let s = typeof val === 'string' ? val.replace(/\u00A0/g, ' ').replace(/\s+/g, ' ').trim().toUpperCase() : val;
+    if (!s) return s;
+    if (s.startsWith('LINHAS ')) s = s.replace(/^LINHAS /i, 'LINHA ');
+    if (/^\d{2}/.test(s)) s = 'LINHA ' + s;
+    if (s === 'OUTROS') s = 'OUTRO';
+    if (s === 'TODAS') s = 'TODOS';
     return s;
   };
   return {
