@@ -2516,7 +2516,7 @@ function renderTabelaPreventivaFE() {
       <td>${r.sugestao || r.resp_fabrica || '—'}</td>
       <td><span class="badge ${r.status_auditoria === 'FINALIZADO' ? 'badge-success' : r.status_auditoria ? 'badge-warning' : ''}">${r.status_auditoria || '—'}</span></td>
       <td>
-        <button type="button" class="btn-icon" onclick="abrirDetalhePreventivaFEPanel('${r.id}')" title="Ver Detalhes" style="background:var(--primary);color:#000;padding:0.4rem 0.8rem;border-radius:6px;font-size:0.8rem;width:auto;font-family:inherit;">Ver</button>
+        <button type="button" class="btn-icon" onclick="abrirDetalhePreventivaFEPanel('${r.id}')" title="Ver Detalhes" style="margin-right: 0.5rem; background: var(--primary); color: white; padding: 0.4rem 0.8rem; border-radius: 6px; font-size: 0.8rem; width: auto; font-family: inherit;">Ver Detalhes</button>
         <button type="button" class="btn-icon" onclick="abrirFormularioPreventivaFE('${r.id}')" title="Editar">✏️</button>
       </td>
     </tr>`;
@@ -2701,10 +2701,49 @@ window.abrirDetalhePreventivaFEPanel = function(id) {
   ).join('');
   document.getElementById('drillInsight').style.display = 'none';
   const desc = r.atividades_descricoes?.[0] || r.descricao || 'Não informado';
+  
+  // Extrair materiais se houver
+  let rawMat;
+  if (r.material && Array.isArray(r.material) && r.material.length > 0) {
+    rawMat = r.material.join('\n');
+  } else if (r.material && !Array.isArray(r.material) && String(r.material) !== 'undefined' && String(r.material).trim() !== '') {
+    rawMat = String(r.material);
+  } else {
+    rawMat = 'Não informado';
+  }
+
+  const formatCards = (text) => {
+    const safeText = String(text || '');
+    if (!safeText || safeText.trim() === '' || safeText === 'Sem descrição' || safeText === 'Nenhum material especificado' || safeText === 'undefined') {
+      return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">Não informado</p>`;
+    }
+    const steps = safeText.split(/\n/).map(s => s.trim().replace(/^[-–]/, '').trim()).filter(s => s.length > 1);
+    if (steps.length === 0) return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">${safeText}</p>`;
+    return steps.map((step, idx) => `
+      <div style="background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <span style="background: rgba(212, 175, 55, 0.15); color: var(--primary); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; flex-shrink: 0; border: 1px solid rgba(212, 175, 55, 0.3);">${idx + 1}</span>
+        <span style="font-size: 0.95rem; line-height: 1.5; color: var(--text); padding-top: 2px;">${step}</span>
+      </div>
+    `).join('');
+  };
+
+  const descHTML = formatCards(desc);
+  const matHTML = formatCards(rawMat);
+
   document.getElementById('drillLista').innerHTML = `
     <article class="drill-item" style="padding:1.5rem;background:transparent;border:none;">
-      <h4 style="margin-top:0;color:var(--text);margin-bottom:1rem;">Descrição da Atividade</h4>
-      <div style="background:var(--bg);padding:1rem;border-radius:8px;border:1px solid var(--border);line-height:1.6;">${desc}</div>
+      <h4 style="margin-top:0;color:var(--text);margin-bottom:1rem;font-size:1.05rem;display:flex;align-items:center;gap:0.5rem;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+        Descrição da Atividade
+      </h4>
+      ${descHTML}
+      
+      <h4 style="margin-top:2rem;color:var(--text);margin-bottom:1rem;font-size:1.05rem;display:flex;align-items:center;gap:0.5rem;">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+        Materiais Necessários
+      </h4>
+      ${matHTML}
+
       <div class="drill-item-actions" style="margin-top:2rem;">
         <button type="button" class="btn-primary" onclick="abrirFormularioPreventivaFE('${r.id}');fecharDrilldown();" style="width:100%;">✏️ Editar Atividade</button>
       </div>
