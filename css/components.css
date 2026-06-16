@@ -6,3 +6,14 @@ body.light-mode .skeleton { background: linear-gradient(90deg, var(--bg2) 25%, r
 
 body.privacy-mode .kpi-card .value { filter: blur(6px) grayscale(50%); opacity: 0.6; pointer-events: none; user-select: none; }
 .kpi-card .value { transition: filter 0.3s ease, opacity 0.3s ease; }
+
+/* SweetAlert2 Theme Overrides */
+.swal2-popup { background: var(--surface-solid) !important; border: 1px solid var(--border) !important; border-radius: var(--radius) !important; color: var(--text) !important; box-shadow: var(--shadow) !important; font-family: 'DM Sans', sans-serif !important; }
+.swal2-title { color: var(--text) !important; font-weight: 500 !important; }
+.swal2-html-container { color: var(--muted) !important; }
+.swal2-confirm.swal2-styled { background: var(--gold) !important; color: #fff !important; border-radius: 6px !important; font-weight: 600 !important; box-shadow: none !important; }
+.swal2-cancel.swal2-styled { background: transparent !important; border: 1px solid var(--border) !important; color: var(--text) !important; border-radius: 6px !important; font-weight: 500 !important; }
+.swal2-icon.swal2-info { border-color: var(--accent) !important; color: var(--accent) !important; }
+.swal2-icon.swal2-warning { border-color: var(--gold) !important; color: var(--gold) !important; }
+.swal2-icon.swal2-success { border-color: var(--success) !important; color: var(--success) !important; }
+.swal2-icon.swal2-error { border-color: var(--danger) !important; color: var(--danger) !important; }
