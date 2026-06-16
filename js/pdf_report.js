@@ -138,7 +138,7 @@ function buildHeader(title) {
     <div class="pdf-header">
       <img src="img/BALL.png" alt="Ball Corporation" />
       <div class="pdf-title-container">
-        <h1 class="pdf-title">Controle de Custos</h1>
+        <h1 class="pdf-title">Manutenção</h1>
         <div class="pdf-subtitle">${title} &bull; Gerado em: ${dataHora}</div>
       </div>
     </div>
