@@ -288,6 +288,22 @@ export async function initExcelImportPreventivaFrontend(supabase, toast, atualiz
         const descricao = row[COLS.DESCRICAO] ? String(row[COLS.DESCRICAO]).trim() : '';
         if (!descricao) continue;
 
+        // Tentar encontrar coluna de material. Como os headers podem estar na linha 1, 
+        // procuramos o índice da coluna que contém 'MATERIAL' ou 'PEÇAS'.
+        let material = '';
+        if (!COLS.hasOwnProperty('MATERIAL')) {
+          const headerRow = rows[1] || rows[0];
+          const matIdx = headerRow.findIndex(h => {
+             const ht = String(h).toUpperCase();
+             return ht.includes('MATERIAL') || ht.includes('MATERIAIS') || ht.includes('PEÇAS') || ht.includes('PECAS');
+          });
+          COLS.MATERIAL = matIdx >= 0 ? matIdx : -1;
+        }
+        
+        if (COLS.MATERIAL >= 0 && row[COLS.MATERIAL]) {
+          material = String(row[COLS.MATERIAL]).trim();
+        }
+
         // Gerar identificador sequencial por máquina
         if (!indexPerMaquina[lastMaquina]) indexPerMaquina[lastMaquina] = 1;
         const idx = indexPerMaquina[lastMaquina]++;
@@ -297,7 +313,7 @@ export async function initExcelImportPreventivaFrontend(supabase, toast, atualiz
           identificador,
           maquina: lastMaquina,
           atividades_descricoes: [descricao],
-          material: [],
+          material: material ? [material] : [],
           plano_padrao: 'S',
           duracao_horas: parseNum(row[COLS.DURACAO]),
           frequencia_meses: parseNum(row[COLS.FREQUENCIA]) || null,
