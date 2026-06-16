@@ -1373,9 +1373,24 @@ async function init() {
 
     for (const records of map.values()) {
       let selected = records.find(r => r.mes === mes && r.linha === linha);
+      let padrao = records.find(r => !r.mes || r.mes === '' || String(r.mes).toUpperCase() === 'TODOS' || String(r.mes) === 'null' || String(r.linha).toUpperCase() === 'PADRAO');
       
       if (!selected) {
-        selected = records.find(r => !r.mes || r.mes === '' || String(r.mes).toUpperCase() === 'TODOS' || String(r.mes) === 'null' || String(r.linha).toUpperCase() === 'PADRAO');
+        selected = padrao;
+      } else if (padrao) {
+        // Se existe o selecionado (agendamento específico) mas tem campos em branco, herda do PADRÃO
+        const clone = { ...selected };
+        if (!clone.material || (Array.isArray(clone.material) && clone.material.length === 0) || (typeof clone.material === 'string' && clone.material.trim() === '')) {
+          clone.material = padrao.material;
+        }
+        if (!clone.atividades_descricoes || (Array.isArray(clone.atividades_descricoes) && clone.atividades_descricoes.length === 0)) {
+          clone.atividades_descricoes = padrao.atividades_descricoes;
+        }
+        if (!clone.descricao && padrao.descricao) clone.descricao = padrao.descricao;
+        if (!clone.duracao_horas && padrao.duracao_horas) clone.duracao_horas = padrao.duracao_horas;
+        if (!clone.hh_mec && padrao.hh_mec) clone.hh_mec = padrao.hh_mec;
+        if (!clone.hh_eletrico && padrao.hh_eletrico) clone.hh_eletrico = padrao.hh_eletrico;
+        selected = clone;
       }
       
       if (!selected && records.length > 0) {
