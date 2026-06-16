@@ -412,6 +412,20 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
     return;
   }
 
+  // DEBUG: Log all field names and material values to console
+  console.log('[PDF DEBUG] Total atividades:', atividades.length);
+  if (atividades.length > 0) {
+    console.log('[PDF DEBUG] Campos do primeiro registro:', Object.keys(atividades[0]));
+    atividades.slice(0, 5).forEach((a, i) => {
+      console.log(`[PDF DEBUG] Atividade ${i} (${a.identificador}):`, {
+        material: a.material,
+        material_type: typeof a.material,
+        material_isArray: Array.isArray(a.material),
+        allKeys: Object.keys(a).filter(k => k.toLowerCase().includes('mat'))
+      });
+    });
+  }
+
   const porMaquina = {};
   atividades.forEach(a => {
     const maq = a.maquina || 'Geral';
@@ -603,7 +617,7 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
     image:        { type: 'jpeg', quality: 1.0 },
     html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'], avoid: ['tr', '.machine-section'] }
+    pagebreak:    { mode: ['css', 'legacy'] }
   };
 
   try {
