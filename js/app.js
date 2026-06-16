@@ -1333,6 +1333,7 @@ async function init() {
     { key: 'linha', label: 'Linha', width: 10 },
     { key: 'mes', label: 'Mês', width: 15 },
     { key: 'atividades_descricoes', label: 'Descrição/Atividade', width: 50 },
+    { key: 'material', label: 'Materiais Necessários', width: 40 },
     { key: 'duracao_horas', label: 'Duração (h)', width: 12 },
     { key: 'hh_mec', label: 'HH Mec', width: 10 },
     { key: 'hh_eletrico', label: 'HH Elétrico', width: 10 },
@@ -1345,14 +1346,16 @@ async function init() {
   $('#btnExportPreventiva')?.addEventListener('click', () => {
     const data = aplicarFiltrosPreventiva().map(r => ({
       ...r,
-      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || '')
+      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || ''),
+      material: Array.isArray(r.material) ? r.material.filter(Boolean).join('\n') : (r.material || '')
     }));
     exportarExcel(data, 'preventiva-backend', COLUNAS_PREVENTIVA);
   });
   $('#btnExportPreventivaFE')?.addEventListener('click', () => {
     const data = aplicarFiltrosFrontend().map(r => ({
       ...r,
-      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || '')
+      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || ''),
+      material: Array.isArray(r.material) ? r.material.filter(Boolean).join('\n') : (r.material || '')
     }));
     exportarExcel(data, 'preventiva-frontend', COLUNAS_PREVENTIVA);
   });
@@ -1421,7 +1424,8 @@ async function init() {
     const { data, prefix } = getLinhaDataParaExportacao();
     const formattedData = data.map(r => ({
       ...r,
-      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || '')
+      atividades_descricoes: Array.isArray(r.atividades_descricoes) ? r.atividades_descricoes.join('\n') : (r.descricao || ''),
+      material: Array.isArray(r.material) ? r.material.filter(Boolean).join('\n') : (r.material || '')
     }));
 
     const filename = `${prefix}-${estadoPlanos.linha}-${estadoPlanos.mes}`;
