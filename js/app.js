@@ -12,7 +12,7 @@ import {
   registrosDoMesmoItem,
   normalizarNatureza,
   agregarFornecedores,
-} from './logic.js';
+} from './logic.js?v=2';
 import { initCalendario, updateCalendario } from './calendario.js?v=2';
 import { 
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 

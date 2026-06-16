@@ -292,15 +292,15 @@ export function totaisKPI(registros) {
 
 export function aplicarFiltros(registros, filtros) {
   return registros.filter((r) => {
-    if (filtros.natureza && filtros.natureza !== 'TODOS' && String(r.natureza || '').trim().toUpperCase() !== filtros.natureza) return false;
+    if (filtros.natureza && filtros.natureza !== 'TODOS' && String(r.natureza || '').replace(/\u00A0/g, ' ').trim().toUpperCase() !== filtros.natureza) return false;
     if (filtros.status && filtros.status !== 'TODOS') {
-      const st = String(r.status || calcularStatus(r) || '').trim().toUpperCase();
+      const st = String(r.status || calcularStatus(r) || '').replace(/\u00A0/g, ' ').trim().toUpperCase();
       if (st !== filtros.status) return false;
     }
-    if (filtros.criticidade && filtros.criticidade !== 'TODOS' && String(r.criticidade || '').trim().toUpperCase() !== filtros.criticidade) return false;
-    if (filtros.linha && filtros.linha !== 'TODOS' && String(r.linha || '').trim().toUpperCase() !== filtros.linha) return false;
-    if (filtros.maquina && filtros.maquina !== 'TODOS' && String(r.maquina || '').trim().toUpperCase() !== filtros.maquina) return false;
-    if (filtros.fornecedor && filtros.fornecedor !== 'TODOS' && String(r.fornecedor || '').trim().toUpperCase() !== filtros.fornecedor) return false;
+    if (filtros.criticidade && filtros.criticidade !== 'TODOS' && String(r.criticidade || '').replace(/\u00A0/g, ' ').trim().toUpperCase() !== filtros.criticidade) return false;
+    if (filtros.linha && filtros.linha !== 'TODOS' && String(r.linha || '').replace(/\u00A0/g, ' ').trim().toUpperCase() !== filtros.linha) return false;
+    if (filtros.maquina && filtros.maquina !== 'TODOS' && String(r.maquina || '').replace(/\u00A0/g, ' ').trim().toUpperCase() !== filtros.maquina) return false;
+    if (filtros.fornecedor && filtros.fornecedor !== 'TODOS' && String(r.fornecedor || '').replace(/\u00A0/g, ' ').trim().toUpperCase() !== filtros.fornecedor) return false;
     if (filtros.busca) {
       const q = filtros.busca.toLowerCase();
       const blob = [r.item, r.descricao_falha, r.rc, r.po, r.solicitante, r.orcamento, r.maquina, r.linha, r.fornecedor, r.status, r.nf_saida]
@@ -391,5 +391,5 @@ export function agregarFornecedores(registros) {
 }
 
 export function opcoesUnicas(registros, campo) {
-  return [...new Set(registros.map((r) => String(r[campo] || '').trim().toUpperCase()).filter(Boolean))].sort();
+  return [...new Set(registros.map((r) => String(r[campo] || '').replace(/\u00A0/g, ' ').trim().toUpperCase()).filter(Boolean))].sort();
 }
