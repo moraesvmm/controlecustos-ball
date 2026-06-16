@@ -1,4 +1,4 @@
-import { fmtMoeda } from './ui.js';
+import { fmtMoeda, loadScript } from './ui.js';
 import { agregarFornecedores } from './logic.js';
 
 // Estilos injetados para o PDF corporativo
@@ -202,11 +202,16 @@ function buildHeader(title) {
 function cloneChartAsImage(canvasId) {
   const canvas = document.getElementById(canvasId);
   if (!canvas) return '';
-  // Convert chart to image data URL so it renders perfectly in PDF without JS issues
   return `<img src="${canvas.toDataURL('image/png', 1.0)}" />`;
 }
 
 export async function gerarRelatorioExecutivoPDF(registros) {
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+  } catch (e) {
+    alert('Erro ao carregar a biblioteca de PDF. Verifique sua conexão.');
+    return;
+  }
   if (typeof html2pdf === 'undefined') {
     alert('A biblioteca PDF não foi carregada.');
     return;
@@ -439,6 +444,9 @@ export async function gerarRelatorioExecutivoPDF(registros) {
 }
 
 export async function gerarRelatorioSLAPDF(registros) {
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+  } catch (e) {}
   if (typeof html2pdf === 'undefined') {
     alert('A biblioteca PDF não foi carregada.');
     return;
@@ -566,8 +574,11 @@ export async function gerarRelatorioSLAPDF(registros) {
 }
 
 export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+  } catch (e) {}
   if (typeof html2pdf === 'undefined') {
-    alert('A biblioteca PDF não foi carregada.');
+    alert('A biblioteca de PDF não foi carregada.');
     return;
   }
 

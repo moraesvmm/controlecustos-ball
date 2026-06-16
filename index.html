@@ -11,14 +11,11 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <link rel="stylesheet" href="css/styles.css?v=59">
   <link rel="stylesheet" href="css/components.css?v=59">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
   <script src="js/env.runtime.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
   <link rel="stylesheet" href="css/sweetalert2-dark.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
 
@@ -183,14 +180,14 @@
         <section class="kpi-grid">
           <div class="kpi-card">
             <div class="label">Registros</div>
-            <div class="value" id="kpiTotal">—</div>
+            <div class="value skeleton" id="kpiTotal">000</div>
           </div>
           <div class="kpi-card kpi-gold tooltip-container" id="cardValorTotal" style="cursor: pointer;">
             <div class="label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
               <span>VALOR TOTAL</span>
               <span style="font-size: 0.8rem; opacity: 0.6; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 50%;">?</span>
             </div>
-            <div class="value" id="kpiValor">-</div>
+            <div class="value skeleton" id="kpiValor">R$ 000.000,00</div>
             <div class="tooltip-card" style="width: 250px;">
               <h4 style="margin-bottom:0.5rem;color:var(--text-primary);font-size:0.95rem;">Valor Total</h4>
               <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Soma do valor financeiro de todas as RCs filtradas no momento (exceto Canceladas).</p>
@@ -198,15 +195,15 @@
           </div>
           <div class="kpi-card">
             <div class="label">Previsto (mês+)</div>
-            <div class="value" id="kpiPrevisto">—</div>
+            <div class="value skeleton" id="kpiPrevisto">R$ 000.000,00</div>
           </div>
           <div class="kpi-card">
             <div class="label">Recebido</div>
-            <div class="value" id="kpiRecebido">—</div>
+            <div class="value skeleton" id="kpiRecebido">R$ 000.000,00</div>
           </div>
           <div class="kpi-card kpi-alert kpi-clickable" id="kpiCardAtrasados" role="button" tabindex="0" title="Clique para ver itens atrasados">
             <div class="label">Atrasados</div>
-            <div class="value" id="kpiAtrasados">—</div>
+            <div class="value skeleton" id="kpiAtrasados">000</div>
           </div>
           <div class="kpi-card kpi-wide">
             <div class="label">Por status (clique para filtrar)</div>
@@ -252,9 +249,9 @@
         </header>
         <p class="section-hint" style="margin-bottom: 0.75rem;">Clique em qualquer barra do gráfico para abrir o detalhamento dos gastos.</p>
         <div class="charts-grid">
-          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div></div>
-          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartMes"></canvas></div></div>
-          <div class="chart-box chart-wide"><div class="chart-canvas-wrap chart-tall"><canvas id="chartMaquina"></canvas></div></div>
+          <div class="chart-box skeleton"><div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div></div>
+          <div class="chart-box skeleton"><div class="chart-canvas-wrap"><canvas id="chartMes"></canvas></div></div>
+          <div class="chart-box chart-wide skeleton"><div class="chart-canvas-wrap chart-tall"><canvas id="chartMaquina"></canvas></div></div>
         </div>
         <h3 style="margin: 1.5rem 0 0.25rem; color: var(--text);">Status de Retorno por Natureza (dias em aberto)</h3>
         <p class="section-hint" style="margin-bottom: 0.75rem;">Clique nas fatias para detalhar itens em aberto por tempo de saída.</p>
@@ -1500,6 +1497,6 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=92"></script>
+  <script type="module" src="js/app.js?v=93"></script>
 </body>
 </html>

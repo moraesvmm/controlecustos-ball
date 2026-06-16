@@ -238,6 +238,7 @@ export function renderDashboardCharts(registros) {
       },
     });
     chartInstances.push(ch1);
+    ctx1.closest('.chart-box')?.classList.remove('skeleton');
   }
 
   const ctx2 = document.getElementById('chartMes');
@@ -283,6 +284,7 @@ export function renderDashboardCharts(registros) {
       },
     });
     chartInstances.push(ch2);
+    ctx2.closest('.chart-box')?.classList.remove('skeleton');
   }
 
   const ctx3 = document.getElementById('chartMaquina');
@@ -323,6 +325,7 @@ export function renderDashboardCharts(registros) {
       },
     });
     chartInstances.push(ch3);
+    ctx3.closest('.chart-box')?.classList.remove('skeleton');
   }
 
 

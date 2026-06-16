@@ -34,6 +34,19 @@ export function confirmar(msg) {
   return window.confirm(msg);
 }
 
+export function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) {
+      return resolve();
+    }
+    const script = document.createElement('script');
+    script.src = src;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+}
+
 export const COLUNAS_TABELA = [
   { key: 'item_id', label: 'ID', width: 56 },
   { key: 'sinal', label: 'Sinal', width: 70 },
@@ -99,8 +112,14 @@ export function valorCelula(r, col) {
 }
 
 export async function exportarExcel(registros, nome = 'controle-rc', customCols = null) {
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js');
+  } catch (e) {
+    alert('Erro ao carregar biblioteca ExcelJS. Verifique sua conexão.');
+    return;
+  }
   if (typeof ExcelJS === 'undefined') {
-    alert('Biblioteca ExcelJS não carregada. Atualize a página ou verifique sua conexão.');
+    alert('Biblioteca ExcelJS não carregada.');
     return;
   }
 

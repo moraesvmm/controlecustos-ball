@@ -19,7 +19,7 @@ carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, si
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
 getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas } from './db.js';
-import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=4';
+import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=5';
 import {
   COLUNAS_TABELA,
   valorCelula,
@@ -100,10 +100,15 @@ function renderKPIs() {
   const atrasados = registrosAtrasados(data);
 
   $('#kpiTotal').textContent = k.total;
+  $('#kpiTotal').classList.remove('skeleton');
   $('#kpiValor').textContent = k.totalValor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  $('#kpiValor').classList.remove('skeleton');
   $('#kpiPrevisto').textContent = k.totalPrevisto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  $('#kpiPrevisto').classList.remove('skeleton');
   $('#kpiRecebido').textContent = k.totalRecebido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  $('#kpiRecebido').classList.remove('skeleton');
   $('#kpiAtrasados').textContent = atrasados.length;
+  $('#kpiAtrasados').classList.remove('skeleton');
 
   const chips = Object.entries(k.porStatus)
     .map(([s, n]) => `<button type="button" class="status-chip" data-status="${s}">${s} <em>${n}</em></button>`)
