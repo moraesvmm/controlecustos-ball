@@ -3915,3 +3915,13 @@ document.getElementById('formNovaTarefaDelegada')?.addEventListener('submit', as
 });
 
 
+
+
+document.getElementById('btnTogglePrivacy')?.addEventListener('click', () => {
+  document.body.classList.toggle('privacy-mode');
+  const isPrivacy = document.body.classList.contains('privacy-mode');
+  const iconOpen = document.getElementById('iconPrivacyOpen');
+  const iconClosed = document.getElementById('iconPrivacyClosed');
+  if (iconOpen) iconOpen.style.display = isPrivacy ? 'none' : 'block';
+  if (iconClosed) iconClosed.style.display = isPrivacy ? 'block' : 'none';
+});

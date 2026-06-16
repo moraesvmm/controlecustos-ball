@@ -3,3 +3,6 @@
 .skeleton { background: linear-gradient(90deg, var(--bg2) 25%, rgba(255,255,255,0.08) 50%, var(--bg2) 75%); background-size: 200% 100%; animation: skeleton-loading 1.5s infinite linear; color: transparent !important; border-radius: 8px; pointer-events: none; } 
 body.light-mode .skeleton { background: linear-gradient(90deg, var(--bg2) 25%, rgba(0,0,0,0.08) 50%, var(--bg2) 75%); background-size: 200% 100%; } 
 @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+body.privacy-mode .kpi-card .value { filter: blur(6px) grayscale(50%); opacity: 0.6; pointer-events: none; user-select: none; }
+.kpi-card .value { transition: filter 0.3s ease, opacity 0.3s ease; }
