@@ -32,7 +32,7 @@ import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownP
 import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
-import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarRelatorioGeralPDF, gerarRelatorioPlanosPrevPDF } from './pdf_report.js?v=9';
+import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarRelatorioGeralPDF, gerarRelatorioPlanosPrevPDF } from './pdf_report.js?v=10';
 
 let registros = [];
 let registrosPreventiva = [];

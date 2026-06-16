@@ -1,4 +1,4 @@
-import { fmtMoeda } from './ui.js';
+﻿import { fmtMoeda } from './ui.js';
 import { agregarFornecedores } from './logic.js';
 
 // Estilos injetados para o PDF corporativo
@@ -192,7 +192,7 @@ function buildHeader(title) {
     <div class="pdf-header">
       <img src="img/BALL.png" alt="Ball Corporation" />
       <div class="pdf-title-container">
-        <h1 class="pdf-title">Manutenção</h1>
+        <h1 class="pdf-title">ManutenÃ§Ã£o</h1>
         <div class="pdf-subtitle">${title} &bull; Gerado em: ${dataHora}</div>
       </div>
     </div>
@@ -208,11 +208,11 @@ function cloneChartAsImage(canvasId) {
 
 export async function gerarRelatorioExecutivoPDF(registros) {
   if (typeof html2pdf === 'undefined') {
-    alert('A biblioteca PDF não foi carregada.');
+    alert('A biblioteca PDF nÃ£o foi carregada.');
     return;
   }
 
-  // 1. Cálculos de KPIs Executivos
+  // 1. CÃ¡lculos de KPIs Executivos
   const totalRegistros = registros.length;
   let atrasadosCount = 0;
   let valorAtrasado = 0;
@@ -267,7 +267,7 @@ export async function gerarRelatorioExecutivoPDF(registros) {
             maquina: r.maquina || 'Geral'
           });
 
-          const f = r.fornecedor || 'NÃO INFORMADO';
+          const f = r.fornecedor || 'NÃƒO INFORMADO';
           if (!fornecedoresAtrasoMap[f]) fornecedoresAtrasoMap[f] = { count: 0, valor: 0 };
           fornecedoresAtrasoMap[f].count++;
           fornecedoresAtrasoMap[f].valor += val;
@@ -314,7 +314,7 @@ export async function gerarRelatorioExecutivoPDF(registros) {
       `;
     }).join('');
 
-  // 2. Montar o DOM do Relatório
+  // 2. Montar o DOM do RelatÃ³rio
   const container = document.createElement('div');
   container.className = 'pdf-report-container';
   
@@ -347,7 +347,7 @@ export async function gerarRelatorioExecutivoPDF(registros) {
 
   container.innerHTML = `
     ${getPDFStyles()}
-    ${buildHeader('Relatório Executivo Analítico')}
+    ${buildHeader('RelatÃ³rio Executivo AnalÃ­tico')}
     
     <div class="pdf-kpi-row">
       <div class="pdf-kpi-card" style="border-top: 4px solid #3b82f6;">
@@ -363,13 +363,13 @@ export async function gerarRelatorioExecutivoPDF(registros) {
       <div class="pdf-kpi-card" style="border-top: 4px solid #ef4444; background: #fff1f2;">
         <div class="pdf-kpi-label" style="color: #be123c;">Capital Retido em Atrasos</div>
         <div class="pdf-kpi-value" style="color: #e11d48;">${fmtMoeda(valorAtrasado)}</div>
-        <div class="pdf-kpi-sub" style="color: #be123c;">Ação corretiva sugerida</div>
+        <div class="pdf-kpi-sub" style="color: #be123c;">AÃ§Ã£o corretiva sugerida</div>
       </div>
     </div>
 
     <div class="pdf-flex-row" style="page-break-inside: avoid;">
       <div class="pdf-flex-col" style="flex: 1.5;">
-        <div class="pdf-section-title">Análise de Status (Pipeline)</div>
+        <div class="pdf-section-title">AnÃ¡lise de Status (Pipeline)</div>
         <div class="pdf-pipeline-container">
           ${pipelineRows}
         </div>
@@ -379,13 +379,13 @@ export async function gerarRelatorioExecutivoPDF(registros) {
         <div class="pdf-natureza-box">
           <div class="pdf-nat-item"><span class="pdf-nat-color" style="background:#3b82f6;"></span> Consertos: <strong>${naturezas.conserto}</strong></div>
           <div class="pdf-nat-item"><span class="pdf-nat-color" style="background:#10b981;"></span> Compras: <strong>${naturezas.compra}</strong></div>
-          <div class="pdf-nat-item"><span class="pdf-nat-color" style="background:#8b5cf6;"></span> Serviços: <strong>${naturezas.servico}</strong></div>
+          <div class="pdf-nat-item"><span class="pdf-nat-color" style="background:#8b5cf6;"></span> ServiÃ§os: <strong>${naturezas.servico}</strong></div>
         </div>
       </div>
     </div>
 
     <div style="page-break-inside: avoid;">
-      <div class="pdf-section-title" style="margin-top: 40px;">Top 5 Fornecedores (Concentração de Atraso)</div>
+      <div class="pdf-section-title" style="margin-top: 40px;">Top 5 Fornecedores (ConcentraÃ§Ã£o de Atraso)</div>
       <table class="pdf-table pdf-table-alt">
         <thead>
           <tr>
@@ -405,10 +405,10 @@ export async function gerarRelatorioExecutivoPDF(registros) {
       <table class="pdf-table">
         <thead>
           <tr>
-            <th>Identificação (RC/Item)</th>
-            <th>Máquina</th>
+            <th>IdentificaÃ§Ã£o (RC/Item)</th>
+            <th>MÃ¡quina</th>
             <th>Fornecedor</th>
-            <th>Previsão Original</th>
+            <th>PrevisÃ£o Original</th>
             <th>Tempo Vencido</th>
             <th style="text-align:right;">Valor Retido (R$)</th>
           </tr>
@@ -420,14 +420,14 @@ export async function gerarRelatorioExecutivoPDF(registros) {
     </div>
   `;
 
-  // 3. Gerar PDF a partir de String HTML Pura (evita bugs de DOM/renderização em branco)
+  // 3. Gerar PDF a partir de String HTML Pura (evita bugs de DOM/renderizaÃ§Ã£o em branco)
   const htmlString = container.outerHTML;
 
   const opt = {
     margin:       0.4,
     filename:     `Relatorio_Executivo_${new Date().toISOString().slice(0,10)}.pdf`,
     image:        { type: 'jpeg', quality: 1.0 },
-    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 800 },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
@@ -440,11 +440,11 @@ export async function gerarRelatorioExecutivoPDF(registros) {
 
 export async function gerarRelatorioSLAPDF(registros) {
   if (typeof html2pdf === 'undefined') {
-    alert('A biblioteca PDF não foi carregada.');
+    alert('A biblioteca PDF nÃ£o foi carregada.');
     return;
   }
 
-  // 1. Cálculos de SLA
+  // 1. CÃ¡lculos de SLA
   let dados = agregarFornecedores(registros);
   
   dados.sort((a, b) => {
@@ -499,7 +499,7 @@ export async function gerarRelatorioSLAPDF(registros) {
 
   container.innerHTML = `
     ${getPDFStyles()}
-    ${buildHeader('Relatório SLA de Fornecedores')}
+    ${buildHeader('RelatÃ³rio SLA de Fornecedores')}
     
     <div class="pdf-kpi-row">
       <div class="pdf-kpi-card">
@@ -511,7 +511,7 @@ export async function gerarRelatorioSLAPDF(registros) {
         <div class="pdf-kpi-value" style="color: ${pontMedia < 80 ? '#ef4444' : '#10b981'};">${pontMedia.toFixed(1)}%</div>
       </div>
       <div class="pdf-kpi-card">
-        <div class="pdf-kpi-label">Atraso Médio Global</div>
+        <div class="pdf-kpi-label">Atraso MÃ©dio Global</div>
         <div class="pdf-kpi-value">${atrasoMedia.toFixed(1)} dias</div>
       </div>
     </div>
@@ -523,7 +523,7 @@ export async function gerarRelatorioSLAPDF(registros) {
           <th>Fornecedor Ofensor</th>
           <th>Total Entregue</th>
           <th>Pontualidade</th>
-          <th>Atraso Médio</th>
+          <th>Atraso MÃ©dio</th>
         </tr>
       </thead>
       <tbody>
@@ -538,7 +538,7 @@ export async function gerarRelatorioSLAPDF(registros) {
           <th>Fornecedor</th>
           <th>Total Entregue</th>
           <th>Pontualidade</th>
-          <th>Atraso Médio</th>
+          <th>Atraso MÃ©dio</th>
         </tr>
       </thead>
       <tbody>
@@ -554,7 +554,7 @@ export async function gerarRelatorioSLAPDF(registros) {
     margin:       0.4,
     filename:     `Relatorio_SLA_${new Date().toISOString().slice(0,10)}.pdf`,
     image:        { type: 'jpeg', quality: 1.0 },
-    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 800 },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
   };
 
@@ -567,7 +567,7 @@ export async function gerarRelatorioSLAPDF(registros) {
 
 export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
   if (typeof html2pdf === 'undefined') {
-    alert('A biblioteca PDF não foi carregada.');
+    alert('A biblioteca PDF nÃ£o foi carregada.');
     return;
   }
 
@@ -691,9 +691,9 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
     htmlContent += `
       <div class="machine-section">
       <div class="machine-header pdf-section-title" style="margin-top: 25px; margin-bottom: 5px; color: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: baseline;">
-        <span>MÁQUINA: ${maq}</span>
+        <span>MÃQUINA: ${maq}</span>
         <span style="font-size: 11px; font-weight: normal; color: #64748b;">
-          Total HH Mec: ${totalHhMec.toFixed(1)}h | Total HH Elét: ${totalHhElet.toFixed(1)}h | Duração Est.: ${totalDuracao.toFixed(1)}h
+          Total HH Mec: ${totalHhMec.toFixed(1)}h | Total HH ElÃ©t: ${totalHhElet.toFixed(1)}h | DuraÃ§Ã£o Est.: ${totalDuracao.toFixed(1)}h
         </span>
       </div>
       <table class="chk-table" style="margin-bottom: 5px;">
@@ -701,9 +701,9 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
           <tr>
             <th style="width: 30px;">[ ]</th>
             <th style="width: 120px;">ID DA ATIVIDADE</th>
-            <th>DESCRIÇÃO DA ATIVIDADE</th>
-            <th style="width: 20%;">MATERIAIS NECESSÁRIOS</th>
-            <th style="width: 25%;">OBSERVAÇÕES DO TÉCNICO</th>
+            <th>DESCRIÃ‡ÃƒO DA ATIVIDADE</th>
+            <th style="width: 20%;">MATERIAIS NECESSÃRIOS</th>
+            <th style="width: 25%;">OBSERVAÃ‡Ã•ES DO TÃ‰CNICO</th>
           </tr>
         </thead>
         <tbody>
@@ -716,7 +716,7 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
       } else if (a.descricao) {
         descricoes = [a.descricao];
       } else {
-        descricoes = ['(Sem descrição detalhada)'];
+        descricoes = ['(Sem descriÃ§Ã£o detalhada)'];
       }
 
       const idText = a.identificador || 'S/ ID';
@@ -725,14 +725,14 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
       const matList = parseMaterial(a.material);
       let printMat = '';
       if (matList.length > 0) {
-        printMat = matList.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="font-size: 9px; white-space: pre-wrap;">• ${m}</span></div>`).join('');
+        printMat = matList.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="font-size: 9px; white-space: pre-wrap;">â€¢ ${m}</span></div>`).join('');
       }
 
       // Also try to get materials from atividades_materiais if it exists
       if (!printMat && a.atividades_materiais) {
         const matFromAtiv = parseMaterial(a.atividades_materiais);
         if (matFromAtiv.length > 0) {
-          printMat = matFromAtiv.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="font-size: 9px; white-space: pre-wrap;">• ${m}</span></div>`).join('');
+          printMat = matFromAtiv.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="font-size: 9px; white-space: pre-wrap;">â€¢ ${m}</span></div>`).join('');
         }
       }
 
@@ -762,9 +762,9 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
 
   htmlContent += `
     <div class="signature-block">
-      <div class="signature-line">Assinatura do Técnico / Executante</div>
+      <div class="signature-line">Assinatura do TÃ©cnico / Executante</div>
       <div class="signature-line">Assinatura do Supervisor</div>
-      <div class="signature-line">Data de Execução</div>
+      <div class="signature-line">Data de ExecuÃ§Ã£o</div>
     </div>
   `;
 
@@ -774,7 +774,7 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
     margin:       0.4,
     filename:     `Checklist_Preventiva_${linha}_${mes}.pdf`,
     image:        { type: 'jpeg', quality: 1.0 },
-    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff', windowWidth: 800 },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
     pagebreak:    { mode: ['css', 'legacy'] }
   };
