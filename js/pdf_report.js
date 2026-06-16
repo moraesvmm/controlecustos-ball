@@ -423,6 +423,23 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
   const container = document.createElement('div');
   container.className = 'pdf-report-container';
 
+  // Helper to safely extract materials from various formats
+  function parseMaterial(mat) {
+    if (!mat) return [];
+    if (Array.isArray(mat)) return mat.filter(Boolean);
+    if (typeof mat === 'string') {
+      // Try JSON parse first (e.g. '["item1","item2"]')
+      try {
+        const parsed = JSON.parse(mat);
+        if (Array.isArray(parsed)) return parsed.filter(Boolean);
+      } catch(e) { /* not JSON */ }
+      // Split by newlines or semicolons
+      const items = mat.split(/[\n;]+/).map(s => s.trim()).filter(Boolean);
+      if (items.length > 0 && items[0] !== 'undefined') return items;
+    }
+    return [];
+  }
+
   let htmlContent = `
     ${getPDFStyles()}
     <style>
@@ -431,18 +448,11 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
       }
       .machine-section {
         margin-bottom: 30px;
+        page-break-inside: auto;
       }
-      .chk-table tr {
-        page-break-inside: avoid;
-        break-inside: avoid;
-      }
-      .chk-box {
-        display: inline-block;
-        width: 14px;
-        height: 14px;
-        border: 2px solid #64748b;
-        border-radius: 3px;
-        vertical-align: middle;
+      .machine-header {
+        page-break-after: avoid;
+        break-after: avoid;
       }
       .chk-table {
         margin-bottom: 20px;
@@ -460,6 +470,18 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
         font-weight: 600;
         text-transform: uppercase;
       }
+      .chk-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+      .chk-box {
+        display: inline-block;
+        width: 14px;
+        height: 14px;
+        border: 2px solid #64748b;
+        border-radius: 3px;
+        vertical-align: middle;
+      }
       .signature-block {
         display: flex;
         justify-content: space-between;
@@ -473,29 +495,6 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
         padding-top: 5px;
         font-size: 11px;
         color: #475569;
-      }
-      .activity-card {
-        border: 1px solid #cbd5e1;
-        border-radius: 6px;
-        padding: 15px;
-        margin-bottom: 15px;
-        page-break-inside: avoid;
-      }
-      .activity-header {
-        display: flex;
-        justify-content: space-between;
-        margin-bottom: 10px;
-        border-bottom: 1px solid #e2e8f0;
-        padding-bottom: 8px;
-      }
-      .activity-title {
-        font-size: 14px;
-        font-weight: 700;
-        color: #0f172a;
-      }
-      .activity-meta {
-        font-size: 10px;
-        color: #64748b;
       }
     </style>
     ${buildHeader(`Checklist de Preventiva: Linha ${linha} - ${mes}`)}
@@ -518,7 +517,7 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
 
     htmlContent += `
       <div class="machine-section">
-      <div class="pdf-section-title" style="margin-top: 25px; margin-bottom: 5px; color: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: baseline;">
+      <div class="machine-header pdf-section-title" style="margin-top: 25px; margin-bottom: 5px; color: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: baseline;">
         <span>MÁQUINA: ${maq}</span>
         <span style="font-size: 11px; font-weight: normal; color: #64748b;">
           Total HH Mec: ${totalHhMec.toFixed(1)}h | Total HH Elét: ${totalHhElet.toFixed(1)}h | Duração Est.: ${totalDuracao.toFixed(1)}h
@@ -549,11 +548,18 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
 
       const idText = a.identificador || 'S/ ID';
 
+      // Parse materials robustly
+      const matList = parseMaterial(a.material);
       let printMat = '';
-      if (Array.isArray(a.material) && a.material.length > 0) {
-        const matList = a.material.filter(Boolean);
-        if (matList.length > 0) {
-          printMat = matList.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="display:inline-block; min-width:10px; height:10px; border:1px solid #94a3b8; margin-top:2px;"></span><span style="font-size: 9px; white-space: pre-wrap;">${m}</span></div>`).join('');
+      if (matList.length > 0) {
+        printMat = matList.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="display:inline-block; min-width:10px; height:10px; border:1px solid #94a3b8; margin-top:2px;"></span><span style="font-size: 9px; white-space: pre-wrap;">${m}</span></div>`).join('');
+      }
+
+      // Also try to get materials from atividades_materiais if it exists
+      if (!printMat && a.atividades_materiais) {
+        const matFromAtiv = parseMaterial(a.atividades_materiais);
+        if (matFromAtiv.length > 0) {
+          printMat = matFromAtiv.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="display:inline-block; min-width:10px; height:10px; border:1px solid #94a3b8; margin-top:2px;"></span><span style="font-size: 9px; white-space: pre-wrap;">${m}</span></div>`).join('');
         }
       }
 
@@ -597,7 +603,7 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
     image:        { type: 'jpeg', quality: 1.0 },
     html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
-    pagebreak:    { mode: ['css', 'legacy'] }
+    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'], avoid: ['tr', '.machine-section'] }
   };
 
   try {
