@@ -566,14 +566,14 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
       const matList = parseMaterial(a.material);
       let printMat = '';
       if (matList.length > 0) {
-        printMat = matList.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="display:inline-block; min-width:10px; height:10px; border:1px solid #94a3b8; margin-top:2px;"></span><span style="font-size: 9px; white-space: pre-wrap;">${m}</span></div>`).join('');
+        printMat = matList.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="font-size: 9px; white-space: pre-wrap;">• ${m}</span></div>`).join('');
       }
 
       // Also try to get materials from atividades_materiais if it exists
       if (!printMat && a.atividades_materiais) {
         const matFromAtiv = parseMaterial(a.atividades_materiais);
         if (matFromAtiv.length > 0) {
-          printMat = matFromAtiv.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="display:inline-block; min-width:10px; height:10px; border:1px solid #94a3b8; margin-top:2px;"></span><span style="font-size: 9px; white-space: pre-wrap;">${m}</span></div>`).join('');
+          printMat = matFromAtiv.map(m => `<div style="margin-bottom: 4px; display:flex; align-items:flex-start; gap:4px;"><span style="font-size: 9px; white-space: pre-wrap;">• ${m}</span></div>`).join('');
         }
       }
 
