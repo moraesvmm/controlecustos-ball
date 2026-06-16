@@ -8,7 +8,7 @@ const getPDFStyles = () => `
       font-family: 'Inter', 'Segoe UI', sans-serif;
       background: white;
       color: #0f172a;
-      width: 710px;
+      width: 794px;
       padding: 40px;
       box-sizing: border-box;
       margin: 0;
@@ -18,117 +18,171 @@ const getPDFStyles = () => `
       display: flex;
       justify-content: space-between;
       align-items: center;
-      border-bottom: 2px solid #e2e8f0;
+      border-bottom: 2px solid #1e293b;
       padding-bottom: 20px;
       margin-bottom: 30px;
     }
     .pdf-header img {
-      max-height: 50px;
+      max-height: 45px;
     }
     .pdf-title-container {
       text-align: right;
     }
     .pdf-title {
-      font-size: 24px;
-      font-weight: 700;
+      font-size: 22px;
+      font-weight: 800;
       margin: 0;
       color: #0f172a;
       text-transform: uppercase;
-      letter-spacing: 1px;
+      letter-spacing: 0.5px;
     }
     .pdf-subtitle {
-      font-size: 12px;
+      font-size: 11px;
       color: #64748b;
-      margin-top: 5px;
+      margin-top: 4px;
+      font-weight: 500;
     }
     .pdf-kpi-row {
       display: flex;
-      gap: 20px;
-      margin-bottom: 30px;
+      gap: 15px;
+      margin-bottom: 35px;
     }
     .pdf-kpi-card {
       flex: 1;
       background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 15px 20px;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      border-radius: 6px;
+      padding: 16px 20px;
     }
     .pdf-kpi-label {
-      font-size: 11px;
+      font-size: 10px;
       text-transform: uppercase;
-      color: #64748b;
-      font-weight: 600;
-      margin-bottom: 5px;
+      color: #475569;
+      font-weight: 700;
+      margin-bottom: 8px;
+      letter-spacing: 0.5px;
     }
     .pdf-kpi-value {
-      font-size: 22px;
-      font-weight: 700;
+      font-size: 20px;
+      font-weight: 800;
       color: #0f172a;
+      margin-bottom: 4px;
+    }
+    .pdf-kpi-sub {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 500;
     }
     .pdf-section-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: #0f172a;
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 10px;
-      margin-top: 30px;
+      font-size: 13px;
+      font-weight: 800;
+      color: #1e293b;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 8px;
       margin-bottom: 20px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-    .pdf-charts-row {
+    .pdf-flex-row {
       display: flex;
-      gap: 20px;
-      margin-bottom: 30px;
-      page-break-inside: avoid;
+      gap: 30px;
+      margin-bottom: 20px;
     }
-    .pdf-chart-container {
+    .pdf-flex-col {
+      display: flex;
+      flex-direction: column;
+    }
+    .pdf-pipeline-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .pdf-pipeline-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 11px;
+    }
+    .pdf-pipeline-label {
+      width: 140px;
+      font-weight: 600;
+      color: #334155;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+    .pdf-pipeline-bar-bg {
       flex: 1;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 15px;
-      background: #fff;
+      background: #f1f5f9;
+      height: 8px;
+      border-radius: 4px;
+      overflow: hidden;
     }
-    .pdf-chart-container img {
-      width: 100%;
-      height: auto;
+    .pdf-pipeline-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+    }
+    .pdf-pipeline-value {
+      width: 30px;
+      text-align: right;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .pdf-natureza-box {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .pdf-nat-item {
+      display: flex;
+      align-items: center;
+      font-size: 12px;
+      color: #334155;
+    }
+    .pdf-nat-color {
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      margin-right: 10px;
     }
     table.pdf-table {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 30px;
-      font-size: 12px;
-      page-break-inside: avoid;
+      font-size: 11px;
+      margin-bottom: 10px;
     }
     table.pdf-table th {
-      background: #f1f5f9;
-      color: #334155;
-      font-weight: 600;
+      background: #f8fafc;
+      color: #475569;
+      font-weight: 700;
       text-align: left;
-      padding: 10px 12px;
+      padding: 12px 10px;
       border-bottom: 2px solid #cbd5e1;
       text-transform: uppercase;
-      font-size: 10px;
+      font-size: 9px;
+      letter-spacing: 0.5px;
     }
     table.pdf-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #e2e8f0;
-      color: #0f172a;
+      padding: 10px 10px;
+      border-bottom: 1px solid #f1f5f9;
     }
-    table.pdf-table tr:last-child td {
-      border-bottom: none;
+    table.pdf-table-alt th {
+      background: #fff;
+      border-top: 1px solid #e2e8f0;
     }
     .badge {
       display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 10px;
-      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
     }
-    .badge-danger { background: #fee2e2; color: #991b1b; }
-    .badge-warning { background: #fef3c7; color: #92400e; }
-    .badge-success { background: #dcfce3; color: #166534; }
+    .badge-danger { background: #fee2e2; color: #b91c1c; }
   </style>
 `;
 
@@ -162,20 +216,43 @@ export async function gerarRelatorioExecutivoPDF(registros) {
   const totalRegistros = registros.length;
   let atrasadosCount = 0;
   let valorAtrasado = 0;
-  
+  let valorTotal = 0;
+
+  let naturezas = { conserto: 0, compra: 0, servico: 0 };
+  let statusCounts = {
+    'ENTREGUE': 0,
+    'PENDENTE DE ENTREGA': 0,
+    'PENDENTE DE PEDIDO': 0,
+    'PENDENTE DE RC': 0,
+    'PENDENTE DE ORCAMENTO': 0,
+    'PENDENTE DE ENVIO': 0,
+    'PENDENTE': 0
+  };
+
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
 
   const topGargalos = [];
+  const fornecedoresAtrasoMap = {};
 
   registros.forEach(r => {
-    if (r.status !== 'ENTREGUE' && r.previsao_entrega) {
+    const val = Number(r.valor_previsto || r.valor || 0);
+    valorTotal += val;
+
+    const nat = (r.natureza || '').toUpperCase();
+    if (nat.includes('CONSERTO')) naturezas.conserto++;
+    else if (nat.includes('COMPRA')) naturezas.compra++;
+    else if (nat.includes('SERV')) naturezas.servico++;
+
+    const st = r.status || 'PENDENTE';
+    if (statusCounts[st] !== undefined) statusCounts[st]++;
+
+    if (st !== 'ENTREGUE' && r.previsao_entrega) {
       const parts = r.previsao_entrega.split('-');
       if (parts.length === 3) {
         const prev = new Date(parts[0], parts[1] - 1, parts[2]);
         if (prev < hoje) {
           atrasadosCount++;
-          const val = r.valor_previsto || r.valor || 0;
           valorAtrasado += val;
           
           const msDiff = hoje.getTime() - prev.getTime();
@@ -186,8 +263,14 @@ export async function gerarRelatorioExecutivoPDF(registros) {
             fornecedor: r.fornecedor || 'N/A',
             previsao: `${parts[2]}/${parts[1]}/${parts[0]}`,
             dias: dias,
-            valor: val
+            valor: val,
+            maquina: r.maquina || 'Geral'
           });
+
+          const f = r.fornecedor || 'NÃO INFORMADO';
+          if (!fornecedoresAtrasoMap[f]) fornecedoresAtrasoMap[f] = { count: 0, valor: 0 };
+          fornecedoresAtrasoMap[f].count++;
+          fornecedoresAtrasoMap[f].valor += val;
         }
       }
     }
@@ -197,68 +280,144 @@ export async function gerarRelatorioExecutivoPDF(registros) {
   topGargalos.sort((a, b) => b.valor - a.valor);
   const top10 = topGargalos.slice(0, 10);
 
+  // Top Fornecedores Impactantes
+  const topFornecedores = Object.entries(fornecedoresAtrasoMap)
+    .map(([nome, data]) => ({ nome, ...data }))
+    .sort((a, b) => b.valor - a.valor)
+    .slice(0, 5);
+
+  // Status HTML Pipeline
+  const statusColors = {
+    'PENDENTE DE ENTREGA': '#eab308',
+    'ENTREGUE': '#22c55e',
+    'PENDENTE DE PEDIDO': '#3b82f6',
+    'PENDENTE DE ORCAMENTO': '#f97316',
+    'PENDENTE DE RC': '#8b5cf6',
+    'PENDENTE DE ENVIO': '#64748b'
+  };
+
+  const maxStatusCount = Math.max(...Object.values(statusCounts), 1);
+  const pipelineRows = Object.entries(statusCounts)
+    .filter(([st, count]) => count > 0)
+    .sort((a, b) => b[1] - a[1])
+    .map(([st, count]) => {
+      const pct = (count / maxStatusCount) * 100;
+      const color = statusColors[st] || '#94a3b8';
+      return `
+        <div class="pdf-pipeline-row">
+          <div class="pdf-pipeline-label">${st}</div>
+          <div class="pdf-pipeline-bar-bg">
+            <div class="pdf-pipeline-bar-fill" style="width: ${pct}%; background-color: ${color};"></div>
+          </div>
+          <div class="pdf-pipeline-value">${count}</div>
+        </div>
+      `;
+    }).join('');
+
   // 2. Montar o DOM do Relatório
   const container = document.createElement('div');
   container.className = 'pdf-report-container';
   
   let tableRows = top10.map(g => `
     <tr>
-      <td style="font-weight:600;">${g.rc}</td>
-      <td>${g.fornecedor}</td>
-      <td>${g.previsao}</td>
+      <td style="font-weight:600; color: #1e293b;">${g.rc}</td>
+      <td style="color: #475569;">${g.maquina}</td>
+      <td style="color: #475569;">${g.fornecedor}</td>
+      <td style="color: #475569;">${g.previsao}</td>
       <td><span class="badge badge-danger">${g.dias} dias</span></td>
-      <td style="font-weight:600; text-align:right;">${fmtMoeda(g.valor)}</td>
+      <td style="font-weight:700; text-align:right; color: #b91c1c;">${fmtMoeda(g.valor)}</td>
     </tr>
   `).join('');
 
   if (top10.length === 0) {
-    tableRows = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Nenhum item em atraso.</td></tr>';
+    tableRows = '<tr><td colspan="6" style="text-align:center; padding: 20px; color: #64748b;">Nenhum item em atraso. Excelente!</td></tr>';
+  }
+
+  let fornRows = topFornecedores.map(f => `
+    <tr>
+      <td style="font-weight:600; color: #1e293b;">${f.nome}</td>
+      <td style="text-align:center;">${f.count}</td>
+      <td style="font-weight:700; text-align:right; color: #b91c1c;">${fmtMoeda(f.valor)}</td>
+    </tr>
+  `).join('');
+
+  if (topFornecedores.length === 0) {
+    fornRows = '<tr><td colspan="3" style="text-align:center; padding: 20px; color: #64748b;">Sem atrasos registrados.</td></tr>';
   }
 
   container.innerHTML = `
     ${getPDFStyles()}
-    ${buildHeader('Relatório Executivo de RC')}
+    ${buildHeader('Relatório Executivo Analítico')}
     
     <div class="pdf-kpi-row">
-      <div class="pdf-kpi-card">
-        <div class="pdf-kpi-label">Volume de Solicitações</div>
-        <div class="pdf-kpi-value">${totalRegistros} itens</div>
+      <div class="pdf-kpi-card" style="border-top: 4px solid #3b82f6;">
+        <div class="pdf-kpi-label">Volume Financeiro Total</div>
+        <div class="pdf-kpi-value">${fmtMoeda(valorTotal)}</div>
+        <div class="pdf-kpi-sub">${totalRegistros} itens rastreados</div>
       </div>
-      <div class="pdf-kpi-card">
+      <div class="pdf-kpi-card" style="border-top: 4px solid #f59e0b;">
         <div class="pdf-kpi-label">Itens Atrasados (Gargalos)</div>
-        <div class="pdf-kpi-value" style="color: #ef4444;">${atrasadosCount} itens</div>
+        <div class="pdf-kpi-value">${atrasadosCount} itens</div>
+        <div class="pdf-kpi-sub">${((atrasadosCount/Math.max(totalRegistros,1))*100).toFixed(1)}% do volume total</div>
       </div>
-      <div class="pdf-kpi-card">
-        <div class="pdf-kpi-label">Capital Retido em Atrasos</div>
-        <div class="pdf-kpi-value" style="color: #ef4444;">${fmtMoeda(valorAtrasado)}</div>
-      </div>
-    </div>
-
-    <div class="pdf-section-title">Análise Macro do Pipeline</div>
-    <div class="pdf-charts-row">
-      <div class="pdf-chart-container" style="flex: 1.5;">
-        ${cloneChartAsImage('chartStatus')}
-      </div>
-      <div class="pdf-chart-container" style="flex: 1;">
-        ${cloneChartAsImage('chartMaquina')}
+      <div class="pdf-kpi-card" style="border-top: 4px solid #ef4444; background: #fff1f2;">
+        <div class="pdf-kpi-label" style="color: #be123c;">Capital Retido em Atrasos</div>
+        <div class="pdf-kpi-value" style="color: #e11d48;">${fmtMoeda(valorAtrasado)}</div>
+        <div class="pdf-kpi-sub" style="color: #be123c;">Ação corretiva sugerida</div>
       </div>
     </div>
 
-    <div class="pdf-section-title">Top 10 Gargalos (Maiores Valores Retidos)</div>
-    <table class="pdf-table">
-      <thead>
-        <tr>
-          <th>RC / Identificação</th>
-          <th>Fornecedor</th>
-          <th>Previsão Original</th>
-          <th>Dias em Atraso</th>
-          <th style="text-align:right;">Valor (R$)</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${tableRows}
-      </tbody>
-    </table>
+    <div class="pdf-flex-row" style="page-break-inside: avoid;">
+      <div class="pdf-flex-col" style="flex: 1.5;">
+        <div class="pdf-section-title">Análise de Status (Pipeline)</div>
+        <div class="pdf-pipeline-container">
+          ${pipelineRows}
+        </div>
+      </div>
+      <div class="pdf-flex-col" style="flex: 1;">
+        <div class="pdf-section-title">Por Natureza</div>
+        <div class="pdf-natureza-box">
+          <div class="pdf-nat-item"><span class="pdf-nat-color" style="background:#3b82f6;"></span> Consertos: <strong>${naturezas.conserto}</strong></div>
+          <div class="pdf-nat-item"><span class="pdf-nat-color" style="background:#10b981;"></span> Compras: <strong>${naturezas.compra}</strong></div>
+          <div class="pdf-nat-item"><span class="pdf-nat-color" style="background:#8b5cf6;"></span> Serviços: <strong>${naturezas.servico}</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="page-break-inside: avoid;">
+      <div class="pdf-section-title" style="margin-top: 40px;">Top 5 Fornecedores (Concentração de Atraso)</div>
+      <table class="pdf-table pdf-table-alt">
+        <thead>
+          <tr>
+            <th>Fornecedor</th>
+            <th style="text-align:center;">Qtd. Itens</th>
+            <th style="text-align:right;">Capital Retido (R$)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${fornRows}
+        </tbody>
+      </table>
+    </div>
+
+    <div style="page-break-inside: avoid;">
+      <div class="pdf-section-title" style="margin-top: 40px;">Detalhamento dos 10 Maiores Gargalos Financeiros</div>
+      <table class="pdf-table">
+        <thead>
+          <tr>
+            <th>Identificação (RC/Item)</th>
+            <th>Máquina</th>
+            <th>Fornecedor</th>
+            <th>Previsão Original</th>
+            <th>Tempo Vencido</th>
+            <th style="text-align:right;">Valor Retido (R$)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${tableRows}
+        </tbody>
+      </table>
+    </div>
   `;
 
   // 3. Gerar PDF a partir de String HTML Pura (evita bugs de DOM/renderização em branco)
