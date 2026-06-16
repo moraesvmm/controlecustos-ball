@@ -8,7 +8,7 @@ const getPDFStyles = () => `
       font-family: 'Inter', 'Segoe UI', sans-serif;
       background: white;
       color: #0f172a;
-      width: 794px;
+      width: 710px;
       padding: 40px;
       box-sizing: border-box;
       margin: 0;
