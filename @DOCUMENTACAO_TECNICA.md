@@ -20,11 +20,7 @@ As seguintes chaves são cruciais para investigações, modificações diretas d
 - **Management Key (Execução de SQL)**: `[REDACTED_BY_SYSTEM]`
 - **URI do Banco (PostgreSQL)**: `[REDACTED_BY_SYSTEM]`
 
-### 2.2. Microsserviços & APIs Externas
-- **Microsserviço de WhatsApp (Hospedado no Railway)**: Token de acesso `[REDACTED_BY_SYSTEM]`. Usado para disparos de notificações/avisos do sistema via WhatsApp.
-- **Resend (Email)**: Chave de API `[REDACTED_BY_SYSTEM]`. Utilizada para o disparo transacional de e-mails do sistema.
 
----
 
 ## 3. Estrutura e Padrão do Frontend (Vanilla SPA)
 O sistema funciona majoritariamente como uma Single Page Application construída com Vanilla JS.
