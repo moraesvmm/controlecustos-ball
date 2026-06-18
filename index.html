@@ -1163,17 +1163,20 @@
       </div>
     </div>
 
-      <section id="secaoCrudGraficos" class="crud-section hidden">
+      <section id="secaoCrudGraficos" class="crud-section hidden" style="flex: 0 0 auto;">
         <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem; margin-bottom: 1.5rem;">
-          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <header style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               <h2 style="color: #fff; margin: 0 0 0.25rem 0;">Análise Mensal</h2>
-              <p class="section-hint">Visão financeira (Previsto vs Recebido) filtrada para o contexto atual.</p>
+              <p class="section-hint" style="margin-bottom: 0;">Visão financeira (Previsto vs Recebido) filtrada para o contexto atual.</p>
             </div>
+            <button type="button" class="btn btn-outline" id="btnToggleChart" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">Mostrar Gráfico</button>
           </header>
-          <div class="chart-box crud-chart-box">
-            <div class="chart-canvas-wrap">
-              <canvas id="chartCrudMes"></canvas>
+          <div id="chartContainer" class="hidden" style="margin-top: 1.5rem;">
+            <div class="chart-box crud-chart-box">
+              <div class="chart-canvas-wrap">
+                <canvas id="chartCrudMes"></canvas>
+              </div>
             </div>
           </div>
         </div>
@@ -1501,6 +1504,6 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=64"></script>
+  <script type="module" src="js/app.js?v=65"></script>
 </body>
 </html>

@@ -2017,6 +2017,20 @@ $('#btnExcluirPreventivaModal')?.addEventListener('click', async () => {
   }
 });
 
+// Toggle Chart in Análise Mensal
+$('#btnToggleChart')?.addEventListener('click', (e) => {
+  const container = $('#chartContainer');
+  const isHidden = container.classList.contains('hidden');
+  if (isHidden) {
+    container.classList.remove('hidden');
+    e.target.textContent = 'Ocultar Gráfico';
+    // Se o gráfico precisar ser redesenhado para ajustar o tamanho, isso já deve ter sido feito na montagem, mas garantimos que está visível
+  } else {
+    container.classList.add('hidden');
+    e.target.textContent = 'Mostrar Gráfico';
+  }
+});
+
 // Intercept clicks on view toggles to update preventiva table
 const originalShowView = showView;
 showView = function(name) {
