@@ -18,7 +18,7 @@ import {
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas } from './db.js';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral } from './db.js';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=5';
 import {
   COLUNAS_TABELA,
@@ -33,8 +33,11 @@ import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=12';
+import { initExcelImportCustoGeral } from './import_custo_geral.js?v=1';
+import { COLUNAS_CUSTO_GERAL } from './ui.js?v=4';
 
 let registros = [];
+let registrosCustoGeral = [];
 let registrosPreventiva = [];
 window.fornecedoresContatosData = [];
 
@@ -957,7 +960,7 @@ function showView(name) {
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
-                     'planos-manutencao-frontend', 'plano-preventiva-frontend'].includes(name);
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral'].includes(name);
 
   const isTask = ['gestao-tarefas', 'minhas-tarefas'].includes(name);
 
@@ -990,6 +993,8 @@ function showView(name) {
     if (!estadoPlanosFrontend.mes) planosGoToStepFrontend('mes');
   } else if (name === 'plano-preventiva-frontend') {
     window._refreshPlanoPreventivaFrontend?.();
+  } else if (name === 'custo-geral') {
+    renderTabelaCustoGeral();
   }
 
   const titles = {
@@ -1005,6 +1010,7 @@ function showView(name) {
     'por-maquina': 'Máquinas & Templates',
     'plano-preventiva': 'Gerador de Planos — Back-end',
     'plano-preventiva-frontend': 'Gerador de Planos — Front-end',
+    'custo-geral': 'Custo Geral',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
@@ -1163,6 +1169,9 @@ async function init() {
       registrosPreventiva = todosPreventiva.filter(r => r.setor !== 'frontend');
       registrosPreventivaFrontend = todosPreventiva.filter(r => r.setor === 'frontend');
     } catch (e) { console.warn('Preventiva table not ready yet', e.message); }
+    try {
+      registrosCustoGeral = await getDadosCustoGeral();
+    } catch (e) { console.warn('Custo Geral table not ready yet', e.message); }
     try {
       tarefasDelegadas = await getTarefasDelegadas();
       renderGestaoTarefas();
@@ -3938,4 +3947,75 @@ document.getElementById('btnTogglePrivacy')?.addEventListener('click', () => {
   const iconClosed = document.getElementById('iconPrivacyClosed');
   if (iconOpen) iconOpen.style.display = isPrivacy ? 'none' : 'block';
   if (iconClosed) iconClosed.style.display = isPrivacy ? 'block' : 'none';
+});
+
+// ==========================================
+// CUSTO GERAL (Integração Financeiro & Datasul)
+// ==========================================
+
+function renderTabelaCustoGeral() {
+  const thead = $('#tabelaHeadCustoGeral');
+  const tbody = $('#tabelaBodyCustoGeral');
+  
+  if (!thead || !tbody) return;
+
+  thead.innerHTML = '<tr>' + COLUNAS_CUSTO_GERAL.map(c => `<th style="min-width:${c.width}px">${c.label}</th>`).join('') + '</tr>';
+
+  if (!registrosCustoGeral || registrosCustoGeral.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${COLUNAS_CUSTO_GERAL.length}" class="empty">Nenhum registro de custo geral encontrado. Importe as planilhas.</td></tr>`;
+    ['kpiCustoMaterial', 'kpiCustoGgf', 'kpiCustoMes', 'kpiCustoCC'].forEach(id => {
+      if ($(id)) $(id).textContent = 'R$ 0,00';
+    });
+    return;
+  }
+
+  let totalMaterial = 0;
+  let totalGGF = 0;
+  let totalMes = 0;
+  let totalCC = 0;
+
+  tbody.innerHTML = registrosCustoGeral.map(r => {
+    totalMaterial += (Number(r.material) || 0);
+    totalGGF += (Number(r.ggf) || 0);
+    totalMes += (Number(r.custo_do_mes) || 0);
+    
+    return `<tr data-id="${r.id}" style="cursor: pointer;">
+      ${COLUNAS_CUSTO_GERAL.map(c => {
+        let val = r[c.key] ?? '';
+        if (c.fmt === 'moeda') val = fmtMoeda(val);
+        if (c.fmt === 'data' && val) val = new Date(val).toLocaleDateString('pt-BR', {timeZone:'UTC'});
+        return `<td title="${val}">${val}</td>`;
+      }).join('')}
+    </tr>`;
+  }).join('');
+
+  if ($('#kpiCustoMaterial')) $('#kpiCustoMaterial').textContent = fmtMoeda(totalMaterial);
+  if ($('#kpiCustoGgf')) $('#kpiCustoGgf').textContent = fmtMoeda(totalGGF);
+  if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(totalMes);
+
+  tbody.querySelectorAll('tr').forEach((tr) => {
+    tr.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      const id = tr.dataset.id;
+      const r = registrosCustoGeral.find(x => String(x.id) === String(id));
+      if (!r) return;
+      abrirDrilldown({
+        titulo: `Ordem: ${r.numero_ordem}`,
+        subtitulo: `${r.descricao_codigo || r.it_codigo}`,
+        registros: [r],
+        meta: { insight: `Solicitante Datasul: ${r.solicitante || 'N/A'}\nMovimento: ${r.ent_sai}\nQuantidade: ${r.quantidade}` }
+      });
+    });
+  });
+}
+
+initExcelImportCustoGeral(getClient(), toast, async () => {
+  try {
+    registrosCustoGeral = await getDadosCustoGeral();
+    if (viewAtual === 'custo-geral') {
+      renderTabelaCustoGeral();
+    }
+  } catch (err) {
+    console.error('Erro ao recarregar custo geral', err);
+  }
 });

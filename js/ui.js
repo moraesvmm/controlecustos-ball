@@ -74,6 +74,23 @@ export const COLUNAS_TABELA = [
   { key: 'dias_fora', label: 'Dias fora', width: 80, computed: true },
 ];
 
+export const COLUNAS_CUSTO_GERAL = [
+  { key: 'numero_ordem', label: 'Ordem', width: 100 },
+  { key: 'it_codigo', label: 'Item', width: 120 },
+  { key: 'descricao_codigo', label: 'Descrição', width: 250 },
+  { key: 'dt_trans', label: 'Data', width: 100, fmt: 'data' },
+  { key: 'ent_sai', label: 'Movimento', width: 100 },
+  { key: 'quantidade', label: 'Qtd', width: 80 },
+  { key: 'linha', label: 'Linha', width: 120 },
+  { key: 'solicitante', label: 'Cód. Solicitante', width: 120 },
+  { key: 'nome_solicitante', label: 'Nome Solicitante', width: 150 },
+  { key: 'area', label: 'Área', width: 120 },
+  { key: 'cc', label: 'C.C.', width: 100 },
+  { key: 'material', label: 'Material', width: 100, fmt: 'moeda' },
+  { key: 'ggf', label: 'GGF', width: 100, fmt: 'moeda' },
+  { key: 'custo_do_mes', label: 'Custo Mês', width: 120, fmt: 'moeda' }
+];
+
 import { NATUREZA_LABELS } from './logic.js?v=9';
 
 export function valorCelula(r, col) {

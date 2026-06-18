@@ -18,6 +18,7 @@
   <script src="js/env.runtime.js"></script>
   <link rel="stylesheet" href="css/sweetalert2-dark.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
     <style>
       /* Remove as setinhas dos inputs de dia */
@@ -113,6 +114,11 @@
           </div>
           <button type="button" data-tab="consertos" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Consertos</button>
           <button type="button" data-tab="compras" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Compras</button>
+        </div>
+
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo Movimentações</div>
+          <button type="button" data-tab="custo-geral" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Custo Geral</button>
         </div>
 
         <div>
@@ -271,6 +277,53 @@
     </div>
 
     <div id="view-rc" class="view"></div>
+    <div id="view-custo-geral" class="view" style="padding: 1.5rem;">
+      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+        <div class="header-left">
+          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Custo Geral</h1>
+          <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Integração Financeiro & Datasul</p>
+        </div>
+        <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+          <input type="file" id="fileImportFinanceiro" accept=".xlsx, .xls" style="display: none" />
+          <input type="file" id="fileImportDatasul" accept=".xlsx, .xls" style="display: none" />
+          <button type="button" class="btn btn-outline" id="btnImportarFinanceiro">Importar Financeiro</button>
+          <button type="button" class="btn btn-outline" id="btnImportarDatasul">Importar Datasul</button>
+          <button type="button" class="btn btn-primary" id="btnExportCustoGeral">Exportar Excel</button>
+        </div>
+      </header>
+      
+      <!-- KPIs do Custo Geral -->
+      <section class="kpi-grid" id="kpisCustoGeral" style="margin-bottom: 1.5rem;">
+        <div class="kpi-card" style="border-left: 4px solid var(--primary);">
+          <span class="kpi-label">Material (Total)</span>
+          <strong class="kpi-value" id="kpiCustoMaterial">R$ 0,00</strong>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid var(--accent);">
+          <span class="kpi-label">GGF (Total)</span>
+          <strong class="kpi-value" id="kpiCustoGgf">R$ 0,00</strong>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid var(--success);">
+          <span class="kpi-label">Custo do Mês</span>
+          <strong class="kpi-value" id="kpiCustoMes">R$ 0,00</strong>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid var(--warning);">
+          <span class="kpi-label">Total C.C.</span>
+          <strong class="kpi-value" id="kpiCustoCC">R$ 0,00</strong>
+        </div>
+      </section>
+
+      <!-- Tabela do Custo Geral -->
+      <section class="crud-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+        <div class="table-scroll-main" style="flex: 1; display: flex; flex-direction: column;">
+          <div class="table-scroll-inner" style="flex: 1; overflow: auto;">
+            <table class="data-table">
+              <thead id="tabelaHeadCustoGeral"></thead>
+              <tbody id="tabelaBodyCustoGeral"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
     <div id="view-consertos" class="view"></div>
     <div id="view-compras" class="view"></div>
     

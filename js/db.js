@@ -369,3 +369,29 @@ export function subscribeTarefas(callback) {
   return channel;
 }
 
+// =============================
+// MÓDULO DE CUSTO GERAL
+// =============================
+
+export async function getDadosCustoGeral() {
+  const client = getClient();
+  const { data: custoGeral, error: errCusto } = await client.from('custo_geral').select('*').order('dt_trans', { ascending: false });
+  if (errCusto) throw errCusto;
+
+  const { data: datasul, error: errDatasul } = await client.from('datasul_ordens').select('*');
+  if (errDatasul) throw errDatasul;
+
+  const mapDatasul = {};
+  for (const d of (datasul || [])) {
+    mapDatasul[d.numero_ordem] = d.solicitante;
+  }
+
+  const dadosEnriquecidos = (custoGeral || []).map(row => {
+    if (!row.solicitante) {
+      row.solicitante = mapDatasul[row.numero_ordem] || null;
+    }
+    return row;
+  });
+
+  return dadosEnriquecidos;
+}

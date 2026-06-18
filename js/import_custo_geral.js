@@ -1,0 +1,162 @@
+export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosGlobais) {
+  const btnFinanceiro = document.getElementById('btnImportarFinanceiro');
+  const fileFinanceiro = document.getElementById('fileImportFinanceiro');
+  const btnDatasul = document.getElementById('btnImportarDatasul');
+  const fileDatasul = document.getElementById('fileImportDatasul');
+
+  if (btnFinanceiro && fileFinanceiro) {
+    btnFinanceiro.addEventListener('click', () => {
+      Swal.fire({
+        title: 'Importar Planilha do Financeiro',
+        text: 'Isso irá apagar os dados atuais do Custo Geral e substituir pelos novos. Confirma?',
+        icon: 'warning',
+        showCancelButton: true,
+        background: '#161f33',
+        color: '#f1f5f9',
+        confirmButtonColor: '#d4af37',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Sim, importar'
+      }).then((res) => {
+        if (res.isConfirmed) fileFinanceiro.click();
+      });
+    });
+
+    fileFinanceiro.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      toast('Lendo arquivo do Financeiro...', 'info');
+
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = window.XLSX.read(data, { type: 'array' });
+        
+        const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes('moviment')) || workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const json = window.XLSX.utils.sheet_to_json(worksheet, { defval: null });
+
+        if (!json || json.length === 0) throw new Error("A planilha está vazia.");
+
+        toast('Processando dados...', 'info');
+        
+        const records = json.map(rawRow => {
+          // Normalize keys to lowercase for case-insensitive matching
+          const row = {};
+          for (let k in rawRow) {
+            if (rawRow.hasOwnProperty(k)) {
+              row[k.toLowerCase().trim()] = rawRow[k];
+            }
+          }
+
+          const parseMoney = (v) => {
+            if (v == null) return 0;
+            if (typeof v === 'number') return v;
+            const str = String(v).split(';')[0].replace(/\./g, '').replace(',', '.');
+            return Number(str) || 0;
+          };
+
+          return {
+            cod_estabel: String(row['cod-estabel'] || ''),
+            cod_depos: String(row['cod-depos'] || ''),
+            it_codigo: String(row['it-codigo'] || row['item'] || ''),
+            descricao_codigo: String(row['descrição codigo'] || row['descricao'] || ''),
+            grupo: String(row['grupo'] || ''),
+            ct_codigo: String(row['ct-codigo'] || ''),
+            descricao_conta: String(row['descrição conta2'] || ''),
+            dt_trans: row['dt-trans'] || row['data'] ? new Date(row['dt-trans'] || row['data']).toISOString().split('T')[0] : null,
+            mes: Number(row['mês'] || row['mes']) || null,
+            esp_docto: String(row['esp-docto'] || ''),
+            especdoc: String(row['especdoc'] || ''),
+            tipo_trans: String(row['tipo-trans'] || ''),
+            ent_sai: String(row['ent/sai'] || ''),
+            quantidade: Number(row['quantidade'] || row['qtd']) || 0,
+            un: String(row['un'] || ''),
+            numero_ordem: String(row['numero-ordem'] || row['ordem'] || ''),
+            nro_docto: String(row['nro-docto'] || ''),
+            linha: String(row['linha prod'] || row['linha'] || ''),
+            cod_emitente: String(row['cod-emitente'] || ''),
+            descricao_emitente: String(row['descrição emitente'] || ''),
+            nat_operacao: String(row['nat-operacao'] || ''),
+            material: parseMoney(row['valor-mat-m'] || row['material'] || row['valor material']),
+            ggf: parseMoney(row['valor-ggf-m'] || row['ggf'] || row['valor ggf']),
+            valor_tt: parseMoney(row['valor tt']),
+            quant_tt_ajustado: Number(row['quant tt ajustado']) || 0,
+            custo_do_mes: parseMoney(row['custo do mês'] || row['custo do mes']),
+            custo_mes_anterior: parseMoney(row['custo mês anterior'] || row['custo mes anterior']),
+            custo_de_entrada: parseMoney(row['custo de entrada']),
+          };
+        }).filter(r => r.it_codigo || r.numero_ordem); // ignorar linhas vazias
+
+        toast(`Salvando ${records.length} registros no banco...`, 'info');
+
+        const { error: delErr } = await supabase.from('custo_geral').delete().not('id', 'is', null);
+        if (delErr) throw delErr;
+
+        for (let i = 0; i < records.length; i += 100) {
+          const batch = records.slice(i, i + 100);
+          const { error: insErr } = await supabase.from('custo_geral').insert(batch);
+          if (insErr) throw insErr;
+        }
+
+        toast('Planilha do Financeiro importada com sucesso!', 'success');
+        fileFinanceiro.value = '';
+        if (atualizarDadosGlobais) atualizarDadosGlobais();
+
+      } catch (err) {
+        console.error(err);
+        toast(`Erro: ${err.message}`, 'error');
+        fileFinanceiro.value = '';
+      }
+    });
+  }
+
+  if (btnDatasul && fileDatasul) {
+    btnDatasul.addEventListener('click', () => fileDatasul.click());
+
+    fileDatasul.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      toast('Lendo arquivo do Datasul...', 'info');
+
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = window.XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        // Considerando que a planilha do Datasul tem cabeçalho
+        const json = window.XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        if (!json || json.length < 2) throw new Error("A planilha do Datasul está vazia.");
+
+        // O Datasul tem o numero_ordem na coluna 1 (A) e o solicitante na coluna 5 (E) na Planilha2 original do Excel
+        // Mas a estrutura crua do Datasul pode variar, vamos assumir A e E
+        const records = [];
+        for (let i = 1; i < json.length; i++) {
+          const row = json[i];
+          const numero_ordem = row[0] ? String(row[0]).trim() : null;
+          const solicitante = row[4] ? String(row[4]).trim() : null;
+          
+          if (numero_ordem && solicitante) {
+            records.push({ numero_ordem, solicitante });
+          }
+        }
+
+        toast(`Encontrados ${records.length} registros. Atualizando base...`, 'info');
+
+        // Upsert para não duplicar numero_ordem
+        for (let i = 0; i < records.length; i += 100) {
+          const batch = records.slice(i, i + 100);
+          const { error: insErr } = await supabase.from('datasul_ordens').upsert(batch, { onConflict: 'numero_ordem' });
+          if (insErr) throw insErr;
+        }
+
+        toast('Planilha do Datasul sincronizada com sucesso!', 'success');
+        fileDatasul.value = '';
+        if (atualizarDadosGlobais) atualizarDadosGlobais();
+
+      } catch (err) {
+        console.error(err);
+        toast(`Erro: ${err.message}`, 'error');
+        fileDatasul.value = '';
+      }
+    });
+  }
+}
