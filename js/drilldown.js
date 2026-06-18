@@ -161,16 +161,16 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
         </div>
         <div class="drill-item-meta">
           <span>${r.maquina_linha || `${r.maquina || ''} · ${r.linha || ''}`}</span>
-          <span>${fmtMoeda(r.valor)}</span>
+          <span>${fmtMoeda(r.valor || r.custo_do_mes || 0)}</span>
         </div>
         <div class="drill-item-detail">
-          RC ${r.rc || '—'} · PO ${r.po || '—'} · ${r.fornecedor || '—'}
+          ${r.rc ? `RC ${r.rc} · PO ${r.po || '—'} · ${r.fornecedor || '—'}` : `Ordem: ${r.numero_ordem || '—'} · Tipo: ${r.ent_sai || '—'}`}
           ${r.previsao_entrega ? ` · Prev. ${fmtData(r.previsao_entrega)}` : ''}
-          ${r.dias_fora != null ? ` · ${r.dias_fora}d fora` : calcularDiasFora(r) != null ? ` · ${calcularDiasFora(r)}d fora` : ''}
+          ${r.dias_fora != null ? ` · ${r.dias_fora}d fora` : (typeof calcularDiasFora !== 'undefined' && calcularDiasFora(r) != null ? ` · ${calcularDiasFora(r)}d fora` : '')}
         </div>
         <div class="drill-item-actions">
-          <button type="button" class="btn-ghost btn-drill-edit" data-id="${r.id}">✏️ Editar RC</button>
-          <button type="button" class="btn-ghost btn-drill-rc" data-id="${r.id}">👁 Ver RC</button>
+          ${r.rc ? `<button type="button" class="btn-ghost btn-drill-edit" data-id="${r.id}">✏️ Editar RC</button>
+          <button type="button" class="btn-ghost btn-drill-rc" data-id="${r.id}">👁 Ver RC</button>` : ''}
         </div>
         ${prazosActions ? `
         <div class="drill-item-actions" style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px dashed var(--border); justify-content: flex-end;">

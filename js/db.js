@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA } from './config.js?v=2';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA } from './config.js?v=3';
 import { enriquecerRegistro, normalizarNatureza } from './logic.js?v=9';
 
 let supabaseClient = null;

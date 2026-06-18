@@ -32,9 +32,36 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         
         const sheetName = workbook.SheetNames.find(n => n.toLowerCase().includes('moviment')) || workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        const json = window.XLSX.utils.sheet_to_json(worksheet, { defval: null });
+        const rawJson = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+        
+        let headerIndex = -1;
+        for (let i = 0; i < Math.min(20, rawJson.length); i++) {
+          const rowStr = rawJson[i].map(c => String(c || '').toLowerCase()).join(' ');
+          if (rowStr.includes('it-codigo') || rowStr.includes('numero-ordem') || rowStr.includes('item') || rowStr.includes('ordem')) {
+            headerIndex = i;
+            break;
+          }
+        }
 
-        if (!json || json.length === 0) throw new Error("A planilha está vazia.");
+        if (headerIndex === -1) {
+          throw new Error("Não foi possível encontrar o cabeçalho correto nas primeiras 20 linhas da planilha. Verifique se as colunas 'it-codigo' ou 'numero-ordem' existem.");
+        }
+
+        const headers = rawJson[headerIndex];
+        const json = [];
+        for (let i = headerIndex + 1; i < rawJson.length; i++) {
+          const obj = {};
+          let rowHasData = false;
+          for (let j = 0; j < headers.length; j++) {
+            if (headers[j]) {
+              obj[headers[j]] = rawJson[i][j];
+              if (rawJson[i][j] !== null && rawJson[i][j] !== '') rowHasData = true;
+            }
+          }
+          if (rowHasData) json.push(obj);
+        }
+
+        if (json.length === 0) throw new Error("A planilha está vazia ou não contém dados válidos abaixo do cabeçalho.");
 
         toast('Processando dados...', 'info');
         
@@ -70,11 +97,13 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             ent_sai: String(row['ent/sai'] || ''),
             quantidade: Number(row['quantidade'] || row['qtd']) || 0,
             un: String(row['un'] || ''),
-            numero_ordem: String(row['numero-ordem'] || row['ordem'] || ''),
+            numero_ordem: String(row['nr-ord-produ'] || row['numero-ordem'] || row['ordem'] || ''),
             nro_docto: String(row['nro-docto'] || ''),
             linha: String(row['linha prod'] || row['linha'] || ''),
             cod_emitente: String(row['cod-emitente'] || ''),
             descricao_emitente: String(row['descrição emitente'] || ''),
+            solicitante: String(row['coluna1'] || row['nome-abrev'] || row['solicitante'] || ''),
+            nome_solicitante: String(row['nome-aprov'] || row['nome_solicitante'] || ''),
             nat_operacao: String(row['nat-operacao'] || ''),
             material: parseMoney(row['valor-mat-m'] || row['material'] || row['valor material']),
             ggf: parseMoney(row['valor-ggf-m'] || row['ggf'] || row['valor ggf']),
@@ -85,6 +114,11 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             custo_de_entrada: parseMoney(row['custo de entrada']),
           };
         }).filter(r => r.it_codigo || r.numero_ordem); // ignorar linhas vazias
+
+        if (records.length === 0) {
+          const colunasLidas = json.length > 0 ? Object.keys(json[0]).join(', ') : 'nenhuma coluna lida';
+          throw new Error(`Nenhum registro válido. Colunas lidas do arquivo: [${colunasLidas}]. Nenhuma bateu com 'it-codigo', 'item', 'numero-ordem' ou 'ordem'. O cabeçalho deve estar na primeira linha.`);
+        }
 
         toast(`Salvando ${records.length} registros no banco...`, 'info');
 

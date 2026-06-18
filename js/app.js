@@ -3961,8 +3961,35 @@ function renderTabelaCustoGeral() {
 
   thead.innerHTML = '<tr>' + COLUNAS_CUSTO_GERAL.map(c => `<th style="min-width:${c.width}px">${c.label}</th>`).join('') + '</tr>';
 
-  if (!registrosCustoGeral || registrosCustoGeral.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${COLUNAS_CUSTO_GERAL.length}" class="empty">Nenhum registro de custo geral encontrado. Importe as planilhas.</td></tr>`;
+  const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
+  const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
+
+  let registrosFiltrados = (registrosCustoGeral || []).filter(r => {
+    // Filtro de Ordem (começa com 5)
+    if (filtroOrdem === 'comeca_com_5' && !String(r.numero_ordem || '').startsWith('5')) {
+      return false;
+    }
+
+    // Busca textual
+    if (!termoBusca) return true;
+    const values = [r.numero_ordem, r.it_codigo, r.descricao_codigo, r.solicitante].map(v => String(v || '').toLowerCase());
+    return values.some(v => v.includes(termoBusca));
+  });
+
+  // Ordenação Padrão: Número da Ordem do Menor para o Maior
+  registrosFiltrados.sort((a, b) => {
+    const ordA = Number(a.numero_ordem) || 0;
+    const ordB = Number(b.numero_ordem) || 0;
+    
+    // Jogar ordens vazias (0) para o final da lista
+    if (ordA === 0 && ordB !== 0) return 1;
+    if (ordB === 0 && ordA !== 0) return -1;
+    
+    return ordA - ordB;
+  });
+
+  if (!registrosFiltrados || registrosFiltrados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${COLUNAS_CUSTO_GERAL.length}" class="empty">Nenhum registro de custo geral encontrado.</td></tr>`;
     ['kpiCustoMaterial', 'kpiCustoGgf', 'kpiCustoMes', 'kpiCustoCC'].forEach(id => {
       if ($(id)) $(id).textContent = 'R$ 0,00';
     });
@@ -3974,10 +4001,11 @@ function renderTabelaCustoGeral() {
   let totalMes = 0;
   let totalCC = 0;
 
-  tbody.innerHTML = registrosCustoGeral.map(r => {
+  tbody.innerHTML = registrosFiltrados.map(r => {
     totalMaterial += (Number(r.material) || 0);
     totalGGF += (Number(r.ggf) || 0);
     totalMes += (Number(r.custo_do_mes) || 0);
+    totalCC += (Number(r.custo_cc) || 0);
     
     return `<tr data-id="${r.id}" style="cursor: pointer;">
       ${COLUNAS_CUSTO_GERAL.map(c => {
@@ -3992,12 +4020,13 @@ function renderTabelaCustoGeral() {
   if ($('#kpiCustoMaterial')) $('#kpiCustoMaterial').textContent = fmtMoeda(totalMaterial);
   if ($('#kpiCustoGgf')) $('#kpiCustoGgf').textContent = fmtMoeda(totalGGF);
   if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(totalMes);
+  if ($('#kpiCustoCC')) $('#kpiCustoCC').textContent = fmtMoeda(totalCC);
 
   tbody.querySelectorAll('tr').forEach((tr) => {
     tr.addEventListener('dblclick', (e) => {
       e.preventDefault();
       const id = tr.dataset.id;
-      const r = registrosCustoGeral.find(x => String(x.id) === String(id));
+      const r = registrosFiltrados.find(x => String(x.id) === String(id));
       if (!r) return;
       abrirDrilldown({
         titulo: `Ordem: ${r.numero_ordem}`,
@@ -4006,6 +4035,27 @@ function renderTabelaCustoGeral() {
         meta: { insight: `Solicitante Datasul: ${r.solicitante || 'N/A'}\nMovimento: ${r.ent_sai}\nQuantidade: ${r.quantidade}` }
       });
     });
+  });
+}
+
+// Listeners for Custo Geral Filters
+if ($('#filtroBuscaCustoGeral')) {
+  $('#filtroBuscaCustoGeral').addEventListener('input', () => {
+    renderTabelaCustoGeral();
+  });
+}
+
+if ($('#filtroOrdemCustoGeral')) {
+  $('#filtroOrdemCustoGeral').addEventListener('change', () => {
+    renderTabelaCustoGeral();
+  });
+}
+
+if ($('#btnLimparFiltrosCustoGeral')) {
+  $('#btnLimparFiltrosCustoGeral').addEventListener('click', () => {
+    if ($('#filtroBuscaCustoGeral')) $('#filtroBuscaCustoGeral').value = '';
+    if ($('#filtroOrdemCustoGeral')) $('#filtroOrdemCustoGeral').value = 'todas';
+    renderTabelaCustoGeral();
   });
 }
 

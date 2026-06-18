@@ -15,7 +15,7 @@
   <link rel="stylesheet" href="css/components.css?v=64">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
-  <script src="js/env.runtime.js"></script>
+  <script src="js/env.runtime.js?v=99"></script>
   <link rel="stylesheet" href="css/sweetalert2-dark.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
@@ -277,8 +277,8 @@
     </div>
 
     <div id="view-rc" class="view"></div>
-    <div id="view-custo-geral" class="view" style="padding: 1.5rem;">
-      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem;">
+    <div id="view-custo-geral" class="view" style="padding: 1.5rem; display: flex; flex-direction: column; height: calc(100vh - 3rem); overflow: hidden;">
+      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
         <div class="header-left">
           <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Custo Geral</h1>
           <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Integração Financeiro & Datasul</p>
@@ -293,7 +293,7 @@
       </header>
       
       <!-- KPIs do Custo Geral -->
-      <section class="kpi-grid" id="kpisCustoGeral" style="margin-bottom: 1.5rem;">
+      <section class="kpi-grid" id="kpisCustoGeral" style="margin-bottom: 1.5rem; flex-shrink: 0;">
         <div class="kpi-card" style="border-left: 4px solid var(--primary);">
           <span class="kpi-label">Material (Total)</span>
           <strong class="kpi-value" id="kpiCustoMaterial">R$ 0,00</strong>
@@ -312,12 +312,25 @@
         </div>
       </section>
 
+      <!-- Filtros de Busca -->
+      <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface); flex-shrink: 0;">
+        <label class="search-field"><span>Busca</span><input type="search" id="filtroBuscaCustoGeral" placeholder="Buscar por Ordem, Item, Descrição..." /></label>
+        <label>
+          <span>Filtro de Ordem</span>
+          <select id="filtroOrdemCustoGeral">
+            <option value="todas">Todas as Ordens</option>
+            <option value="comeca_com_5">Iniciadas com "5"</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-ghost" id="btnLimparFiltrosCustoGeral">Limpar filtros</button>
+      </section>
+
       <!-- Tabela do Custo Geral -->
-      <section class="crud-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+      <section class="crud-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
         <div class="table-scroll-main" style="flex: 1; display: flex; flex-direction: column;">
-          <div class="table-scroll-inner" style="flex: 1; overflow: auto;">
+          <div class="table-scroll-inner" style="flex: 1; overflow: auto; min-height: 0;">
             <table class="data-table">
-              <thead id="tabelaHeadCustoGeral"></thead>
+              <thead id="tabelaHeadCustoGeral" style="position: sticky; top: 0; z-index: 10; background: var(--surface);"></thead>
               <tbody id="tabelaBodyCustoGeral"></tbody>
             </table>
           </div>
