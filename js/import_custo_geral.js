@@ -77,7 +77,10 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           const parseMoney = (v) => {
             if (v == null) return 0;
             if (typeof v === 'number') return v;
-            const str = String(v).split(';')[0].replace(/\./g, '').replace(',', '.');
+            let str = String(v).split(';')[0].trim();
+            if (str.includes(',')) {
+              str = str.replace(/\./g, '').replace(',', '.');
+            }
             return Number(str) || 0;
           };
 
@@ -105,8 +108,8 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             solicitante: String(row['coluna1'] || row['nome-abrev'] || row['solicitante'] || ''),
             nome_solicitante: String(row['nome-aprov'] || row['nome_solicitante'] || ''),
             nat_operacao: String(row['nat-operacao'] || ''),
-            material: parseMoney(row['valor-mat-m'] || row['material'] || row['valor material']),
-            ggf: parseMoney(row['valor-ggf-m'] || row['ggf'] || row['valor ggf']),
+            material: parseMoney(row['material'] || row['valor material'] || row['valor-mat-m']),
+            ggf: parseMoney(row['ggf'] || row['valor ggf'] || row['valor-ggf-m']),
             valor_tt: parseMoney(row['valor tt']),
             quant_tt_ajustado: Number(row['quant tt ajustado']) || 0,
             custo_do_mes: parseMoney(row['custo do mês'] || row['custo do mes']),
