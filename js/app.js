@@ -2982,6 +2982,16 @@ document.addEventListener('click', (e) => {
   if (e.target.classList.contains('drill-foto-img')) {
     openLightbox(e.target.src);
   }
+
+  // Seleção de linha para as tabelas do módulo Preventiva
+  const trPreventiva = e.target.closest('#view-planos-manutencao tbody tr, #view-planos-manutencao-frontend tbody tr, #view-plano-preventiva tbody tr, #view-plano-preventiva-frontend tbody tr, #view-por-maquina tbody tr');
+  if (trPreventiva) {
+    const tbody = trPreventiva.closest('tbody');
+    if (tbody) {
+      tbody.querySelectorAll('tr').forEach(sib => sib.classList.remove('row-selected'));
+      trPreventiva.classList.add('row-selected');
+    }
+  }
 });
 
 // Função auxiliar temporária para o usuário migrar do Excel para o Supabase
