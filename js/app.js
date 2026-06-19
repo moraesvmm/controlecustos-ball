@@ -4022,7 +4022,58 @@ function renderTabelaCustoGeral() {
   if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(totalMes);
   if ($('#kpiCustoCC')) $('#kpiCustoCC').textContent = fmtMoeda(totalCC);
 
+  let linhaSelecionadaCustoGeralId = null;
+
+  function atualizarBarraLinhaCustoGeral() {
+    const bar = $('#rowActionBarCustoGeral');
+    const label = $('#rowActionLabelCustoGeral');
+    if (!bar) return;
+
+    if (!linhaSelecionadaCustoGeralId) {
+      bar.classList.add('hidden');
+      return;
+    }
+
+    const r = (window.registrosCustoGeral || []).find(x => String(x.id) === String(linhaSelecionadaCustoGeralId));
+    if (!r) {
+      linhaSelecionadaCustoGeralId = null;
+      bar.classList.add('hidden');
+      return;
+    }
+
+    bar.classList.remove('hidden');
+    if (label) {
+      label.textContent = `Ordem: ${r.numero_ordem || '—'} · Item: ${r.it_codigo || '—'}`;
+    }
+  }
+
+  function selecionarLinhaCustoGeral(id) {
+    linhaSelecionadaCustoGeralId = id;
+    document.querySelectorAll('#tabelaBodyCustoGeral tr').forEach((tr) => {
+      tr.classList.toggle('row-selected', String(tr.dataset.id) === String(id));
+    });
+    atualizarBarraLinhaCustoGeral();
+  }
+
+  // Bind the Ver Detalhes button on the action bar
+  const btnRowDetalheCG = $('#btnRowDetalheCustoGeral');
+  if (btnRowDetalheCG && !btnRowDetalheCG.dataset.bound) {
+    btnRowDetalheCG.dataset.bound = 'true';
+    btnRowDetalheCG.addEventListener('click', () => {
+      if (!linhaSelecionadaCustoGeralId) return;
+      const r = (window.registrosCustoGeral || []).find(x => String(x.id) === String(linhaSelecionadaCustoGeralId));
+      if (!r) return;
+      abrirDrilldown({
+        titulo: `Ordem: ${r.numero_ordem}`,
+        subtitulo: `${r.descricao_codigo || r.it_codigo}`,
+        registros: [r],
+        meta: { insight: `Solicitante Datasul: ${r.solicitante || 'N/A'}\nMovimento: ${r.ent_sai}\nQuantidade: ${r.quantidade}` }
+      });
+    });
+  }
+
   tbody.querySelectorAll('tr').forEach((tr) => {
+    tr.addEventListener('click', () => selecionarLinhaCustoGeral(tr.dataset.id));
     tr.addEventListener('dblclick', (e) => {
       e.preventDefault();
       const id = tr.dataset.id;

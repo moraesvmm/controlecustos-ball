@@ -314,7 +314,7 @@
       </section>
 
       <!-- Filtros de Busca -->
-      <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface); flex-shrink: 0;">
+      <section class="toolbar" style="margin-bottom: 1.5rem; flex-shrink: 0; background: var(--surface); padding: 1rem; border-radius: var(--radius); border: 1px solid var(--border);">
         <label class="search-field"><span>Busca</span><input type="search" id="filtroBuscaCustoGeral" placeholder="Buscar por Ordem, Item, Descrição..." /></label>
         <label>
           <span>Filtro de Ordem</span>
@@ -325,6 +325,16 @@
         </label>
         <button type="button" class="btn btn-ghost" id="btnLimparFiltrosCustoGeral">Limpar filtros</button>
       </section>
+
+      <div class="row-action-bar hidden" id="rowActionBarCustoGeral" aria-live="polite">
+        <div class="row-action-info">
+          <span class="row-action-label" id="rowActionLabelCustoGeral">Linha selecionada</span>
+          <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+        </div>
+        <div class="row-action-buttons">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDetalheCustoGeral">Ver detalhes</button>
+        </div>
+      </div>
 
       <!-- Tabela do Custo Geral -->
       <section class="crud-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
