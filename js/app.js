@@ -1093,7 +1093,7 @@ async function salvarForm(e) {
     nf_saida: f.nf_saida.value,
     data_saida: f.data_saida.value || null,
     orcamento: f.orcamento.value,
-    rc: f.rc.value,
+    rc: f.rc.value ? f.rc.value.replace(/\./g, '') : '',
     po: f.po.value,
     valor: parseFloat(f.valor.value) || 0,
     previsao_entrega: f.previsao_entrega.value || null,
