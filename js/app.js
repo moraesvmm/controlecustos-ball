@@ -27,18 +27,15 @@ import {
   toast,
   confirmar,
   fmtMoeda,
-  COLUNAS_CUSTO_GERAL, 
-  COLUNAS_FORNECEDORES, 
-  COLUNAS_SLAS, 
-  COLUNAS_NAV_GERAL, 
-  COLUNAS_NAV_FE 
-} from './ui.js?v=6';
+} from './ui.js?v=7';
 import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=7';
 import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=12';
 import { initExcelImportCustoGeral } from './import_custo_geral.js?v=1';
+import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
+
 
 let registros = [];
 let registrosCustoGeral = [];
