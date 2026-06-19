@@ -18,7 +18,7 @@ import {
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral } from './db.js';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral } from './db.js?v=44';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=5';
 import {
   COLUNAS_TABELA,
@@ -27,14 +27,18 @@ import {
   toast,
   confirmar,
   fmtMoeda,
-} from './ui.js?v=3';
+  COLUNAS_CUSTO_GERAL, 
+  COLUNAS_FORNECEDORES, 
+  COLUNAS_SLAS, 
+  COLUNAS_NAV_GERAL, 
+  COLUNAS_NAV_FE 
+} from './ui.js?v=6';
 import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=7';
 import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=12';
 import { initExcelImportCustoGeral } from './import_custo_geral.js?v=1';
-import { COLUNAS_CUSTO_GERAL } from './ui.js?v=4';
 
 let registros = [];
 let registrosCustoGeral = [];
