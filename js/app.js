@@ -1375,6 +1375,41 @@ async function init() {
     }));
     exportarExcel(data, 'preventiva-frontend', COLUNAS_PREVENTIVA);
   });
+
+  $('#btnExportCustoGeral')?.addEventListener('click', () => {
+    const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
+    const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
+    const modoColunas = $('#filtroModoColunasCustoGeral')?.value || 'todas';
+
+    let colunasAtuais = COLUNAS_CUSTO_GERAL;
+    if (modoColunas === 'resumo') {
+      const permitidas = ['numero_ordem', 'solicitante', 'nome_solicitante', 'material', 'area'];
+      colunasAtuais = COLUNAS_CUSTO_GERAL.filter(c => permitidas.includes(c.key));
+    }
+
+    let registrosFiltrados = (registrosCustoGeral || []).filter(r => {
+      if (filtroOrdem === 'com_ordem' && !r.numero_ordem) return false;
+      if (filtroOrdem === 'sem_ordem' && r.numero_ordem) return false;
+      if (!termoBusca) return true;
+      const values = [r.numero_ordem, r.it_codigo, r.descricao_codigo, r.solicitante, r.nome_solicitante, r.area, r.linha, r.nro_docto, r.cc].map(v => String(v || '').toLowerCase());
+      return values.some(v => v.includes(termoBusca));
+    });
+
+    registrosFiltrados.sort((a, b) => {
+      const ordA = Number(a.numero_ordem) || 0;
+      const ordB = Number(b.numero_ordem) || 0;
+      if (ordA === 0 && ordB !== 0) return 1;
+      if (ordB === 0 && ordA !== 0) return -1;
+      return ordA - ordB;
+    });
+
+    if (registrosFiltrados.length === 0) {
+      toast('Nenhum registro para exportar', 'warning');
+      return;
+    }
+
+    exportarExcel(registrosFiltrados, 'custo-geral', colunasAtuais);
+  });
   
   function mergeLinhaData(baseArray, linha, mes) {
     const map = new Map();
