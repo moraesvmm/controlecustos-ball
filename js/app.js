@@ -4100,7 +4100,7 @@ function renderTabelaCustoGeral() {
       return;
     }
 
-    const r = (window.registrosCustoGeral || []).find(x => String(x.id) === String(linhaSelecionadaCustoGeralId));
+    const r = (registrosCustoGeral || []).find(x => String(x.id) === String(linhaSelecionadaCustoGeralId));
     if (!r) {
       linhaSelecionadaCustoGeralId = null;
       bar.classList.add('hidden');
@@ -4128,7 +4128,7 @@ function renderTabelaCustoGeral() {
     btnRowDetalheCG.dataset.bound = 'true';
     btnRowDetalheCG.addEventListener('click', () => {
       if (!linhaSelecionadaCustoGeralId) return;
-      const r = (window.registrosCustoGeral || []).find(x => String(x.id) === String(linhaSelecionadaCustoGeralId));
+      const r = (registrosCustoGeral || []).find(x => String(x.id) === String(linhaSelecionadaCustoGeralId));
       if (!r) return;
       abrirDrilldown({
         titulo: `Ordem: ${r.numero_ordem}`,
