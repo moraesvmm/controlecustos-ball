@@ -391,26 +391,40 @@ export function subscribeTarefas(callback) {
 export async function getDadosCustoGeral() {
   const client = getClient();
 
-  // 1. Carregar as 3 tabelas em paralelo
-  const [resCusto, resDatasul, resColab] = await Promise.all([
-    client.from('custo_geral').select('*').order('dt_trans', { ascending: false }),
-    client.from('datasul_ordens').select('*'),
-    client.from('colaboradores').select('*'),
+  // 1. Função helper para paginação (Supabase limita a 1000 rows/request por padrão)
+  async function fetchAll(table, orderCol) {
+    let all = [];
+    let from = 0;
+    const limit = 1000;
+    while (true) {
+      let query = client.from(table).select('*').range(from, from + limit - 1);
+      if (orderCol) query = query.order(orderCol, { ascending: false });
+      const { data, error } = await query;
+      if (error) throw error;
+      if (!data || data.length === 0) break;
+      all.push(...data);
+      if (data.length < limit) break;
+      from += limit;
+    }
+    return all;
+  }
+
+  // 2. Carregar as 3 tabelas em paralelo com paginação
+  const [dataCusto, dataDatasul, dataColab] = await Promise.all([
+    fetchAll('custo_geral', 'dt_trans'),
+    fetchAll('datasul_ordens'),
+    fetchAll('colaboradores'),
   ]);
 
-  if (resCusto.error) throw resCusto.error;
-  if (resDatasul.error) console.warn('Tabela datasul_ordens não disponível:', resDatasul.error.message);
-  if (resColab.error) console.warn('Tabela colaboradores não disponível:', resColab.error.message);
-
-  // 2. Montar mapa Datasul: numero_ordem → solicitante (requisitante)
+  // 3. Montar mapa Datasul: numero_ordem → solicitante (requisitante)
   const mapDatasul = {};
-  for (const d of (resDatasul.data || [])) {
+  for (const d of dataDatasul) {
     mapDatasul[d.numero_ordem] = d.solicitante;
   }
 
-  // 3. Montar mapa Colaboradores: cod_req (lowercase) → { nome, area, cc, area_cc, turno }
+  // 4. Montar mapa Colaboradores: cod_req (lowercase) → { nome, area, cc, area_cc, turno }
   const mapColaboradores = {};
-  for (const c of (resColab.data || [])) {
+  for (const c of dataColab) {
     if (c.cod_req) {
       mapColaboradores[c.cod_req.toLowerCase()] = {
         nome: c.nome,
@@ -422,8 +436,8 @@ export async function getDadosCustoGeral() {
     }
   }
 
-  // 4. Enriquecer cada registro com as fórmulas/PROCVs
-  const dadosEnriquecidos = (resCusto.data || []).map(row => {
+  // 5. Enriquecer cada registro com as fórmulas/PROCVs
+  const dadosEnriquecidos = dataCusto.map(row => {
     // PROCV 1: solicitante_2 = IF(Coluna1 != "", Coluna1, VLOOKUP(nr_ord_produ, datasul, "requisitante"))
     if (!row.solicitante || row.solicitante.trim() === '') {
       row.solicitante = mapDatasul[String(row.numero_ordem || '')] || null;
