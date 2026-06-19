@@ -4032,10 +4032,9 @@ function renderTabelaCustoGeral() {
   const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
 
   let registrosFiltrados = (registrosCustoGeral || []).filter(r => {
-    // Filtro de Ordem (começa com 5)
-    if (filtroOrdem === 'comeca_com_5' && !String(r.numero_ordem || '').startsWith('5')) {
-      return false;
-    }
+    // Filtro de Ordem
+    if (filtroOrdem === 'com_ordem' && !r.numero_ordem) return false;
+    if (filtroOrdem === 'sem_ordem' && r.numero_ordem) return false;
 
     // Busca textual
     if (!termoBusca) return true;
