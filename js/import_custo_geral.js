@@ -80,12 +80,20 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
 
           const parseMoney = (v) => {
             if (v == null) return 0;
-            if (typeof v === 'number') return v;
-            let str = String(v).split(';')[0].trim();
-            if (str.includes(',')) {
-              str = str.replace(/\./g, '').replace(',', '.');
+            let val = 0;
+            if (typeof v === 'number') {
+              val = v;
+            } else {
+              let str = String(v).split(';')[0].trim();
+              if (str.includes(',')) {
+                str = str.replace(/\./g, '').replace(',', '.');
+              }
+              val = Number(str) || 0;
             }
-            return Number(str) || 0;
+            // Inverte o sinal para que as despesas/requisições (negativas no ERP)
+            // virem um "Custo Positivo" no painel, e as devoluções (positivas no ERP)
+            // virem um "Custo Negativo" que abate o total gasto.
+            return val === 0 ? 0 : val * -1;
           };
 
           return {
