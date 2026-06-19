@@ -196,6 +196,21 @@ export async function carregarPreventiva() {
 
   const { data, error } = await client.from('preventiva_registros').select('*').order('created_at');
   if (error) throw error;
+
+  if (data) {
+    data.forEach(r => {
+      if (typeof r.atividades_descricoes === 'string') {
+        try { r.atividades_descricoes = JSON.parse(r.atividades_descricoes); } catch (e) { r.atividades_descricoes = []; }
+      }
+      if (typeof r.material === 'string') {
+        try { r.material = JSON.parse(r.material); } catch (e) { r.material = []; }
+      }
+      if (typeof r.programacao === 'string') {
+        try { r.programacao = JSON.parse(r.programacao); } catch (e) { r.programacao = {}; }
+      }
+    });
+  }
+
   return data || [];
 }
 

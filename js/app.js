@@ -1817,9 +1817,9 @@ function renderTabelaPreventiva() {
       <td><strong>#${idx + 1}</strong></td>
       <td>${r.maquina || '—'}</td>
       <td style="min-width:350px; white-space:normal; line-height:1.5; padding: 12px; color: var(--text);">
-        ${(r.atividades_descricoes && r.atividades_descricoes.length 
-          ? r.atividades_descricoes.map(d => `<div style="margin-bottom:0.5rem;">• ${d.replace(/\n/g, '<br>')}</div>`).join('') 
-          : (r.descricao ? r.descricao.replace(/\n/g, '<br>') : '-'))}
+        ${(Array.isArray(r.atividades_descricoes) && r.atividades_descricoes.length 
+          ? r.atividades_descricoes.map(d => `<div style="margin-bottom:0.5rem;">• ${String(d).replace(/\n/g, '<br>')}</div>`).join('') 
+          : (r.descricao ? String(r.descricao).replace(/\n/g, '<br>') : '-'))}
       </td>
       <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
       <td>${r.hh_mec != null && r.hh_mec !== 0 ? r.hh_mec : '—'}</td>
@@ -2532,9 +2532,9 @@ function renderTabelaPreventivaFE() {
       <td style="position: relative;">${isEdited ? '<div class="floatFadeCard" style="border-color:#6ee7b7;color:#6ee7b7;box-shadow:0 0 10px rgba(110,231,183,0.3)">Salvo</div>' : ''}<strong>#${i + 1}</strong></td>
       <td>${r.maquina || '—'}</td>
       <td style="min-width:350px; white-space:normal; line-height:1.5; padding: 12px; color: var(--text);">
-        ${(r.atividades_descricoes && r.atividades_descricoes.length 
-          ? r.atividades_descricoes.map(d => `<div style="margin-bottom:0.5rem;">• ${d.replace(/\n/g, '<br>')}</div>`).join('') 
-          : (r.descricao ? r.descricao.replace(/\n/g, '<br>') : '-'))}
+        ${(Array.isArray(r.atividades_descricoes) && r.atividades_descricoes.length 
+          ? r.atividades_descricoes.map(d => `<div style="margin-bottom:0.5rem;">• ${String(d).replace(/\n/g, '<br>')}</div>`).join('') 
+          : (r.descricao ? String(r.descricao).replace(/\n/g, '<br>') : '-'))}
       </td>
       <td>${r.duracao_horas != null && r.duracao_horas !== '' ? r.duracao_horas + 'h' : '—'}</td>
       <td>${r.hh_mec || '—'}</td>
