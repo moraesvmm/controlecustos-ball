@@ -4109,7 +4109,8 @@ function renderTabelaCustoGeral() {
 
     bar.classList.remove('hidden');
     if (label) {
-      label.textContent = `Ordem: ${r.numero_ordem || '—'} · Item: ${r.it_codigo || '—'}`;
+      const materialStr = fmtMoeda(r.material || 0);
+      label.textContent = `Ordem: ${r.numero_ordem || '—'} · Cód. Solicitante: ${r.solicitante || '—'} · Nome: ${r.nome_solicitante || '—'} · Material: ${materialStr} · Área: ${r.area || '—'}`;
     }
   }
 
