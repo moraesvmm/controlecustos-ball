@@ -2226,8 +2226,10 @@ window.abrirDetalhePreventivaPanel = function(id) {
   const overlay = document.getElementById('drillOverlay');
   if (!panel) return;
 
-  document.getElementById('drillTitulo').textContent = r.identificador || 'Detalhes da Atividade';
-  document.getElementById('drillSubtitulo').textContent = r.maquina || '';
+  const primeiraAtiv = Array.isArray(r.atividades_descricoes) && r.atividades_descricoes.length > 0 ? String(r.atividades_descricoes[0]) : (r.descricao ? String(r.descricao) : 'Plano de Manutenção');
+  const tituloTruncado = primeiraAtiv.length > 60 ? primeiraAtiv.substring(0, 57) + '...' : primeiraAtiv;
+  document.getElementById('drillTitulo').textContent = tituloTruncado;
+  document.getElementById('drillSubtitulo').textContent = `${r.maquina || ''} · ID: ${r.identificador || 'N/A'}`;
 
   const stats = [
     { label: 'Plano Padrão', value: r.plano_padrao || '-' },
@@ -2713,7 +2715,9 @@ window.abrirDetalhePreventivaFEPanel = function(id) {
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
   if (!panel) return;
-  document.getElementById('drillTitulo').textContent = r.identificador || r.maquina || 'Detalhes';
+  const primeiraAtiv = Array.isArray(r.atividades_descricoes) && r.atividades_descricoes.length > 0 ? String(r.atividades_descricoes[0]) : (r.descricao ? String(r.descricao) : 'Plano de Manutenção');
+  const tituloTruncado = primeiraAtiv.length > 60 ? primeiraAtiv.substring(0, 57) + '...' : primeiraAtiv;
+  document.getElementById('drillTitulo').textContent = tituloTruncado;
   document.getElementById('drillSubtitulo').textContent = `${r.maquina || ''} · Front-end`;
   const stats = [
     { label: 'Duração', value: r.duracao_horas ? r.duracao_horas + 'h' : '—' },
