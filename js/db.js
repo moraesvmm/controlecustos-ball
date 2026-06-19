@@ -390,23 +390,75 @@ export function subscribeTarefas(callback) {
 
 export async function getDadosCustoGeral() {
   const client = getClient();
-  const { data: custoGeral, error: errCusto } = await client.from('custo_geral').select('*').order('dt_trans', { ascending: false });
-  if (errCusto) throw errCusto;
 
-  const { data: datasul, error: errDatasul } = await client.from('datasul_ordens').select('*');
-  if (errDatasul) throw errDatasul;
+  // 1. Carregar as 3 tabelas em paralelo
+  const [resCusto, resDatasul, resColab] = await Promise.all([
+    client.from('custo_geral').select('*').order('dt_trans', { ascending: false }),
+    client.from('datasul_ordens').select('*'),
+    client.from('colaboradores').select('*'),
+  ]);
 
+  if (resCusto.error) throw resCusto.error;
+  if (resDatasul.error) console.warn('Tabela datasul_ordens não disponível:', resDatasul.error.message);
+  if (resColab.error) console.warn('Tabela colaboradores não disponível:', resColab.error.message);
+
+  // 2. Montar mapa Datasul: numero_ordem → solicitante (requisitante)
   const mapDatasul = {};
-  for (const d of (datasul || [])) {
+  for (const d of (resDatasul.data || [])) {
     mapDatasul[d.numero_ordem] = d.solicitante;
   }
 
-  const dadosEnriquecidos = (custoGeral || []).map(row => {
-    if (!row.solicitante) {
-      row.solicitante = mapDatasul[row.numero_ordem] || null;
+  // 3. Montar mapa Colaboradores: cod_req (lowercase) → { nome, area, cc, area_cc, turno }
+  const mapColaboradores = {};
+  for (const c of (resColab.data || [])) {
+    if (c.cod_req) {
+      mapColaboradores[c.cod_req.toLowerCase()] = {
+        nome: c.nome,
+        area: c.area,
+        cc: c.cc,
+        area_cc: c.area_cc,
+        turno: c.turno,
+      };
     }
+  }
+
+  // 4. Enriquecer cada registro com as fórmulas/PROCVs
+  const dadosEnriquecidos = (resCusto.data || []).map(row => {
+    // PROCV 1: solicitante_2 = IF(Coluna1 != "", Coluna1, VLOOKUP(nr_ord_produ, datasul, "requisitante"))
+    if (!row.solicitante || row.solicitante.trim() === '') {
+      row.solicitante = mapDatasul[String(row.numero_ordem || '')] || null;
+    }
+
+    // Fórmula 2: item_tipo = LEFT(it_codigo, 3)
+    row.item_tipo = (row.it_codigo || '').substring(0, 3).toUpperCase();
+
+    // Fórmula 3: carater = IF(item_tipo == "SER", "Real Compras Serv", "Real Consumo")
+    row.carater = row.item_tipo === 'SER' ? 'Real Compras Serv' : 'Real Consumo';
+
+    // PROCVs 4, 5, 6: buscar colaborador pelo solicitante
+    const solKey = (row.solicitante || '').trim().toLowerCase();
+    const colab = mapColaboradores[solKey] || null;
+
+    // PROCV 4: area = VLOOKUP(solicitante, COLABORADORES, "area")
+    row.area = colab?.area || row.area || null;
+
+    // PROCV 5: nome_solicitante = VLOOKUP(solicitante, COLABORADORES, "nome")
+    row.nome_solicitante = colab?.nome || row.nome_solicitante || null;
+
+    // PROCV 6: cc = VLOOKUP(solicitante, COLABORADORES, "area_cc")
+    row.cc = colab?.area_cc || row.cc || null;
+
+    // Fórmula 7: check = IF(area == "OUTROS", "OUTROS", area & " - " & carater)
+    if (row.area) {
+      row.check = row.area === 'OUTROS' ? 'OUTROS' : `${row.area} - ${row.carater}`;
+    }
+
+    // Fórmula 8: custo_cc = SUM(custo_do_mes, custo_mes_anterior, custo_de_entrada)
+    row.custo_cc = (Number(row.custo_do_mes) || 0) + (Number(row.custo_mes_anterior) || 0) + (Number(row.custo_de_entrada) || 0);
+
     return row;
   });
 
   return dadosEnriquecidos;
 }
+

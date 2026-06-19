@@ -4031,7 +4031,7 @@ function renderTabelaCustoGeral() {
 
     // Busca textual
     if (!termoBusca) return true;
-    const values = [r.numero_ordem, r.it_codigo, r.descricao_codigo, r.solicitante].map(v => String(v || '').toLowerCase());
+    const values = [r.numero_ordem, r.it_codigo, r.descricao_codigo, r.solicitante, r.nome_solicitante, r.area, r.linha, r.nro_docto, r.cc].map(v => String(v || '').toLowerCase());
     return values.some(v => v.includes(termoBusca));
   });
 

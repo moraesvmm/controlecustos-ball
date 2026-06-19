@@ -3,7 +3,12 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
   const fileFinanceiro = document.getElementById('fileImportFinanceiro');
   const btnDatasul = document.getElementById('btnImportarDatasul');
   const fileDatasul = document.getElementById('fileImportDatasul');
+  const btnColaboradores = document.getElementById('btnImportarColaboradores');
+  const fileColaboradores = document.getElementById('fileImportColaboradores');
 
+  // =============================
+  // IMPORTADOR FINANCEIRO
+  // =============================
   if (btnFinanceiro && fileFinanceiro) {
     btnFinanceiro.addEventListener('click', () => {
       Swal.fire({
@@ -88,10 +93,10 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             cod_estabel: String(row['cod-estabel'] || ''),
             cod_depos: String(row['cod-depos'] || ''),
             it_codigo: String(row['it-codigo'] || row['item'] || ''),
-            descricao_codigo: String(row['descrição codigo'] || row['descricao'] || ''),
+            descricao_codigo: String(row['descrição codigo'] || row['descriçao codigo'] || row['descricao codigo'] || row['descricao'] || ''),
             grupo: String(row['grupo'] || ''),
             ct_codigo: String(row['ct-codigo'] || ''),
-            descricao_conta: String(row['descrição conta2'] || ''),
+            descricao_conta: String(row['descrição conta2'] || row['descriçao conta2'] || row['descricao conta2'] || ''),
             dt_trans: row['dt-trans'] || row['data'] ? new Date(row['dt-trans'] || row['data']).toISOString().split('T')[0] : null,
             mes: Number(row['mês'] || row['mes']) || null,
             esp_docto: String(row['esp-docto'] || ''),
@@ -104,17 +109,20 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             nro_docto: String(row['nro-docto'] || ''),
             linha: String(row['linha prod'] || row['linha'] || ''),
             cod_emitente: String(row['cod-emitente'] || ''),
-            descricao_emitente: String(row['descrição emitente'] || ''),
+            descricao_emitente: String(row['descrição emitente'] || row['descriçao emitente'] || row['descricao emitente'] || ''),
             solicitante: String(row['coluna1'] || row['nome-abrev'] || row['solicitante'] || ''),
             nome_solicitante: String(row['nome-aprov'] || row['nome_solicitante'] || ''),
             nat_operacao: String(row['nat-operacao'] || ''),
             material: parseMoney(row['material'] || row['valor material'] || row['valor-mat-m']),
             ggf: parseMoney(row['ggf'] || row['valor ggf'] || row['valor-ggf-m']),
+            valor_mob: parseMoney(row['valor-mob-m']),
             valor_tt: parseMoney(row['valor tt']),
             quant_tt_ajustado: Number(row['quant tt ajustado']) || 0,
             custo_do_mes: parseMoney(row['custo do mês'] || row['custo do mes']),
             custo_mes_anterior: parseMoney(row['custo mês anterior'] || row['custo mes anterior']),
             custo_de_entrada: parseMoney(row['custo de entrada']),
+            sc_codigo: String(row['sc-codigo'] || ''),
+            descricao_db: String(row['descricao-db'] || ''),
           };
         }).filter(r => r.it_codigo || r.numero_ordem); // ignorar linhas vazias
 
@@ -146,8 +154,25 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
     });
   }
 
+  // =============================
+  // IMPORTADOR DATASUL
+  // =============================
   if (btnDatasul && fileDatasul) {
-    btnDatasul.addEventListener('click', () => fileDatasul.click());
+    btnDatasul.addEventListener('click', () => {
+      Swal.fire({
+        title: 'Importar Planilha do Datasul',
+        text: 'Isso irá atualizar a tabela de ordens do Datasul (Ordem → Requisitante). Confirma?',
+        icon: 'info',
+        showCancelButton: true,
+        background: '#161f33',
+        color: '#f1f5f9',
+        confirmButtonColor: '#d4af37',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Sim, importar'
+      }).then((res) => {
+        if (res.isConfirmed) fileDatasul.click();
+      });
+    });
 
     fileDatasul.addEventListener('change', async (e) => {
       const file = e.target.files[0];
@@ -158,34 +183,68 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         const data = await file.arrayBuffer();
         const workbook = window.XLSX.read(data, { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-        // Considerando que a planilha do Datasul tem cabeçalho
-        const json = window.XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+        const rawJson = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
 
-        if (!json || json.length < 2) throw new Error("A planilha do Datasul está vazia.");
+        if (!rawJson || rawJson.length < 2) throw new Error("A planilha do Datasul está vazia.");
 
-        // O Datasul tem o numero_ordem na coluna 1 (A) e o solicitante na coluna 5 (E) na Planilha2 original do Excel
-        // Mas a estrutura crua do Datasul pode variar, vamos assumir A e E
-        const records = [];
-        for (let i = 1; i < json.length; i++) {
-          const row = json[i];
-          const numero_ordem = row[0] ? String(row[0]).trim() : null;
-          const solicitante = row[4] ? String(row[4]).trim() : null;
-          
-          if (numero_ordem && solicitante) {
-            records.push({ numero_ordem, solicitante });
+        // Buscar a linha do header dinamicamente
+        let headerIndex = -1;
+        for (let i = 0; i < Math.min(15, rawJson.length); i++) {
+          const rowStr = rawJson[i].map(c => String(c || '').toLowerCase().trim()).join('|');
+          if (rowStr.includes('ordem') && rowStr.includes('requisitante')) {
+            headerIndex = i;
+            break;
           }
         }
 
+        if (headerIndex === -1) {
+          // Fallback: tentar a row 2 (index 2) como no formato padrão do gotoexcel
+          console.warn('[Datasul Import] Header não encontrado automaticamente, tentando row 2...');
+          headerIndex = 2;
+        }
+
+        const headers = rawJson[headerIndex].map(h => String(h || '').trim().toLowerCase());
+        console.log('[Datasul Import] Headers detectados:', headers);
+
+        // Encontrar índices das colunas relevantes
+        const idxOrdem = headers.findIndex(h => h === 'ordem');
+        const idxRequisitante = headers.findIndex(h => h === 'requisitante');
+
+        if (idxOrdem === -1 || idxRequisitante === -1) {
+          throw new Error(`Colunas obrigatórias não encontradas. Headers lidos: [${headers.join(', ')}]. Esperado: 'Ordem' e 'Requisitante'.`);
+        }
+
+        const records = [];
+        for (let i = headerIndex + 1; i < rawJson.length; i++) {
+          const row = rawJson[i];
+          if (!row || !row[idxOrdem]) continue;
+          
+          // Normalizar numero_ordem: remover pontos e espaços (5914.44 → 591444)
+          let ordemRaw = String(row[idxOrdem]).trim();
+          let ordemNorm = ordemRaw.replace(/\./g, '').replace(/\s/g, '');
+          const requisitante = row[idxRequisitante] ? String(row[idxRequisitante]).trim().toLowerCase() : null;
+          
+          if (ordemNorm && requisitante) {
+            records.push({ numero_ordem: ordemNorm, solicitante: requisitante });
+          }
+        }
+
+        if (records.length === 0) throw new Error('Nenhum registro válido encontrado na planilha do Datasul.');
+
         toast(`Encontrados ${records.length} registros. Atualizando base...`, 'info');
 
-        // Upsert para não duplicar numero_ordem
+        // Limpar tabela antes de inserir
+        const { error: delErr } = await supabase.from('datasul_ordens').delete().not('id', 'is', null);
+        if (delErr) throw delErr;
+
+        // Inserir em batches (upsert para segurança)
         for (let i = 0; i < records.length; i += 100) {
           const batch = records.slice(i, i + 100);
           const { error: insErr } = await supabase.from('datasul_ordens').upsert(batch, { onConflict: 'numero_ordem' });
           if (insErr) throw insErr;
         }
 
-        toast('Planilha do Datasul sincronizada com sucesso!', 'success');
+        toast(`Datasul sincronizado com sucesso! ${records.length} ordens importadas.`, 'success');
         fileDatasul.value = '';
         if (atualizarDadosGlobais) atualizarDadosGlobais();
 
@@ -193,6 +252,112 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         console.error(err);
         toast(`Erro: ${err.message}`, 'error');
         fileDatasul.value = '';
+      }
+    });
+  }
+
+  // =============================
+  // IMPORTADOR COLABORADORES
+  // =============================
+  if (btnColaboradores && fileColaboradores) {
+    btnColaboradores.addEventListener('click', () => {
+      Swal.fire({
+        title: 'Importar Tabela de Colaboradores',
+        html: 'Selecione a planilha que contém a aba <strong>COLABORADORES</strong> com as colunas:<br><em>CC, CÓD.REQ, REQ, ÁREA, TURNO, ÁREA CC</em>',
+        icon: 'info',
+        showCancelButton: true,
+        background: '#161f33',
+        color: '#f1f5f9',
+        confirmButtonColor: '#6ee7b7',
+        confirmButtonText: 'Selecionar arquivo',
+        cancelButtonText: 'Cancelar'
+      }).then((res) => {
+        if (res.isConfirmed) fileColaboradores.click();
+      });
+    });
+
+    fileColaboradores.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      toast('Lendo arquivo de Colaboradores...', 'info');
+
+      try {
+        const data = await file.arrayBuffer();
+        const workbook = window.XLSX.read(data, { type: 'array' });
+        
+        // Buscar aba COLABORADORES
+        const sheetName = workbook.SheetNames.find(n => n.toUpperCase().includes('COLABORADOR')) || workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const rawJson = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
+
+        if (!rawJson || rawJson.length < 3) throw new Error("A planilha de Colaboradores está vazia.");
+
+        // Buscar header dinamicamente
+        let headerIndex = -1;
+        for (let i = 0; i < Math.min(10, rawJson.length); i++) {
+          const rowStr = rawJson[i].map(c => String(c || '').toLowerCase().trim()).join('|');
+          if (rowStr.includes('req') && (rowStr.includes('cc') || rowStr.includes('área') || rowStr.includes('area'))) {
+            headerIndex = i;
+            break;
+          }
+        }
+
+        if (headerIndex === -1) throw new Error("Header da aba COLABORADORES não encontrado. Procurado: colunas com 'CC', 'CÓD.REQ', 'REQ', 'ÁREA'.");
+
+        const headers = rawJson[headerIndex].map(h => String(h || '').trim().toLowerCase());
+        console.log('[Colaboradores Import] Headers:', headers);
+
+        // Mapear colunas flexíveis
+        const findCol = (...candidates) => headers.findIndex(h => candidates.some(c => h.includes(c)));
+        const idxCC = findCol('cc');
+        const idxCodReq = findCol('cód.req', 'cod.req', 'cod_req', 'código');
+        const idxNome = findCol('req');
+        const idxArea = headers.findIndex(h => h === 'área' || h === 'area');
+        const idxTurno = findCol('turno');
+        const idxAreaCC = headers.findIndex((h, idx) => (h.includes('área cc') || h.includes('area cc')) && idx !== idxArea);
+
+        if (idxCodReq === -1) {
+          throw new Error(`Coluna CÓD.REQ não encontrada. Headers lidos: [${headers.join(', ')}]`);
+        }
+
+        const records = [];
+        for (let i = headerIndex + 1; i < rawJson.length; i++) {
+          const row = rawJson[i];
+          const codReq = row[idxCodReq] ? String(row[idxCodReq]).trim().toLowerCase() : null;
+          if (!codReq) continue;
+
+          records.push({
+            cc: row[idxCC] ? String(row[idxCC]).trim() : null,
+            cod_req: codReq,
+            nome: row[idxNome] ? String(row[idxNome]).trim() : null,
+            area: row[idxArea] ? String(row[idxArea]).trim().toUpperCase() : null,
+            turno: row[idxTurno] ? String(row[idxTurno]).trim() : null,
+            area_cc: row[idxAreaCC] ? String(row[idxAreaCC]).trim() : null,
+          });
+        }
+
+        if (records.length === 0) throw new Error('Nenhum colaborador válido encontrado.');
+
+        toast(`Encontrados ${records.length} colaboradores. Salvando...`, 'info');
+
+        // Limpar tabela e inserir novos
+        const { error: delErr } = await supabase.from('colaboradores').delete().not('id', 'is', null);
+        if (delErr) throw delErr;
+
+        for (let i = 0; i < records.length; i += 100) {
+          const batch = records.slice(i, i + 100);
+          const { error: insErr } = await supabase.from('colaboradores').insert(batch);
+          if (insErr) throw insErr;
+        }
+
+        toast(`${records.length} colaboradores importados com sucesso!`, 'success');
+        fileColaboradores.value = '';
+        if (atualizarDadosGlobais) atualizarDadosGlobais();
+
+      } catch (err) {
+        console.error(err);
+        toast(`Erro: ${err.message}`, 'error');
+        fileColaboradores.value = '';
       }
     });
   }

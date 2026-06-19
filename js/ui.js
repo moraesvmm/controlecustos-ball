@@ -79,16 +79,23 @@ export const COLUNAS_CUSTO_GERAL = [
   { key: 'it_codigo', label: 'Item', width: 120 },
   { key: 'descricao_codigo', label: 'Descrição', width: 250 },
   { key: 'dt_trans', label: 'Data', width: 100, fmt: 'data' },
+  { key: 'mes', label: 'Mês', width: 60 },
   { key: 'ent_sai', label: 'Movimento', width: 100 },
   { key: 'quantidade', label: 'Qtd', width: 80 },
+  { key: 'nro_docto', label: 'Nro. Documento', width: 120 },
   { key: 'linha', label: 'Linha', width: 120 },
   { key: 'solicitante', label: 'Cód. Solicitante', width: 120 },
   { key: 'nome_solicitante', label: 'Nome Solicitante', width: 150 },
   { key: 'area', label: 'Área', width: 120 },
   { key: 'cc', label: 'C.C.', width: 100 },
+  { key: 'item_tipo', label: 'Tipo Item', width: 80 },
+  { key: 'carater', label: 'Caráter', width: 140 },
   { key: 'material', label: 'Material', width: 100, fmt: 'moeda' },
   { key: 'ggf', label: 'GGF', width: 100, fmt: 'moeda' },
-  { key: 'custo_do_mes', label: 'Custo Mês', width: 120, fmt: 'moeda' }
+  { key: 'custo_do_mes', label: 'Custo Mês', width: 120, fmt: 'moeda' },
+  { key: 'custo_mes_anterior', label: 'Custo Anterior', width: 120, fmt: 'moeda' },
+  { key: 'custo_de_entrada', label: 'Custo Entrada', width: 120, fmt: 'moeda' },
+  { key: 'custo_cc', label: 'Custo CC', width: 120, fmt: 'moeda' },
 ];
 
 import { NATUREZA_LABELS } from './logic.js?v=9';
