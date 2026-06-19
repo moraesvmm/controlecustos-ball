@@ -28,7 +28,7 @@ import {
   confirmar,
   fmtMoeda,
 } from './ui.js?v=7';
-import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=8';
+import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=9';
 import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';

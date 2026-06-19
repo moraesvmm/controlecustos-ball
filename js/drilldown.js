@@ -22,28 +22,37 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
   const overlay = document.getElementById('drillOverlay');
   if (!panel) return;
 
-  const total = registros.reduce((s, r) => s + (Number(r.valor) || 0), 0);
-  const totalPrev = registros.reduce((s, r) => s + (Number(r.valor_previsto) || 0), 0);
-  const totalRec = registros.reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0);
-  const atrasados = registros.filter((r) => {
-    if (r._diasAtraso) return true;
-    const st = r.status || calcularStatus(r);
-    if (st === 'ENTREGUE') return false;
-    const pe = r.previsao_entrega;
-    if (!pe) return false;
-    return new Date(pe) < new Date();
-  }).length;
+  let stats = [];
+  if (meta.isCustoGeral) {
+    const totalMaterial = registros.reduce((s, r) => s + (Number(r.material) || 0), 0);
+    stats = [
+      { label: 'Registros', value: registros.length },
+      { label: 'Valor Material', value: fmtMoeda(totalMaterial) }
+    ];
+  } else {
+    const total = registros.reduce((s, r) => s + (Number(r.valor) || 0), 0);
+    const totalPrev = registros.reduce((s, r) => s + (Number(r.valor_previsto) || 0), 0);
+    const totalRec = registros.reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0);
+    const atrasados = registros.filter((r) => {
+      if (r._diasAtraso) return true;
+      const st = r.status || calcularStatus(r);
+      if (st === 'ENTREGUE') return false;
+      const pe = r.previsao_entrega;
+      if (!pe) return false;
+      return new Date(pe) < new Date();
+    }).length;
+
+    stats = [
+      { label: 'Registros', value: registros.length },
+      { label: 'Valor total', value: fmtMoeda(total) },
+      { label: 'Previsto', value: fmtMoeda(totalPrev) },
+      { label: 'Recebido', value: fmtMoeda(totalRec) },
+      { label: 'Atrasados', value: atrasados, warn: atrasados > 0 },
+    ];
+  }
 
   document.getElementById('drillTitulo').textContent = titulo;
   document.getElementById('drillSubtitulo').textContent = subtitulo || '';
-
-  const stats = [
-    { label: 'Registros', value: registros.length },
-    { label: 'Valor total', value: fmtMoeda(total) },
-    { label: 'Previsto', value: fmtMoeda(totalPrev) },
-    { label: 'Recebido', value: fmtMoeda(totalRec) },
-    { label: 'Atrasados', value: atrasados, warn: atrasados > 0 },
-  ];
 
   document.getElementById('drillStats').innerHTML = stats
     .map(
