@@ -1635,114 +1635,67 @@ Segue abaixo itens para verificação de atraso.</textarea>
   </div>
 
   <div class="modal-overlay" id="modalCustoGeral">
-    <div class="modal modal-lg" style="max-width:780px; width:95%; max-height:90vh; overflow-y:auto;">
+    <div class="modal modal-lg">
       <header class="modal-header">
-        <h3 style="margin:0; font-size:1.1rem; color:var(--text-light);" id="modalCustoGeralTitle">Novo Registro - Custo Geral</h3>
+        <h2 id="modalCustoGeralTitle">Novo Registro - Custo Geral</h2>
         <button type="button" class="btn-icon" id="btnFecharModalCustoGeral" aria-label="Fechar">✕</button>
       </header>
-      <div class="modal-body">
-        <form id="formCustoGeral" style="display:flex; flex-direction:column; gap:1rem;">
-          <input type="hidden" id="cg_id" />
-          
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
-            <label class="form-control">
-              <span>Ordem</span>
-              <input type="text" id="cg_numero_ordem" />
-            </label>
-            <label class="form-control">
-              <span>Item (Código)</span>
-              <input type="text" id="cg_it_codigo" />
-            </label>
-            <label class="form-control">
-              <span>Nro. Documento</span>
-              <input type="text" id="cg_nro_docto" />
-            </label>
-            <label class="form-control">
-              <span>Data</span>
-              <input type="date" id="cg_dt_trans" />
-            </label>
+      <form id="formCustoGeral">
+        <input type="hidden" id="cg_id" />
+        
+        <div class="form-section">
+          <h3>Identificação</h3>
+          <div class="form-grid">
+            <label><span>Ordem</span><input type="text" id="cg_numero_ordem" /></label>
+            <label><span>Item (Código)</span><input type="text" id="cg_it_codigo" /></label>
+            <label><span>Nro. Documento</span><input type="text" id="cg_nro_docto" /></label>
+            <label><span>Data</span><input type="date" id="cg_dt_trans" /></label>
+            <label class="full"><span>Descrição</span><input type="text" id="cg_descricao_codigo" /></label>
           </div>
+        </div>
 
-          <label class="form-control">
-            <span>Descrição</span>
-            <input type="text" id="cg_descricao_codigo" />
-          </label>
-
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:1rem;">
-            <label class="form-control">
-              <span>Movimento (Ent/Sai)</span>
-              <input type="text" id="cg_ent_sai" />
-            </label>
-            <label class="form-control">
-              <span>Quantidade</span>
-              <input type="number" id="cg_quantidade" step="any" />
-            </label>
-            <label class="form-control">
-              <span>Linha</span>
-              <input type="text" id="cg_linha" />
-            </label>
-            <label class="form-control">
-              <span>Mês</span>
-              <input type="number" id="cg_mes" placeholder="Ex: 5" />
-            </label>
+        <div class="form-section">
+          <h3>Movimento & Local</h3>
+          <div class="form-grid">
+            <label><span>Movimento (Ent/Sai)</span><input type="text" id="cg_ent_sai" /></label>
+            <label><span>Quantidade</span><input type="number" id="cg_quantidade" step="any" /></label>
+            <label><span>Linha</span><input type="text" id="cg_linha" /></label>
+            <label><span>Mês</span><input type="number" id="cg_mes" placeholder="Ex: 5" /></label>
           </div>
+        </div>
 
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
-            <label class="form-control">
-              <span>Cód. Solicitante</span>
-              <input type="text" id="cg_solicitante" />
-            </label>
-            <label class="form-control">
-              <span>Nome Solicitante</span>
-              <input type="text" id="cg_nome_solicitante" />
-            </label>
-            <label class="form-control">
-              <span>Área</span>
-              <input type="text" id="cg_area" />
-            </label>
-            <label class="form-control">
-              <span>Centro de Custo (C.C.)</span>
-              <input type="text" id="cg_cc" />
-            </label>
+        <div class="form-section">
+          <h3>Solicitante & Área</h3>
+          <div class="form-grid">
+            <label><span>Cód. Solicitante</span><input type="text" id="cg_solicitante" /></label>
+            <label><span>Nome Solicitante</span><input type="text" id="cg_nome_solicitante" /></label>
+            <label><span>Área</span><input type="text" id="cg_area" /></label>
+            <label><span>Centro de Custo (C.C.)</span><input type="text" id="cg_cc" /></label>
           </div>
+        </div>
 
-          <fieldset style="border:1px solid var(--border); padding:1rem; border-radius:4px; margin-top:0.5rem;">
-            <legend style="padding:0 0.5rem; color:var(--muted); font-size:0.85rem;">Custos (Use vírgula para centavos ou copie direto)</legend>
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:1rem;">
-              <label class="form-control">
-                <span>Material</span>
-                <input type="text" id="cg_material" />
-              </label>
-              <label class="form-control">
-                <span>GGF</span>
-                <input type="text" id="cg_ggf" />
-              </label>
-              <label class="form-control">
-                <span>Custo do Mês</span>
-                <input type="text" id="cg_custo_do_mes" />
-              </label>
-              <label class="form-control">
-                <span>Custo Mês Anterior</span>
-                <input type="text" id="cg_custo_mes_anterior" />
-              </label>
-              <label class="form-control">
-                <span>Custo de Entrada</span>
-                <input type="text" id="cg_custo_de_entrada" />
-              </label>
-            </div>
-          </fieldset>
-        </form>
-      </div>
-      <footer class="modal-header" style="justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); border-bottom:none; padding:1rem 1.5rem;">
-        <button type="button" class="btn btn-ghost" id="btnCancelarModalCustoGeral">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="btnSalvarModalCustoGeral">Salvar Registro</button>
-      </footer>
+        <div class="form-section">
+          <h3>Custos <small style="color:var(--muted); font-weight:normal;">(Use vírgula para centavos)</small></h3>
+          <div class="form-grid">
+            <label><span>Material</span><input type="text" id="cg_material" /></label>
+            <label><span>GGF</span><input type="text" id="cg_ggf" /></label>
+            <label><span>Custo do Mês</span><input type="text" id="cg_custo_do_mes" /></label>
+            <label><span>Custo Mês Anterior</span><input type="text" id="cg_custo_mes_anterior" /></label>
+            <label><span>Custo de Entrada</span><input type="text" id="cg_custo_de_entrada" /></label>
+          </div>
+        </div>
+
+        <footer class="form-actions">
+          <button type="button" class="btn btn-outline" id="btnCancelarModalCustoGeral">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSalvarModalCustoGeral">Salvar Registro</button>
+        </footer>
+      </form>
     </div>
   </div>
 
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=66"></script>
+  <script type="module" src="js/app.js?v=69"></script>
 </body>
 </html>

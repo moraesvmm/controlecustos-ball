@@ -39,6 +39,7 @@ import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
 
 let registros = [];
 let registrosCustoGeral = [];
+let linhaSelecionadaCustoGeralId = null;
 let registrosPreventiva = [];
 window.fornecedoresContatosData = [];
 
@@ -4088,7 +4089,7 @@ function renderTabelaCustoGeral() {
   if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(totalMes);
   if ($('#kpiCustoCC')) $('#kpiCustoCC').textContent = fmtMoeda(totalCC);
 
-  let linhaSelecionadaCustoGeralId = null;
+  linhaSelecionadaCustoGeralId = null;
 
   function atualizarBarraLinhaCustoGeral() {
     const bar = $('#rowActionBarCustoGeral');
