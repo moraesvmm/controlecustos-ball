@@ -476,3 +476,23 @@ export async function getDadosCustoGeral() {
   return dadosEnriquecidos;
 }
 
+
+export async function inserirCustoGeral(dados) {
+  const client = getClient();
+  const { data, error } = await client.from('custo_geral').insert([dados]).select();
+  if (error) throw error;
+  return data;
+}
+
+export async function atualizarCustoGeral(id, dados) {
+  const client = getClient();
+  const { data, error } = await client.from('custo_geral').update(dados).eq('id', id).select();
+  if (error) throw error;
+  return data;
+}
+
+export async function excluirCustoGeral(id) {
+  const client = getClient();
+  const { error } = await client.from('custo_geral').delete().eq('id', id);
+  if (error) throw error;
+}

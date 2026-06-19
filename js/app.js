@@ -18,7 +18,7 @@ import {
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral } from './db.js?v=44';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=45';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=5';
 import {
   COLUNAS_TABELA,
@@ -4192,5 +4192,153 @@ initExcelImportCustoGeral(getClient(), toast, async () => {
     }
   } catch (err) {
     console.error('Erro ao recarregar custo geral', err);
+  }
+});
+
+// =============================
+// CRUD Custo Geral
+// =============================
+
+function abrirModalCustoGeral(id = null) {
+  const m = document.getElementById('modalCustoGeral');
+  if (!m) return;
+  const form = document.getElementById('formCustoGeral');
+  form.reset();
+
+  const title = document.getElementById('modalCustoGeralTitle');
+  
+  if (id) {
+    title.textContent = 'Editar Registro - Custo Geral';
+    const r = (registrosCustoGeral || []).find(x => String(x.id) === String(id));
+    if (r) {
+      document.getElementById('cg_id').value = r.id;
+      document.getElementById('cg_numero_ordem').value = r.numero_ordem || '';
+      document.getElementById('cg_it_codigo').value = r.it_codigo || '';
+      document.getElementById('cg_descricao_codigo').value = r.descricao_codigo || '';
+      document.getElementById('cg_dt_trans').value = r.dt_trans ? String(r.dt_trans).slice(0,10) : '';
+      document.getElementById('cg_mes').value = r.mes || '';
+      document.getElementById('cg_ent_sai').value = r.ent_sai || '';
+      document.getElementById('cg_quantidade').value = r.quantidade || '';
+      document.getElementById('cg_nro_docto').value = r.nro_docto || '';
+      document.getElementById('cg_linha').value = r.linha || '';
+      document.getElementById('cg_solicitante').value = r.solicitante || '';
+      document.getElementById('cg_nome_solicitante').value = r.nome_solicitante || '';
+      document.getElementById('cg_area').value = r.area || '';
+      document.getElementById('cg_cc').value = r.cc || '';
+      
+      const setMoeda = (id, val) => {
+        if (val) document.getElementById(id).value = fmtMoeda(val);
+      };
+      setMoeda('cg_material', r.material);
+      setMoeda('cg_ggf', r.ggf);
+      setMoeda('cg_custo_do_mes', r.custo_do_mes);
+      setMoeda('cg_custo_mes_anterior', r.custo_mes_anterior);
+      setMoeda('cg_custo_de_entrada', r.custo_de_entrada);
+    }
+  } else {
+    title.textContent = 'Novo Registro - Custo Geral';
+    document.getElementById('cg_id').value = '';
+  }
+
+  m.classList.add('open');
+}
+
+function fecharModalCustoGeral() {
+  const m = document.getElementById('modalCustoGeral');
+  if (m) m.classList.remove('open');
+}
+
+$('#btnNovoCustoGeral')?.addEventListener('click', () => abrirModalCustoGeral(null));
+$('#btnFecharModalCustoGeral')?.addEventListener('click', fecharModalCustoGeral);
+$('#btnCancelarModalCustoGeral')?.addEventListener('click', fecharModalCustoGeral);
+
+$('#btnEditarCustoGeral')?.addEventListener('click', () => {
+  if (linhaSelecionadaCustoGeralId) {
+    abrirModalCustoGeral(linhaSelecionadaCustoGeralId);
+  } else {
+    toast('Selecione uma linha primeiro', 'warning');
+  }
+});
+
+$('#btnExcluirCustoGeral')?.addEventListener('click', async () => {
+  if (!linhaSelecionadaCustoGeralId) return;
+  if (!confirmar('Deseja realmente excluir este registro de Custo Geral?')) return;
+  
+  try {
+    toast('Excluindo...', 'info');
+    await excluirCustoGeral(linhaSelecionadaCustoGeralId);
+    toast('Registro excluído!', 'success');
+    linhaSelecionadaCustoGeralId = null;
+    const bar = document.getElementById('rowActionBarCustoGeral');
+    if (bar) bar.classList.add('hidden');
+    
+    registrosCustoGeral = await getDadosCustoGeral();
+    renderTabelaCustoGeral();
+  } catch (err) {
+    console.error(err);
+    toast('Erro ao excluir: ' + err.message, 'danger');
+  }
+});
+
+$('#btnSalvarModalCustoGeral')?.addEventListener('click', async () => {
+  const id = document.getElementById('cg_id').value;
+  
+  const parseMoeda = (str) => {
+    if (!str) return 0;
+    if (typeof str === 'number') return str;
+    let v = str.replace(/[R$\s]/g, '');
+    if (v.includes(',')) {
+      v = v.replace(/\./g, '').replace(',', '.');
+    }
+    return Number(v) || 0;
+  };
+
+  const dados = {
+    numero_ordem: document.getElementById('cg_numero_ordem').value.trim() || null,
+    it_codigo: document.getElementById('cg_it_codigo').value.trim() || null,
+    descricao_codigo: document.getElementById('cg_descricao_codigo').value.trim() || null,
+    dt_trans: document.getElementById('cg_dt_trans').value || null,
+    mes: document.getElementById('cg_mes').value ? Number(document.getElementById('cg_mes').value) : null,
+    ent_sai: document.getElementById('cg_ent_sai').value.trim() || null,
+    quantidade: document.getElementById('cg_quantidade').value ? Number(document.getElementById('cg_quantidade').value) : 0,
+    nro_docto: document.getElementById('cg_nro_docto').value.trim() || null,
+    linha: document.getElementById('cg_linha').value.trim() || null,
+    solicitante: document.getElementById('cg_solicitante').value.trim() || null,
+    nome_solicitante: document.getElementById('cg_nome_solicitante').value.trim() || null,
+    area: document.getElementById('cg_area').value.trim() || null,
+    cc: document.getElementById('cg_cc').value.trim() || null,
+    material: parseMoeda(document.getElementById('cg_material').value),
+    ggf: parseMoeda(document.getElementById('cg_ggf').value),
+    custo_do_mes: parseMoeda(document.getElementById('cg_custo_do_mes').value),
+    custo_mes_anterior: parseMoeda(document.getElementById('cg_custo_mes_anterior').value),
+    custo_de_entrada: parseMoeda(document.getElementById('cg_custo_de_entrada').value)
+  };
+
+  try {
+    const btn = document.getElementById('btnSalvarModalCustoGeral');
+    const oldText = btn.textContent;
+    btn.textContent = 'Salvando...';
+    btn.disabled = true;
+
+    if (id) {
+      await atualizarCustoGeral(id, dados);
+      toast('Registro atualizado com sucesso!', 'success');
+    } else {
+      await inserirCustoGeral(dados);
+      toast('Registro inserido com sucesso!', 'success');
+    }
+
+    fecharModalCustoGeral();
+    registrosCustoGeral = await getDadosCustoGeral();
+    renderTabelaCustoGeral();
+    
+    btn.textContent = oldText;
+    btn.disabled = false;
+  } catch (err) {
+    console.error(err);
+    toast('Erro ao salvar: ' + err.message, 'danger');
+    const btn = document.getElementById('btnSalvarModalCustoGeral');
+    btn.textContent = 'Salvar Registro';
+    btn.disabled = false;
   }
 });
