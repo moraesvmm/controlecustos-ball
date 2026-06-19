@@ -2983,13 +2983,58 @@ document.addEventListener('click', (e) => {
     openLightbox(e.target.src);
   }
 
+  // Lógica para o botão "Ver detalhes" das action bars da Preventiva
+  if (e.target.closest('.btn-detalhes-prev')) {
+    const bar = e.target.closest('.row-action-bar');
+    if (bar) {
+      const view = bar.closest('.view');
+      if (view) {
+        const selectedTr = view.querySelector('tbody tr.row-selected');
+        if (selectedTr) {
+          selectedTr.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+        }
+      }
+    }
+    return;
+  }
+
   // Seleção de linha para as tabelas do módulo Preventiva
   const trPreventiva = e.target.closest('#view-planos-manutencao tbody tr, #view-planos-manutencao-frontend tbody tr, #view-plano-preventiva tbody tr, #view-plano-preventiva-frontend tbody tr, #view-por-maquina tbody tr');
-  if (trPreventiva) {
+  if (trPreventiva && !trPreventiva.querySelector('td.empty')) {
     const tbody = trPreventiva.closest('tbody');
     if (tbody) {
       tbody.querySelectorAll('tr').forEach(sib => sib.classList.remove('row-selected'));
       trPreventiva.classList.add('row-selected');
+
+      const view = trPreventiva.closest('.view');
+      if (view) {
+        let barId, labelId;
+        if (view.id === 'view-planos-manutencao') { barId = 'rowActionBarPrev'; labelId = 'rowActionLabelPrev'; }
+        else if (view.id === 'view-planos-manutencao-frontend') { barId = 'rowActionBarPrevFE'; labelId = 'rowActionLabelPrevFE'; }
+        else if (view.id === 'view-plano-preventiva') { barId = 'rowActionBarGerador'; labelId = 'rowActionLabelGerador'; }
+        else if (view.id === 'view-plano-preventiva-frontend') { barId = 'rowActionBarGeradorFE'; labelId = 'rowActionLabelGeradorFE'; }
+        
+        if (barId) {
+          // Ocultar as outras
+          ['rowActionBarPrev', 'rowActionBarPrevFE', 'rowActionBarGerador', 'rowActionBarGeradorFE'].forEach(id => {
+            if (id !== barId && document.getElementById(id)) document.getElementById(id).classList.add('hidden');
+          });
+          
+          const bar = document.getElementById(barId);
+          const label = document.getElementById(labelId);
+          if (bar && label) {
+            bar.classList.remove('hidden');
+            const tds = Array.from(trPreventiva.querySelectorAll('td'));
+            if (tds.length >= 2) {
+              const text1 = tds[0].textContent.trim();
+              const text2 = tds[1].textContent.trim();
+              label.textContent = `Linha Selecionada: ${text1} ${text2 ? '- ' + text2 : ''}`;
+            } else {
+              label.textContent = 'Linha Selecionada';
+            }
+          }
+        }
+      }
     }
   }
 });

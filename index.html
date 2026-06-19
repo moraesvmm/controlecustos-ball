@@ -554,6 +554,16 @@
             <button type="button" class="btn btn-ghost" id="btnLimparFiltrosPreventiva">Limpar filtros</button>
           </section>
           
+          <div class="row-action-bar hidden" id="rowActionBarPrev" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelPrev">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
           <div class="table-scroll-main">
             <div class="table-scroll-inner">
               <table class="data-table">
@@ -713,6 +723,17 @@
             <label><span>Status/Auditoria</span><select id="filtroStatusPreventivaFE"><option value="TODOS">TODOS</option></select></label>
             <button type="button" class="btn btn-ghost" id="btnLimparFiltrosPreventivaFE">Limpar filtros</button>
           </section>
+
+          <div class="row-action-bar hidden" id="rowActionBarPrevFE" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelPrevFE">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
           <div class="table-scroll-main">
             <div class="table-scroll-inner">
               <table class="data-table">
@@ -843,6 +864,17 @@
             <h4 style="margin:0;" id="planoAtividadesLabel">Atividades do Plano</h4>
             <span id="planoAtividadesCount" style="font-size:0.8rem; color:var(--muted);"></span>
           </div>
+
+          <div class="row-action-bar hidden" id="rowActionBarGerador" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelGerador">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
           <div class="table-scroll-main" style="max-height:420px;">
             <div class="table-scroll-inner">
               <table class="data-table" id="planoActivitiesTable">
@@ -922,6 +954,17 @@
             <h4 style="margin:0;" id="planoAtividadesLabelFE">Atividades do Plano</h4>
             <span id="planoAtividadesCountFE" style="font-size:0.8rem; color:var(--muted);"></span>
           </div>
+
+          <div class="row-action-bar hidden" id="rowActionBarGeradorFE" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelGeradorFE">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
           <div class="table-scroll-main" style="max-height:420px;">
             <div class="table-scroll-inner">
               <table class="data-table" id="planoActivitiesTableFE">
