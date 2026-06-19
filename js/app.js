@@ -4019,7 +4019,14 @@ function renderTabelaCustoGeral() {
   
   if (!thead || !tbody) return;
 
-  thead.innerHTML = '<tr>' + COLUNAS_CUSTO_GERAL.map(c => `<th style="min-width:${c.width}px">${c.label}</th>`).join('') + '</tr>';
+  const modoColunas = $('#filtroModoColunasCustoGeral')?.value || 'todas';
+  let colunasAtuais = COLUNAS_CUSTO_GERAL;
+  if (modoColunas === 'resumo') {
+    const permitidas = ['numero_ordem', 'solicitante', 'nome_solicitante', 'material', 'area'];
+    colunasAtuais = COLUNAS_CUSTO_GERAL.filter(c => permitidas.includes(c.key));
+  }
+
+  thead.innerHTML = '<tr>' + colunasAtuais.map(c => `<th style="min-width:${c.width}px">${c.label}</th>`).join('') + '</tr>';
 
   const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
   const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
@@ -4049,7 +4056,7 @@ function renderTabelaCustoGeral() {
   });
 
   if (!registrosFiltrados || registrosFiltrados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${COLUNAS_CUSTO_GERAL.length}" class="empty">Nenhum registro de custo geral encontrado.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colunasAtuais.length}" class="empty">Nenhum registro de custo geral encontrado.</td></tr>`;
     ['kpiCustoMaterial', 'kpiCustoGgf', 'kpiCustoMes', 'kpiCustoCC'].forEach(id => {
       if ($(id)) $(id).textContent = 'R$ 0,00';
     });
@@ -4068,7 +4075,7 @@ function renderTabelaCustoGeral() {
     totalCC += (Number(r.custo_cc) || 0);
     
     return `<tr data-id="${r.id}" style="cursor: pointer;">
-      ${COLUNAS_CUSTO_GERAL.map(c => {
+      ${colunasAtuais.map(c => {
         let val = r[c.key] ?? '';
         if (c.fmt === 'moeda') val = fmtMoeda(val);
         if (c.fmt === 'data' && val) val = new Date(val).toLocaleDateString('pt-BR', {timeZone:'UTC'});
@@ -4162,10 +4169,17 @@ if ($('#filtroOrdemCustoGeral')) {
   });
 }
 
+if ($('#filtroModoColunasCustoGeral')) {
+  $('#filtroModoColunasCustoGeral').addEventListener('change', () => {
+    renderTabelaCustoGeral();
+  });
+}
+
 if ($('#btnLimparFiltrosCustoGeral')) {
   $('#btnLimparFiltrosCustoGeral').addEventListener('click', () => {
     if ($('#filtroBuscaCustoGeral')) $('#filtroBuscaCustoGeral').value = '';
     if ($('#filtroOrdemCustoGeral')) $('#filtroOrdemCustoGeral').value = 'todas';
+    if ($('#filtroModoColunasCustoGeral')) $('#filtroModoColunasCustoGeral').value = 'todas';
     renderTabelaCustoGeral();
   });
 }
