@@ -3,8 +3,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
   const fileFinanceiro = document.getElementById('fileImportFinanceiro');
   const btnDatasul = document.getElementById('btnImportarDatasul');
   const fileDatasul = document.getElementById('fileImportDatasul');
-  const btnColaboradores = document.getElementById('btnImportarColaboradores');
-  const fileColaboradores = document.getElementById('fileImportColaboradores');
+
 
   // =============================
   // IMPORTADOR FINANCEIRO
@@ -256,109 +255,4 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
     });
   }
 
-  // =============================
-  // IMPORTADOR COLABORADORES
-  // =============================
-  if (btnColaboradores && fileColaboradores) {
-    btnColaboradores.addEventListener('click', () => {
-      Swal.fire({
-        title: 'Importar Tabela de Colaboradores',
-        html: 'Selecione a planilha que contém a aba <strong>COLABORADORES</strong> com as colunas:<br><em>CC, CÓD.REQ, REQ, ÁREA, TURNO, ÁREA CC</em>',
-        icon: 'info',
-        showCancelButton: true,
-        background: '#161f33',
-        color: '#f1f5f9',
-        confirmButtonColor: '#6ee7b7',
-        confirmButtonText: 'Selecionar arquivo',
-        cancelButtonText: 'Cancelar'
-      }).then((res) => {
-        if (res.isConfirmed) fileColaboradores.click();
-      });
-    });
-
-    fileColaboradores.addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      toast('Lendo arquivo de Colaboradores...', 'info');
-
-      try {
-        const data = await file.arrayBuffer();
-        const workbook = window.XLSX.read(data, { type: 'array' });
-        
-        // Buscar aba COLABORADORES
-        const sheetName = workbook.SheetNames.find(n => n.toUpperCase().includes('COLABORADOR')) || workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const rawJson = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: null });
-
-        if (!rawJson || rawJson.length < 3) throw new Error("A planilha de Colaboradores está vazia.");
-
-        // Buscar header dinamicamente
-        let headerIndex = -1;
-        for (let i = 0; i < Math.min(10, rawJson.length); i++) {
-          const rowStr = rawJson[i].map(c => String(c || '').toLowerCase().trim()).join('|');
-          if (rowStr.includes('req') && (rowStr.includes('cc') || rowStr.includes('área') || rowStr.includes('area'))) {
-            headerIndex = i;
-            break;
-          }
-        }
-
-        if (headerIndex === -1) throw new Error("Header da aba COLABORADORES não encontrado. Procurado: colunas com 'CC', 'CÓD.REQ', 'REQ', 'ÁREA'.");
-
-        const headers = rawJson[headerIndex].map(h => String(h || '').trim().toLowerCase());
-        console.log('[Colaboradores Import] Headers:', headers);
-
-        // Mapear colunas flexíveis
-        const findCol = (...candidates) => headers.findIndex(h => candidates.some(c => h.includes(c)));
-        const idxCC = findCol('cc');
-        const idxCodReq = findCol('cód.req', 'cod.req', 'cod_req', 'código');
-        const idxNome = findCol('req');
-        const idxArea = headers.findIndex(h => h === 'área' || h === 'area');
-        const idxTurno = findCol('turno');
-        const idxAreaCC = headers.findIndex((h, idx) => (h.includes('área cc') || h.includes('area cc')) && idx !== idxArea);
-
-        if (idxCodReq === -1) {
-          throw new Error(`Coluna CÓD.REQ não encontrada. Headers lidos: [${headers.join(', ')}]`);
-        }
-
-        const records = [];
-        for (let i = headerIndex + 1; i < rawJson.length; i++) {
-          const row = rawJson[i];
-          const codReq = row[idxCodReq] ? String(row[idxCodReq]).trim().toLowerCase() : null;
-          if (!codReq) continue;
-
-          records.push({
-            cc: row[idxCC] ? String(row[idxCC]).trim() : null,
-            cod_req: codReq,
-            nome: row[idxNome] ? String(row[idxNome]).trim() : null,
-            area: row[idxArea] ? String(row[idxArea]).trim().toUpperCase() : null,
-            turno: row[idxTurno] ? String(row[idxTurno]).trim() : null,
-            area_cc: row[idxAreaCC] ? String(row[idxAreaCC]).trim() : null,
-          });
-        }
-
-        if (records.length === 0) throw new Error('Nenhum colaborador válido encontrado.');
-
-        toast(`Encontrados ${records.length} colaboradores. Salvando...`, 'info');
-
-        // Limpar tabela e inserir novos
-        const { error: delErr } = await supabase.from('colaboradores').delete().not('id', 'is', null);
-        if (delErr) throw delErr;
-
-        for (let i = 0; i < records.length; i += 100) {
-          const batch = records.slice(i, i + 100);
-          const { error: insErr } = await supabase.from('colaboradores').insert(batch);
-          if (insErr) throw insErr;
-        }
-
-        toast(`${records.length} colaboradores importados com sucesso!`, 'success');
-        fileColaboradores.value = '';
-        if (atualizarDadosGlobais) atualizarDadosGlobais();
-
-      } catch (err) {
-        console.error(err);
-        toast(`Erro: ${err.message}`, 'error');
-        fileColaboradores.value = '';
-      }
-    });
-  }
 }
