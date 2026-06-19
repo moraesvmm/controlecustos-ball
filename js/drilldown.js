@@ -150,6 +150,35 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
           </div>
         </div>`;
 
+        if (meta.isCustoGeral) {
+          return `
+      <article class="drill-item" data-id="${r.id}">
+        <div class="drill-item-head">
+          <strong>${r.item || '—'}</strong>
+          <div class="drill-item-badges">
+            <span class="badge-status" style="background: var(--bg-alt); color: var(--text-light); border: 1px solid var(--border);">Custo Geral</span>
+          </div>
+        </div>
+        <div class="drill-item-meta" style="margin-top: 12px; display: block;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; width: 100%;">
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Movimento</span> <strong>${r.ent_sai || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Quantidade</span> <strong>${r.quantidade || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Nro. Documento</span> <strong>${r.numero_documento || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Linha</span> <strong>${r.linha || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Cód. Solicitante</span> <strong>${r.solicitante || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Nome Solicitante</span> <strong>${r.nome_solicitante || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Área</span> <strong>${r.area || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">C.C.</span> <strong>${r.cc || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Tipo Item</span> <strong>${r.tipo_item || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Caráter</span> <strong>${r.carater || '—'}</strong></div>
+            <div style="grid-column: span 2; margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--border);">
+              <span style="color:var(--muted); font-size: 0.75rem; display:block;">Material</span> <strong style="color:var(--gold); font-size: 1.1rem;">${fmtMoeda(r.material || 0)}</strong>
+            </div>
+          </div>
+        </div>
+      </article>`;
+        }
+
         return `
       <article class="drill-item${atrasadoClass}" data-id="${r.id}">
         <div class="drill-item-head">

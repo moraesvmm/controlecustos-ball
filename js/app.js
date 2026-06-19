@@ -28,7 +28,7 @@ import {
   confirmar,
   fmtMoeda,
 } from './ui.js?v=7';
-import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=7';
+import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=8';
 import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
@@ -4134,7 +4134,7 @@ function renderTabelaCustoGeral() {
         titulo: `Ordem: ${r.numero_ordem}`,
         subtitulo: `${r.descricao_codigo || r.it_codigo}`,
         registros: [r],
-        meta: { insight: `Solicitante Datasul: ${r.solicitante || 'N/A'}\nMovimento: ${r.ent_sai}\nQuantidade: ${r.quantidade}` }
+        meta: { isCustoGeral: true }
       });
     });
   }
@@ -4150,7 +4150,7 @@ function renderTabelaCustoGeral() {
         titulo: `Ordem: ${r.numero_ordem}`,
         subtitulo: `${r.descricao_codigo || r.it_codigo}`,
         registros: [r],
-        meta: { insight: `Solicitante Datasul: ${r.solicitante || 'N/A'}\nMovimento: ${r.ent_sai}\nQuantidade: ${r.quantidade}` }
+        meta: { isCustoGeral: true }
       });
     });
   });
