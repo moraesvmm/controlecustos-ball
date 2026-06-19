@@ -90,10 +90,9 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
               }
               val = Number(str) || 0;
             }
-            // Inverte o sinal para que as despesas/requisições (negativas no ERP)
-            // virem um "Custo Positivo" no painel, e as devoluções (positivas no ERP)
-            // virem um "Custo Negativo" que abate o total gasto.
-            return val === 0 ? 0 : val * -1;
+            // Usa Math.abs para garantir que todos os valores fiquem positivos.
+            // Isso resolve o problema de 'Custo do Mês' vir negativo e 'Material' vir positivo.
+            return Math.abs(val);
           };
 
           return {
