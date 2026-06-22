@@ -307,11 +307,11 @@ window.abrirModalEditarAtividadePM = (idAtividade) => {
   document.getElementById('pm_atividade_hh').value = atv.hh || '';
   document.getElementById('pm_atividade_material').value = atv.material || '';
 
-  document.getElementById('modalEditarAtividadePM').classList.add('active');
+  document.getElementById('modalEditarAtividadePM').classList.add('open');
 };
 
 function fecharModalEditarAtividade() {
-  document.getElementById('modalEditarAtividadePM').classList.remove('active');
+  document.getElementById('modalEditarAtividadePM').classList.remove('open');
 }
 
 async function salvarEdicaoAtividade() {
