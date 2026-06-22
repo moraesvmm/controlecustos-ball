@@ -296,7 +296,7 @@ window.excluirAtividadePM = async (idAtividade) => {
 };
 
 window.abrirModalEditarAtividadePM = (idAtividade) => {
-  const atv = dataAtividades.find(a => a.id === idAtividade);
+  const atv = dataAtividades.find(a => String(a.id) === String(idAtividade));
   if (!atv) return;
 
   document.getElementById('pm_atividade_id').value = atv.id;
