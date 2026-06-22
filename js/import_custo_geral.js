@@ -95,6 +95,26 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             return Math.abs(val);
           };
 
+          const parseDate = (val) => {
+            if (!val) return null;
+            // Se for número (serial date do Excel, ex: 45293)
+            if (typeof val === 'number') {
+              // 25569 é a diferença de dias entre 1900-01-01 e 1970-01-01
+              const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+              // Corrige o timezone para evitar que caia no dia anterior
+              d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+              return d.toISOString().split('T')[0];
+            }
+            // Se for string no formato ISO ou outro suportado pelo JS
+            try {
+              const d = new Date(val);
+              if (isNaN(d.getTime())) return null;
+              return d.toISOString().split('T')[0];
+            } catch (e) {
+              return null;
+            }
+          };
+
           return {
             cod_estabel: String(row['cod-estabel'] || ''),
             cod_depos: String(row['cod-depos'] || ''),
@@ -103,7 +123,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             grupo: String(row['grupo'] || ''),
             ct_codigo: String(row['ct-codigo'] || ''),
             descricao_conta: String(row['descrição conta2'] || row['descriçao conta2'] || row['descricao conta2'] || ''),
-            dt_trans: row['dt-trans'] || row['data'] ? new Date(row['dt-trans'] || row['data']).toISOString().split('T')[0] : null,
+            dt_trans: parseDate(row['dt-trans'] || row['data']),
             mes: Number(row['mês'] || row['mes']) || null,
             esp_docto: String(row['esp-docto'] || ''),
             especdoc: String(row['especdoc'] || ''),
