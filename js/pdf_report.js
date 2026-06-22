@@ -839,7 +839,7 @@ export async function gerarChecklistPlanoMestrePDF(atividades, maquinasArray) {
       .signature-block { display: flex; justify-content: space-between; margin-top: 50px; page-break-inside: avoid; }
       .signature-line { width: 30%; border-top: 1px solid #cbd5e1; text-align: center; padding-top: 5px; font-size: 11px; color: #475569; }
     </style>
-    ${buildHeader(\`Plano Mestre de Manutenção\`)}
+    ${buildHeader('Plano Mestre de Manutenção')}
   `;
 
   maquinas.forEach(maq => {
@@ -912,7 +912,7 @@ export async function gerarChecklistPlanoMestrePDF(atividades, maquinasArray) {
 
   const opt = {
     margin:       0.4,
-    filename:     \`Checklist_PlanoMestre.pdf\`,
+    filename:     'Checklist_PlanoMestre.pdf',
     image:        { type: 'jpeg', quality: 1.0 },
     html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
     jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
