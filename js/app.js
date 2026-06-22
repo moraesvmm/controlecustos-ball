@@ -846,6 +846,7 @@ function renderTabela() {
 
         const input = document.createElement('input');
         input.type = col.startsWith('data_') ? 'date' : 'text';
+        if (col === 'data_recebimento') input.max = new Date().toISOString().slice(0, 10);
         input.value = rawVal;
         input.className = 'inline-edit-input';
 
@@ -1053,6 +1054,9 @@ function abrirModal(id) {
     const input = f.querySelector(`[name="${name}"]`);
     if (input) input.value = editando[name] ?? '';
   });
+
+  const inputRecebimento = f.querySelector('[name="data_recebimento"]');
+  if (inputRecebimento) inputRecebimento.max = new Date().toISOString().slice(0, 10);
 
   const irmas = editando.item_id != null ? registrosDoMesmoItem(registros, editando.item_id) : [];
   const hintId =
