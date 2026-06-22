@@ -751,12 +751,13 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
         const borderStyle = idx === 0 ? 'border-top: 2px solid #cbd5e1;' : 'border-top: 1px solid #e2e8f0;';
         const printId = idx === 0 ? `<div style="font-weight:700; color:#0f172a;">${idText}</div><div style="font-size:9px; color:#64748b; margin-top:2px;">HH M:${a.hh_mec||0} | E:${a.hh_eletrico||0}</div>` : '';
         const matColumn = idx === 0 ? printMat : '';
+        const descSafe = (d || '').replace(/\r/g, '').replace(/\n/g, '<br>');
         
         htmlContent += `
           <tr style="${borderStyle}">
             <td style="text-align: center;"><div class="chk-box"></div></td>
             <td style="vertical-align: top; background: #f8fafc;">${printId}</td>
-            <td style="vertical-align: top;">${d}</td>
+            <td style="vertical-align: top;">${descSafe}</td>
             <td style="vertical-align: top; background: #f8fafc;">${matColumn}</td>
             <td></td>
           </tr>
@@ -879,6 +880,8 @@ export async function gerarChecklistPlanoMestrePDF(atividades, maquinasArray) {
         matHtml = `<div style="font-size: 9px;">• ${a.material}</div>`;
       }
 
+      const acaoSafe = (a.o_que_fazer || '-').replace(/\r/g, '').replace(/\n/g, '<br>');
+
       htmlContent += `
         <tr style="${borderStyle}">
           <td style="text-align: center;"><div class="chk-box"></div></td>
@@ -886,7 +889,7 @@ export async function gerarChecklistPlanoMestrePDF(atividades, maquinasArray) {
             <div style="font-weight:700; color:#0f172a;">${componente}</div>
             <div style="font-size:9px; color:#64748b; margin-top:2px;">${a.estrategia||'-'} | Freq: ${a.frequencia||'-'}</div>
           </td>
-          <td style="vertical-align: top;">${a.o_que_fazer || '-'}</td>
+          <td style="vertical-align: top;">${acaoSafe}</td>
           <td style="vertical-align: top; background: #f8fafc;">${matHtml}</td>
           <td></td>
         </tr>
