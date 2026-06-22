@@ -826,6 +826,49 @@
           </div>
         </div>
 
+        
+        <!-- DASHBOARD E FILTROS PLANO MESTRE -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
+            <div class="stat-title">Total de Atividades</div>
+            <div class="stat-value" id="pm-total-atividades">0</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
+            <div class="stat-title">H-H Estimado</div>
+            <div class="stat-value" id="pm-total-hh">0.00</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
+            <div class="stat-title">Máquinas</div>
+            <div class="stat-value" id="pm-total-maquinas">0</div>
+          </div>
+          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 0.5rem;">
+             <canvas id="pmChartEstrategia" style="max-height: 80px;"></canvas>
+          </div>
+        </div>
+
+        <div style="display:flex; flex-wrap:wrap; gap: 1rem; margin-bottom:1.5rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
+          <div class="form-group" style="flex: 1; min-width: 250px; margin: 0;">
+            <input type="text" id="pm-search" class="form-control" placeholder="🔍 Buscar por TAG, Máquina ou Tarefa..." style="width: 100%;" />
+          </div>
+          <div class="form-group" style="width: 200px; margin: 0;">
+            <select id="pm-filter-disciplina" class="form-control" style="width: 100%;">
+              <option value="">Todas as Disciplinas</option>
+              <option value="MECÂNICA">Mecânica</option>
+              <option value="ELÉTRICA">Elétrica</option>
+            </select>
+          </div>
+          <div class="form-group" style="width: 200px; margin: 0;">
+            <select id="pm-filter-estrategia" class="form-control" style="width: 100%;">
+              <option value="">Todas Estratégias</option>
+            </select>
+          </div>
+          <div>
+            <button id="btnExportPlanoMestre" class="btn btn-primary" style="height: 100%;">
+              <span class="icon">📊</span> Exportar Excel
+            </button>
+          </div>
+        </div>
+
         <div id="planoMestreContent" style="min-height: 400px;">
           <!-- Renderizado via JS -->
         </div>
@@ -1715,6 +1758,50 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=71"></script>
+  <script type="module" src="js/app.js?v=72"></script>
+
+  <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
+  <div class="modal-overlay" id="modalEditarAtividadePM">
+    <div class="modal" style="max-width: 600px;">
+      <div class="modal-header">
+        <h3>Editar Atividade do Plano Mestre</h3>
+        <button type="button" class="modal-close" id="btnFecharModalAtividadePM">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="pm_atividade_id">
+        <div class="form-grid">
+          <div class="form-group" style="grid-column: span 2;">
+            <label>Hierarquia / Componente</label>
+            <input type="text" id="pm_atividade_hierarquia" class="form-control" disabled style="opacity: 0.7;">
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label>Ação / O que fazer?</label>
+            <textarea id="pm_atividade_acao" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Estratégia</label>
+            <input type="text" id="pm_atividade_estrategia" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Frequência</label>
+            <input type="text" id="pm_atividade_frequencia" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>H-H Previsto</label>
+            <input type="number" step="0.01" id="pm_atividade_hh" class="form-control">
+          </div>
+          <div class="form-group">
+            <label>Material / Componente</label>
+            <input type="text" id="pm_atividade_material" class="form-control">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" id="btnCancelarModalAtividadePM">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSalvarAtividadePM">Salvar Alterações</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
