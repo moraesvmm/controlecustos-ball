@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { getClient } from './db.js';
 import { toast } from './ui.js';
 
 export function initImportPlanoMestre() {
@@ -132,6 +132,7 @@ export function initImportPlanoMestre() {
       toast(`Salvando ${maquinasToInsert.length} máquinas e ${atividadesToInsert.length} atividades...`, 'info');
 
       // 1. Deletar tudo
+      const supabase = getClient();
       await supabase.from('plano_mestre_maquinas').delete().not('id', 'is', null);
       
       // 2. Inserir máquinas

@@ -1,4 +1,4 @@
-import { supabase } from './supabase.js';
+import { getClient } from './db.js';
 import { toast } from './ui.js';
 
 let dataMaquinas = [];
@@ -20,6 +20,7 @@ export async function initPlanoMestre() {
 
 async function carregarDados() {
   try {
+    const supabase = getClient();
     const { data: maquinas, error: errMaq } = await supabase.from('plano_mestre_maquinas').select('*');
     if (errMaq) throw errMaq;
     
