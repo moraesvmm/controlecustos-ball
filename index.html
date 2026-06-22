@@ -137,16 +137,10 @@
 
           <button type="button" data-tab="por-maquina" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Plano Padrão</button>
 
-          <!-- Accordion: Gerador de Planos -->
-          <div class="nav-accordion">
-            <button type="button" class="nav-accordion-trigger" data-accordion="nav-gerador">
-              Gerador de Planos <span class="nav-accordion-arrow">▾</span>
-            </button>
-            <div class="nav-sub-menu" id="nav-gerador-sub">
-              <button type="button" data-tab="plano-preventiva" class="nav-item nav-sub-item">↳ Back-end</button>
-              <button type="button" data-tab="plano-preventiva-frontend" class="nav-item nav-sub-item">↳ Front-end</button>
-            </div>
-          </div>
+          <!-- Plano Mestre -->
+          <button type="button" data-tab="plano-mestre" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">
+            Plano Mestre
+          </button>
         </div>
 
         <div>
@@ -810,6 +804,31 @@
             </div>
           </div>
         </section>
+      </div>
+    </div>
+
+    
+    <!-- =====================================================
+         PLANO MESTRE
+         ===================================================== -->
+    <div id="view-plano-mestre" class="view">
+      <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <div>
+            <h3 style="margin:0 0 0.25rem 0;">Plano Mestre de Manutenção</h3>
+            <p class="section-hint" style="margin:0;">Gerencie as atividades, frequências e cronogramas de cada máquina.</p>
+          </div>
+          <div style="display: flex; gap: 1rem;">
+            <input type="file" id="filePlanoMestre" accept=".xlsx, .xls" style="display: none;" />
+            <button id="btnImportPlanoMestre" class="btn btn-secondary">
+              <span class="icon">📁</span> Importar Excel
+            </button>
+          </div>
+        </div>
+
+        <div id="planoMestreContent" style="min-height: 400px;">
+          <!-- Renderizado via JS -->
+        </div>
       </div>
     </div>
 

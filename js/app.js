@@ -35,6 +35,9 @@ import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=12';
 import { initExcelImportCustoGeral } from './import_custo_geral.js?v=4';
 import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
+import { initPlanoMestre } from './plano_mestre.js?v=1';
+import { initImportPlanoMestre } from './import_plano_mestre.js?v=1';
+
 
 
 let registros = [];
