@@ -41,7 +41,13 @@ export async function initPlanoMestre() {
 
   // Bind Export
   document.getElementById('btnExportPlanoMestre')?.addEventListener('click', exportarExcelPlanoMestre);
-
+  document.getElementById('btnExportPlanoMestrePDF')?.addEventListener('click', () => {
+    import('./pdf_report.js?v=9').then(m => {
+      if (m.gerarChecklistPlanoMestrePDF) {
+        m.gerarChecklistPlanoMestrePDF(getAtividadesFiltradas(), dataMaquinas);
+      }
+    });
+  });
   await carregarDados();
   atualizarSelectEstrategias();
   render();

@@ -796,3 +796,133 @@ export async function gerarChecklistLinhaPDF(linha, mes, atividades) {
     console.error('Erro na exportacao PDF:', err);
   }
 }
+
+export async function gerarChecklistPlanoMestrePDF(atividades, maquinasArray) {
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+  } catch (e) {}
+  if (typeof html2pdf === 'undefined') {
+    alert('A biblioteca de PDF não foi carregada.');
+    return;
+  }
+
+  if (atividades.length === 0) {
+    alert('Nenhuma atividade filtrada para exportar.');
+    return;
+  }
+
+  const porMaquina = {};
+  atividades.forEach(a => {
+    const maqId = a.maquina_id;
+    const maq = maquinasArray.find(m => m.id === maqId);
+    const maqName = maq ? (maq.tag + ' - ' + maq.nome_maquina) : 'Sem Máquina';
+    
+    if (!porMaquina[maqName]) porMaquina[maqName] = [];
+    porMaquina[maqName].push(a);
+  });
+
+  const maquinas = Object.keys(porMaquina).sort();
+  const container = document.createElement('div');
+  container.className = 'pdf-report-container';
+
+  let htmlContent = `
+    ${getPDFStyles()}
+    <style>
+      .pdf-report-container { width: 710px !important; }
+      .machine-section { margin-bottom: 30px; page-break-inside: auto; }
+      .machine-header { page-break-after: avoid; break-after: avoid; }
+      .chk-table { margin-bottom: 20px; width: 100%; border-collapse: collapse; }
+      .chk-table th, .chk-table td { border: 1px solid #e2e8f0; padding: 8px 10px; font-size: 11px; }
+      .chk-table th { background: #f8fafc; color: #334155; font-weight: 600; text-transform: uppercase; }
+      .chk-table tr { page-break-inside: avoid; break-inside: avoid; }
+      .chk-box { display: inline-block; width: 14px; height: 14px; border: 2px solid #64748b; border-radius: 3px; vertical-align: middle; }
+      .signature-block { display: flex; justify-content: space-between; margin-top: 50px; page-break-inside: avoid; }
+      .signature-line { width: 30%; border-top: 1px solid #cbd5e1; text-align: center; padding-top: 5px; font-size: 11px; color: #475569; }
+    </style>
+    ${buildHeader(\`Plano Mestre de Manutenção\`)}
+  `;
+
+  maquinas.forEach(maq => {
+    let totalHh = 0;
+    porMaquina[maq].forEach(a => {
+      totalHh += parseFloat(a.hh) || 0;
+    });
+
+    htmlContent += `
+      <div class="machine-section">
+      <div class="machine-header pdf-section-title" style="margin-top: 25px; margin-bottom: 5px; color: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: baseline;">
+        <span>MÁQUINA: ${maq}</span>
+        <span style="font-size: 11px; font-weight: normal; color: #64748b;">
+          Total H-H Estimado: ${totalHh.toFixed(1)}h
+        </span>
+      </div>
+      <table class="chk-table" style="margin-bottom: 5px;">
+        <thead>
+          <tr>
+            <th style="width: 30px;">[ ]</th>
+            <th style="width: 25%;">COMPONENTE</th>
+            <th>AÇÃO (O QUE FAZER?)</th>
+            <th style="width: 15%;">MATERIAL</th>
+            <th style="width: 15%;">OBSERVAÇÃO</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    porMaquina[maq].forEach((a, idx) => {
+      const borderStyle = idx === 0 ? 'border-top: 2px solid #cbd5e1;' : 'border-top: 1px solid #e2e8f0;';
+      const parts = (a.hierarquia_sistema || '').split(' > ');
+      const componente = parts.pop() || '-';
+      
+      let matHtml = '';
+      if (a.material) {
+        matHtml = `<div style="font-size: 9px;">• ${a.material}</div>`;
+      }
+
+      htmlContent += `
+        <tr style="${borderStyle}">
+          <td style="text-align: center;"><div class="chk-box"></div></td>
+          <td style="vertical-align: top; background: #f8fafc;">
+            <div style="font-weight:700; color:#0f172a;">${componente}</div>
+            <div style="font-size:9px; color:#64748b; margin-top:2px;">${a.estrategia||'-'} | Freq: ${a.frequencia||'-'}</div>
+          </td>
+          <td style="vertical-align: top;">${a.o_que_fazer || '-'}</td>
+          <td style="vertical-align: top; background: #f8fafc;">${matHtml}</td>
+          <td></td>
+        </tr>
+      `;
+    });
+
+    htmlContent += `
+        </tbody>
+      </table>
+      </div>
+    `;
+  });
+
+  htmlContent += `
+    <div class="signature-block">
+      <div class="signature-line">Assinatura do Técnico / Executante</div>
+      <div class="signature-line">Assinatura do Supervisor</div>
+      <div class="signature-line">Data de Execução</div>
+    </div>
+  `;
+
+  container.innerHTML = htmlContent;
+
+  const opt = {
+    margin:       0.4,
+    filename:     \`Checklist_PlanoMestre.pdf\`,
+    image:        { type: 'jpeg', quality: 1.0 },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['css', 'legacy'] }
+  };
+
+  try {
+    await html2pdf().set(opt).from(container.outerHTML).save();
+  } catch (err) {
+    console.error('Erro na exportacao PDF Plano Mestre:', err);
+  }
+}
+
