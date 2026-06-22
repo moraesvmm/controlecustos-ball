@@ -193,7 +193,6 @@ function render() {
                 <th style="padding: 0.8rem 1rem; text-align: center; width: 10%;">Estratégia</th>
                 <th style="padding: 0.8rem 1rem; text-align: center; width: 8%;">H-H</th>
                 <th style="padding: 0.8rem 1rem; text-align: center; width: 12%;">Frequência</th>
-                <th style="padding: 0.8rem 1.5rem; text-align: center; width: 10%;">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -205,7 +204,7 @@ function render() {
       const path = parts.join(' > ');
 
       html += `
-        <tr class="table-row-hover" style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s;">
+        <tr class="table-row-hover" style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; cursor: pointer;" onclick="window.abrirDetalhesPlanoMestre('${atv.id}')">
           <td style="padding: 0.8rem 1.5rem;">
             <div style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.2rem;">${path}</div>
             <div style="color: var(--text); font-weight: 500;">${componente}</div>
@@ -220,10 +219,6 @@ function render() {
           <td style="padding: 0.8rem 1rem; text-align: center; color: var(--muted);">${atv.hh ? atv.hh.toFixed(2) : '-'}</td>
           <td style="padding: 0.8rem 1rem; text-align: center;">
              <strong style="color: var(--secondary);">${atv.frequencia || '-'}</strong>
-          </td>
-          <td style="padding: 0.8rem 1.5rem; text-align: center;">
-             <button class="btn-action" style="color: var(--info); margin-right: 0.5rem; cursor:pointer;" onclick="window.abrirModalEditarAtividadePM('${atv.id}')">✏️</button>
-             <button class="btn-action" style="color: var(--danger); cursor:pointer;" onclick="window.excluirAtividadePM('${atv.id}')">🗑️</button>
           </td>
         </tr>
       `;
@@ -244,6 +239,26 @@ function render() {
 // ------------------------------------------------------------------
 // LÓGICA DE CRUD
 // ------------------------------------------------------------------
+window.abrirDetalhesPlanoMestre = (idAtv) => {
+  const atv = dataAtividades.find(a => a.id === idAtv);
+  if (!atv) return;
+  const maq = dataMaquinas.find(m => m.id === atv.maquina_id);
+  
+  // Mix in machine name for the drilldown
+  const atvView = { ...atv, maquina_nome: maq ? maq.nome_maquina : '' };
+
+  if (window.abrirDrilldown) {
+    window.abrirDrilldown({
+      titulo: maq ? maq.tag : 'Atividade',
+      subtitulo: maq ? maq.nome_maquina : '',
+      registros: [atvView],
+      meta: { isPlanoMestre: true }
+    });
+  } else {
+    toast('Função de drilldown não encontrada.', 'warning');
+  }
+};
+
 window.excluirMaquinaPM = async (idMaquina) => {
   if (!confirmar('ATENÇÃO: Deseja realmente apagar esta MÁQUINA e todas as suas atividades? Esta ação não pode ser desfeita.')) return;
   

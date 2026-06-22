@@ -17,19 +17,20 @@ export function setDrilldownPhotoHandler(fn) {
   onSavePhotoCallback = fn;
 }
 
+window.abrirDrilldown = abrirDrilldown;
 export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
   if (!panel) return;
 
   let stats = [];
-  if (meta.isCustoGeral) {
-    const totalMaterial = registros.reduce((s, r) => s + (Number(r.material) || 0), 0);
+  if (meta.isPlanoMestre) {
+    const totalHH = registros.reduce((s, r) => s + (Number(r.hh) || 0), 0);
     stats = [
-      { label: 'Registros', value: registros.length },
-      { label: 'Valor Material', value: fmtMoeda(totalMaterial) }
+      { label: 'Atividades', value: registros.length },
+      { label: 'H-H Previsto', value: totalHH.toFixed(2) }
     ];
-  } else {
+  } else if (meta.isCustoGeral) {
     const total = registros.reduce((s, r) => s + (Number(r.valor) || 0), 0);
     const totalPrev = registros.reduce((s, r) => s + (Number(r.valor_previsto) || 0), 0);
     const totalRec = registros.reduce((s, r) => s + (Number(r.valor_recebido) || 0), 0);
@@ -158,6 +159,36 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
             ${hasFoto ? `<button type="button" class="btn-ghost btn-sm btn-danger-text drill-foto-remove" data-id="${r.id}">Remover</button>` : ''}
           </div>
         </div>`;
+
+        if (meta.isPlanoMestre) {
+          const parts = (r.hierarquia_sistema || '').split(' > ');
+          const componente = parts.pop() || 'Geral';
+          const path = parts.join(' > ') || r.maquina_nome || '';
+          return `
+      <article class="drill-item" data-id="${r.id}">
+        <div class="drill-item-head">
+          <strong>${componente}</strong>
+          <div class="drill-item-badges">
+            <span class="badge-status" style="background: rgba(255,255,255,0.1); color: var(--text-light); border: 1px solid var(--border);">${r.estrategia || '-'}</span>
+          </div>
+        </div>
+        <div class="drill-item-meta" style="margin-top: 12px; display: block;">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.85rem; width: 100%;">
+            <div style="grid-column: span 2;"><span style="color:var(--muted); font-size: 0.75rem; display:block;">Hierarquia</span> <strong>${path}</strong></div>
+            <div style="grid-column: span 2;"><span style="color:var(--muted); font-size: 0.75rem; display:block;">Ação</span> <strong>${r.o_que_fazer || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">Frequência</span> <strong>${r.frequencia || '—'}</strong></div>
+            <div><span style="color:var(--muted); font-size: 0.75rem; display:block;">H-H Estimado</span> <strong>${r.hh || '0.00'}</strong></div>
+            <div style="grid-column: span 2; margin-top: 4px; padding-top: 8px; border-top: 1px dashed var(--border);">
+              <span style="color:var(--muted); font-size: 0.75rem; display:block;">Material / Peças</span> <strong style="color:var(--info); font-size: 1.1rem;">${r.material || 'N/D'}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="drill-item-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-primary" onclick="window.abrirModalEditarAtividadePM('${r.id}'); fecharDrilldown();" style="width: 100%; margin-bottom: 0.5rem; justify-content:center;">✏️ Editar Atividade</button>
+          <button type="button" class="btn btn-outline" onclick="window.excluirAtividadePM('${r.id}'); fecharDrilldown();" style="width: 100%; border-color: var(--danger); color: var(--danger); justify-content:center;">🗑️ Excluir Atividade</button>
+        </div>
+      </article>`;
+        }
 
         if (meta.isCustoGeral) {
           return `
@@ -321,6 +352,11 @@ function handleRemovePhoto(id, lista) {
 }
 
 export function fecharDrilldown() {
+  document.getElementById('drillPanel')?.classList.remove('open');
+  document.getElementById('drillOverlay')?.classList.remove('open');
+}
+window.fecharDrilldown = fecharDrilldown;
+function fecharDrilldown_old() {
   document.getElementById('drillPanel')?.classList.remove('open');
   document.getElementById('drillOverlay')?.classList.remove('open');
 }
