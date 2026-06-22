@@ -828,46 +828,47 @@
 
         
         <!-- DASHBOARD E FILTROS PLANO MESTRE -->
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
-            <div class="stat-title">Total de Atividades</div>
-            <div class="stat-value" id="pm-total-atividades">0</div>
+        <section class="kpi-grid" style="margin-bottom: 1.5rem;">
+          <div class="kpi-card">
+            <div class="label">Total de Atividades</div>
+            <div class="value" id="pm-total-atividades">0</div>
           </div>
-          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
-            <div class="stat-title">H-H Estimado</div>
-            <div class="stat-value" id="pm-total-hh">0.00</div>
+          <div class="kpi-card">
+            <div class="label">H-H Estimado</div>
+            <div class="value" id="pm-total-hh">0.00</div>
           </div>
-          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border);">
-            <div class="stat-title">Máquinas</div>
-            <div class="stat-value" id="pm-total-maquinas">0</div>
+          <div class="kpi-card">
+            <div class="label">Máquinas</div>
+            <div class="value" id="pm-total-maquinas">0</div>
           </div>
-          <div class="stat-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; padding: 0.5rem;">
+          <div class="kpi-card" style="display: flex; align-items: center; justify-content: center; padding: 0.5rem; border:none; background: transparent; box-shadow: none;">
              <canvas id="pmChartEstrategia" style="max-height: 80px;"></canvas>
           </div>
-        </div>
+        </section>
 
-        <div style="display:flex; flex-wrap:wrap; gap: 1rem; margin-bottom:1.5rem; background: rgba(0,0,0,0.2); padding: 1rem; border-radius: 8px; border: 1px solid var(--border);">
-          <div class="form-group" style="flex: 1; min-width: 250px; margin: 0;">
-            <input type="text" id="pm-search" class="form-control" placeholder="🔍 Buscar por TAG, Máquina ou Tarefa..." style="width: 100%;" />
-          </div>
-          <div class="form-group" style="width: 200px; margin: 0;">
-            <select id="pm-filter-disciplina" class="form-control" style="width: 100%;">
+        <section class="filters" style="margin-bottom:1.5rem; justify-content: flex-start; flex-wrap: wrap;">
+          <label class="search-field" style="flex: 1; min-width: 250px; max-width: 400px;">
+            <span>Busca</span>
+            <input type="search" id="pm-search" placeholder="Buscar por TAG, Máquina ou Tarefa..." />
+          </label>
+          <label style="min-width: 150px;">
+            <span>Disciplina</span>
+            <select id="pm-filter-disciplina">
               <option value="">Todas as Disciplinas</option>
               <option value="MECÂNICA">Mecânica</option>
               <option value="ELÉTRICA">Elétrica</option>
             </select>
-          </div>
-          <div class="form-group" style="width: 200px; margin: 0;">
-            <select id="pm-filter-estrategia" class="form-control" style="width: 100%;">
+          </label>
+          <label style="min-width: 150px;">
+            <span>Estratégia</span>
+            <select id="pm-filter-estrategia">
               <option value="">Todas Estratégias</option>
             </select>
-          </div>
-          <div>
-            <button id="btnExportPlanoMestre" class="btn btn-primary" style="height: 100%;">
-              <span class="icon">📊</span> Exportar Excel
-            </button>
-          </div>
-        </div>
+          </label>
+          <button id="btnExportPlanoMestre" class="btn btn-primary" style="margin-top: 1.5rem; height: 38px;">
+            <span class="icon">📊</span> Exportar Excel
+          </button>
+        </section>
 
         <div id="planoMestreContent" style="min-height: 400px;">
           <!-- Renderizado via JS -->
