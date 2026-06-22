@@ -32,6 +32,7 @@ import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownP
 import { initExcelImport } from './import_excel.js?v=8';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
+
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=12';
 import { initExcelImportCustoGeral } from './import_custo_geral.js?v=4';
 import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
@@ -4381,3 +4382,8 @@ $('#btnSalvarModalCustoGeral')?.addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+
+// PLANO MESTRE INIT
+initPlanoMestre();
+initImportPlanoMestre();
