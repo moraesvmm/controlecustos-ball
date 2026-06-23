@@ -298,8 +298,9 @@ export function renderDashboardCharts(registros) {
           data: byMaquina.map((x) => x.valor),
           backgroundColor: (c) => gradient(c, 'rgba(212, 175, 55, 0.85)', 'rgba(180, 140, 40, 0.35)'),
           borderRadius: 8,
-          barThickness: Math.min(24, Math.max(12, 300 / (byMaquina.length || 1))),
-          maxBarThickness: 32
+          barPercentage: 0.6,
+          categoryPercentage: 0.8,
+          maxBarThickness: 24
         }],
       },
       options: {
