@@ -4185,17 +4185,15 @@ function renderTabelaCustoGeral() {
   if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(realTotal);
   if ($('#kpiCustoCC')) $('#kpiCustoCC').textContent = fmtMoeda(totalCC);
 
-  let metaMesAnual = bTotal / 12; // Aproximação do budget mensal se o AOP for anual
-  
-  if ($('#kpiBudgetTotalResumo')) $('#kpiBudgetTotalResumo').textContent = fmtMoeda(metaMesAnual);
+  if ($('#kpiBudgetTotalResumo')) $('#kpiBudgetTotalResumo').textContent = fmtMoeda(bTotal);
   if ($('#kpiBudgetTotal')) $('#kpiBudgetTotal').textContent = fmtMoeda(bTotal);
   if ($('#kpiBudgetManutencao')) $('#kpiBudgetManutencao').textContent = fmtMoeda(bManutencao);
   if ($('#kpiBudgetFerramentas')) $('#kpiBudgetFerramentas').textContent = fmtMoeda(bFerramentaria);
   if ($('#kpiBudgetFacilities')) $('#kpiBudgetFacilities').textContent = fmtMoeda(bFacilities);
   
   // Progress Bar e Saldo
-  if (metaMesAnual > 0) {
-    let perc = (realTotal / metaMesAnual) * 100;
+  if (bTotal > 0) {
+    let perc = (realTotal / bTotal) * 100;
     let color = perc > 100 ? 'var(--danger)' : (perc > 80 ? 'var(--warning)' : 'var(--success)');
     if ($('#barBudgetConsumido')) {
       $('#barBudgetConsumido').style.width = Math.min(perc, 100) + '%';
@@ -4203,7 +4201,7 @@ function renderTabelaCustoGeral() {
     }
     if ($('#lblPercentConsumido')) $('#lblPercentConsumido').textContent = perc.toFixed(1) + '%';
     
-    let saldo = metaMesAnual - realTotal;
+    let saldo = bTotal - realTotal;
     if ($('#lblSaldoBudget')) {
       $('#lblSaldoBudget').textContent = fmtMoeda(saldo);
       $('#lblSaldoBudget').style.color = saldo < 0 ? 'var(--danger)' : 'var(--success)';
