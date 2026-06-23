@@ -289,39 +289,64 @@ export function renderDashboardCharts(registros) {
 
   const ctx3 = document.getElementById('chartMaquina');
   if (ctx3) {
+    const paletteBorder = [
+      '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444',
+      '#0ea5e9', '#ec4899', '#14b8a6', '#f97316', '#6366f1'
+    ];
+    const paletteBg = paletteBorder.map(color => {
+      // transform hex to rgba with 0.5 opacity for the neon effect
+      let r = parseInt(color.slice(1,3), 16);
+      let g = parseInt(color.slice(3,5), 16);
+      let b = parseInt(color.slice(5,7), 16);
+      return `rgba(${r}, ${g}, ${b}, 0.5)`;
+    });
+
     const ch3 = new Chart(ctx3, {
-      type: 'bar',
+      type: 'polarArea',
       data: {
-        labels: byMaquina.map((x) => x.maquina_linha),
+        labels: byMaquina.map((x) => x.maquina_linha.length > 20 ? x.maquina_linha.substring(0,20)+'...' : x.maquina_linha),
         datasets: [{
           label: 'Valor Recebido',
           data: byMaquina.map((x) => x.valor),
-          backgroundColor: (c) => gradient(c, 'rgba(212, 175, 55, 0.85)', 'rgba(180, 140, 40, 0.35)'),
-          borderRadius: 6,
-          barThickness: Math.min(24, Math.max(12, 300 / (byMaquina.length || 1))),
-          maxBarThickness: 32
+          backgroundColor: paletteBg,
+          borderColor: paletteBorder,
+          borderWidth: 2,
+          hoverOffset: 15
         }],
       },
       options: {
         ...premiumDefaults,
-        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
         onClick: makeClickHandler('maquina'),
         plugins: {
           ...premiumDefaults.plugins,
           title: {
             display: true,
-            text: 'GASTOS POR MÁQUINA',
+            text: 'TOP 10 GASTOS POR MÁQUINA / LINHA',
             color: tc.titleColor,
             font: { ...CHART_FONT, size: 14, weight: '600' },
+            padding: { top: 10, bottom: 20 }
           },
+          legend: {
+            display: true,
+            position: 'right',
+            labels: { color: tc.tickColor, font: CHART_FONT, boxWidth: 12, padding: 15 }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) { return ' ' + fmtMoeda(context.raw); }
+            }
+          }
         },
         scales: {
-          x: {
-            ticks: { color: tc.tickColor, font: CHART_FONT, callback: (v) => fmtMoeda(v) },
-            grid: { color: tc.gridColor },
-          },
-          y: { ticks: { color: tc.tickColor, font: CHART_FONT, maxRotation: 0 }, grid: { display: false } },
-        },
+          r: {
+            ticks: { display: false },
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            angleLines: { color: 'rgba(255,255,255,0.05)' },
+            pointLabels: { display: false }
+          }
+        }
       },
     });
     chartInstances.push(ch3);
