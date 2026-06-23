@@ -866,8 +866,9 @@ function renderTabela() {
             registros[index] = updated;
           }
           try {
-            await salvarRegistro(updated);
-            registros = await carregarRegistros();
+            const salvo = await salvarRegistro(updated);
+            const idx = registros.findIndex(r => String(r.id) === String(salvo.id));
+            if (idx !== -1) registros[idx] = salvo; else registros.push(salvo);
             toast('Registro atualizado.', 'success');
           } catch (err) {
             toast('Erro ao salvar: ' + err.message, 'error');
@@ -1109,8 +1110,9 @@ async function salvarForm(e) {
     comentario: f.comentario.value,
   };
   try {
-    await salvarRegistro(payload);
-    registros = await carregarRegistros();
+    const salvo = await salvarRegistro(payload);
+    const idx = registros.findIndex(r => String(r.id) === String(salvo.id));
+    if (idx !== -1) registros[idx] = salvo; else registros.push(salvo);
     $('#modal').classList.remove('open');
     toast('Registro salvo com sucesso.', 'success');
     renderFiltros();
@@ -1124,7 +1126,7 @@ async function excluir(id) {
   if (!confirmar('Excluir este registro permanentemente?')) return;
   try {
     await excluirRegistro(id);
-    registros = await carregarRegistros();
+    registros = registros.filter(r => String(r.id) !== String(id));
     toast('Registro excluído.', 'success');
     refresh();
   } catch (err) {
@@ -1134,8 +1136,8 @@ async function excluir(id) {
 
 async function duplicar(id) {
   try {
-    await duplicarRegistro(id);
-    registros = await carregarRegistros();
+    const salvo = await duplicarRegistro(id);
+    registros.push(salvo);
     toast('Registro duplicado.', 'success');
     renderFiltros();
     refresh();
@@ -1264,8 +1266,9 @@ async function init() {
     const r = registros.find((x) => String(x.id) === String(id));
     if (!r) return;
     try {
-      await salvarRegistro({ ...r, foto_url: dataUrl });
-      registros = await carregarRegistros();
+      const salvo = await salvarRegistro({ ...r, foto_url: dataUrl });
+      const idx = registros.findIndex(x => String(x.id) === String(salvo.id));
+      if (idx !== -1) registros[idx] = salvo;
       toast('Mídia da RC atualizada.', 'success');
       refresh();
     } catch (err) {
