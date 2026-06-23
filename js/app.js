@@ -4157,7 +4157,7 @@ function renderTabelaCustoGeral() {
 
   // Calculando Realizado
   for (let r of registrosReais) {
-    let custo = Number(r.custo_do_mes) || 0;
+    let custo = Number(r.custo_cc) || 0;
     if (custo === 0) continue;
     // Regra oficial da planilha: se it-codigo começa com "SER", é serviço. Senão, é consumo.
     let it_codigo = String(r.it_codigo || '').trim().toUpperCase();
@@ -4455,7 +4455,7 @@ function renderTabelaCustoGeral() {
     
     for (let r of todosRegistros) {
       if (r.it_codigo === 'BUDGET_METADATA') continue;
-      let custo = Number(r.custo_do_mes) || 0;
+      let custo = Number(r.custo_cc) || 0;
       if (custo === 0) continue;
       
       let linha = String(r.linha || '').trim();
