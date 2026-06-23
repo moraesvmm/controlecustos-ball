@@ -302,16 +302,17 @@ export function renderDashboardCharts(registros) {
     });
 
     const ch3 = new Chart(ctx3, {
-      type: 'polarArea',
+      type: 'doughnut',
       data: {
-        labels: byMaquina.map((x) => x.maquina_linha.length > 20 ? x.maquina_linha.substring(0,20)+'...' : x.maquina_linha),
+        labels: byMaquina.map((x) => x.maquina_linha), // Nome completo para o drilldown funcionar
         datasets: [{
           label: 'Valor Recebido',
           data: byMaquina.map((x) => x.valor),
           backgroundColor: paletteBg,
           borderColor: paletteBorder,
           borderWidth: 2,
-          hoverOffset: 15
+          hoverOffset: 15,
+          cutout: '65%'
         }],
       },
       options: {
@@ -331,20 +332,38 @@ export function renderDashboardCharts(registros) {
           legend: {
             display: true,
             position: 'right',
-            labels: { color: tc.tickColor, font: CHART_FONT, boxWidth: 12, padding: 15 }
+            labels: { 
+              color: tc.tickColor, 
+              font: CHART_FONT, 
+              boxWidth: 12, 
+              padding: 15,
+              generateLabels: (chart) => {
+                const data = chart.data;
+                if (data.labels.length && data.datasets.length) {
+                  return data.labels.map((label, i) => {
+                    const meta = chart.getDatasetMeta(0);
+                    const style = meta.controller.getStyle(i);
+                    return {
+                      text: label.length > 22 ? label.substring(0, 22) + '...' : label,
+                      fillStyle: style.backgroundColor,
+                      strokeStyle: style.borderColor,
+                      lineWidth: style.borderWidth,
+                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                      index: i
+                    };
+                  });
+                }
+                return [];
+              }
+            }
           },
           tooltip: {
             callbacks: {
-              label: function(context) { return ' ' + fmtMoeda(context.raw); }
+              label: function(context) { 
+                const label = context.label || '';
+                return ' ' + label + ': ' + fmtMoeda(context.raw); 
+              }
             }
-          }
-        },
-        scales: {
-          r: {
-            ticks: { display: false },
-            grid: { color: 'rgba(255,255,255,0.05)' },
-            angleLines: { color: 'rgba(255,255,255,0.05)' },
-            pointLabels: { display: false }
           }
         }
       },
