@@ -289,14 +289,30 @@
       </header>
       
       <!-- KPIs do Custo Geral -->
-      <section class="kpi-grid" id="kpisCustoGeral" style="margin-bottom: 1.5rem; flex-shrink: 0;">
+      <section class="kpi-grid" id="kpisCustoGeral" style="margin-bottom: 1.5rem; flex-shrink: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
         <div class="kpi-card" style="border-left: 4px solid var(--primary);">
           <span class="kpi-label">Material (Total)</span>
           <strong class="kpi-value" id="kpiCustoMaterial">R$ 0,00</strong>
         </div>
-        <div class="kpi-card" style="border-left: 4px solid var(--accent);">
-          <span class="kpi-label">GGF (Total)</span>
-          <strong class="kpi-value" id="kpiCustoGgf">R$ 0,00</strong>
+        <div class="kpi-card" style="border-left: 4px solid #d4af37;">
+          <span class="kpi-label">Budget Total</span>
+          <strong class="kpi-value" id="kpiBudgetTotal">R$ 0,00</strong>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid #3b82f6;">
+          <span class="kpi-label">Budget Manutenção</span>
+          <strong class="kpi-value" id="kpiBudgetManutencao">R$ 0,00</strong>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid #8b5cf6;">
+          <span class="kpi-label">Budget Ferramentaria</span>
+          <strong class="kpi-value" id="kpiBudgetFerramentas">R$ 0,00</strong>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid #10b981;">
+          <span class="kpi-label">Budget Facilities</span>
+          <strong class="kpi-value" id="kpiBudgetFacilities">R$ 0,00</strong>
+        </div>
+        <div class="kpi-card" style="border-left: 4px solid var(--danger);">
+          <span class="kpi-label">Budget Consumido</span>
+          <strong class="kpi-value" id="kpiBudgetConsumido">R$ 0,00</strong>
         </div>
         <div class="kpi-card" style="border-left: 4px solid var(--success);">
           <span class="kpi-label">Custo do Mês</span>
@@ -306,6 +322,31 @@
           <span class="kpi-label">Total C.C.</span>
           <strong class="kpi-value" id="kpiCustoCC">R$ 0,00</strong>
         </div>
+      </section>
+
+      <!-- Tabela Detalhada de Budgets -->
+      <section class="panel" id="tabelaBudgetsContainer" style="margin-bottom: 1.5rem; display: none; background: var(--surface); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="margin: 0; font-size: 1rem; color: var(--text);">Desdobramento do Budget</h3>
+          <button id="btnEntregarLogica" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;"><i class="fa-solid fa-file-export"></i> Entregar Lógica</button>
+        </div>
+        <table class="data-table" id="tabelaDetalhamentoBudgets" style="width: 100%; text-align: right; font-size: 0.85rem;">
+          <thead>
+            <tr>
+              <th style="text-align: left;">ÁREA</th>
+              <th style="text-align: left;">TIPO</th>
+              <th>%</th>
+              <th>META MÊS</th>
+              <th>META SEMANA</th>
+              <th>REAL</th>
+              <th>ESTIMATIVA ACUMULADA</th>
+              <th>PLANEJADO x DIA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
       </section>
 
       <!-- Filtros de Busca -->

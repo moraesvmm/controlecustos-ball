@@ -4078,7 +4078,18 @@ function renderTabelaCustoGeral() {
   const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
   const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
 
-  let registrosFiltrados = (registrosCustoGeral || []).filter(r => {
+  let budgetMetadata = null;
+  let registrosReais = [];
+
+  for (let r of (registrosCustoGeral || [])) {
+    if (r.it_codigo === 'BUDGET_METADATA') {
+      try { budgetMetadata = JSON.parse(r.descricao_codigo); } catch(e){}
+    } else {
+      registrosReais.push(r);
+    }
+  }
+
+  let registrosFiltrados = registrosReais.filter(r => {
     // Filtro de Ordem
     if (filtroOrdem === 'com_ordem' && !r.numero_ordem) return false;
     if (filtroOrdem === 'sem_ordem' && r.numero_ordem) return false;
@@ -4130,10 +4141,106 @@ function renderTabelaCustoGeral() {
     </tr>`;
   }).join('');
 
+  // --- CÁLCULOS DO BUDGET ---
+  let bManutencao = budgetMetadata ? (budgetMetadata.manutencao || 0) : 0;
+  let bFerramentaria = budgetMetadata ? (budgetMetadata.ferramentaria || 0) : 0;
+  let bFacilities = budgetMetadata ? (budgetMetadata.facilities || 0) : 0;
+  let bTotal = budgetMetadata ? (budgetMetadata.total || 0) : 0;
+
+  let rManutServ = 0, rManutCons = 0;
+  let rFerramServ = 0, rFerramCons = 0;
+  let rFacilServ = 0, rFacilCons = 0;
+
+  // Calculando Realizado
+  for (let r of registrosReais) {
+    let custo = Number(r.custo_do_mes) || 0;
+    if (custo === 0) continue;
+    let mat = Number(r.material) || 0;
+    let isConsumo = (mat !== 0); // Se tem valor de material, consideramos consumo
+
+    const str = [r.grupo, r.descricao_conta, r.linha, r.descricao_db].join(' ').toLowerCase();
+    
+    if (str.includes('ferram')) {
+      if (isConsumo) rFerramCons += custo; else rFerramServ += custo;
+    } else if (str.includes('facil')) {
+      if (isConsumo) rFacilCons += custo; else rFacilServ += custo;
+    } else {
+      // Default: Manutenção
+      if (isConsumo) rManutCons += custo; else rManutServ += custo;
+    }
+  }
+
+  const realManut = rManutServ + rManutCons;
+  const realFerram = rFerramServ + rFerramCons;
+  const realFacil = rFacilServ + rFacilCons;
+  const realTotal = realManut + realFerram + realFacil;
+
+  // Atualizando KPIs
   if ($('#kpiCustoMaterial')) $('#kpiCustoMaterial').textContent = fmtMoeda(totalMaterial);
-  if ($('#kpiCustoGgf')) $('#kpiCustoGgf').textContent = fmtMoeda(totalGGF);
   if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(totalMes);
   if ($('#kpiCustoCC')) $('#kpiCustoCC').textContent = fmtMoeda(totalCC);
+
+  if ($('#kpiBudgetTotal')) $('#kpiBudgetTotal').textContent = fmtMoeda(bTotal);
+  if ($('#kpiBudgetManutencao')) $('#kpiBudgetManutencao').textContent = fmtMoeda(bManutencao);
+  if ($('#kpiBudgetFerramentas')) $('#kpiBudgetFerramentas').textContent = fmtMoeda(bFerramentaria);
+  if ($('#kpiBudgetFacilities')) $('#kpiBudgetFacilities').textContent = fmtMoeda(bFacilities);
+  if ($('#kpiBudgetConsumido')) $('#kpiBudgetConsumido').textContent = fmtMoeda(realTotal);
+
+  // Renderizando Tabela Detalhada
+  const tabContainer = $('#tabelaBudgetsContainer');
+  const tabBody = $('#tabelaDetalhamentoBudgets tbody');
+  if (tabContainer && tabBody) {
+    if (budgetMetadata) {
+      tabContainer.style.display = 'block';
+      
+      const diasMes = 30; // Aproximação padrão, ou calcular a partir da data atual
+      const diaAtual = new Date().getDate();
+      
+      const renderRow = (area, tipo, percStr, metaMes, metaSemana, real, planejDia) => {
+        let estAcumulada = planejDia * diaAtual;
+        return `<tr>
+          <td style="text-align: left;">${area}</td>
+          <td style="text-align: left;">${tipo}</td>
+          <td>${percStr}</td>
+          <td>${fmtMoeda(metaMes)}</td>
+          <td>${fmtMoeda(metaSemana)}</td>
+          <td style="font-weight: 500; color: ${real > metaMes ? 'var(--danger)' : 'var(--success)'}">${fmtMoeda(real)}</td>
+          <td>${fmtMoeda(estAcumulada)}</td>
+          <td>${fmtMoeda(planejDia)}</td>
+        </tr>`;
+      };
+
+      let html = '';
+      // Assumindo split 50/50 entre Serviço e Consumo para as metas
+      let metaMesManut = bManutencao / 2;
+      let metaMesFerram = bFerramentaria / 2;
+      let metaMesFacil = bFacilities / 2;
+
+      html += renderRow('MANUTENÇÃO', 'SERV', '64,4%', metaMesManut, metaMesManut/5, rManutServ, metaMesManut/diasMes);
+      html += renderRow('', 'CONS', '64,4%', metaMesManut, metaMesManut/5, rManutCons, metaMesManut/diasMes);
+      
+      html += renderRow('FERRAMENTARIA', 'SERV', '29,9%', metaMesFerram, metaMesFerram/5, rFerramServ, metaMesFerram/diasMes);
+      html += renderRow('', 'CONS', '29,9%', metaMesFerram, metaMesFerram/5, rFerramCons, metaMesFerram/diasMes);
+
+      html += renderRow('FACILITIES', 'SERV', '5,7%', metaMesFacil, metaMesFacil/5, rFacilServ, metaMesFacil/diasMes);
+      html += renderRow('', 'CONS', '5,7%', metaMesFacil, metaMesFacil/5, rFacilCons, metaMesFacil/diasMes);
+
+      html += `<tr style="background: rgba(255,255,255,0.05); font-weight: bold;">
+        <td colspan="3" style="text-align: left; color: #fff;">TOTAL</td>
+        <td style="color: #fff;">${fmtMoeda(bTotal)}</td>
+        <td style="color: #fff;">${fmtMoeda(bTotal/5)}</td>
+        <td style="color: #fff;">${fmtMoeda(realTotal)}</td>
+        <td style="color: #fff;">${fmtMoeda((bTotal/diasMes)*diaAtual)}</td>
+        <td style="color: #fff;">${fmtMoeda(bTotal/diasMes)}</td>
+      </tr>`;
+
+      tabBody.innerHTML = html;
+    } else {
+      tabContainer.style.display = 'none';
+    }
+  }
+
+  // --- FIM DOS CÁLCULOS DO BUDGET ---
 
   linhaSelecionadaCustoGeralId = null;
 
@@ -4394,3 +4501,50 @@ $('#btnSalvarModalCustoGeral')?.addEventListener('click', async () => {
 // PLANO MESTRE INIT
 initPlanoMestre();
 initImportPlanoMestre();
+
+// LOGICA BUDGET EXPORT
+const btnLogica = document.getElementById('btnEntregarLogica');
+if (btnLogica) {
+  btnLogica.addEventListener('click', () => {
+    const text = `=== LÓGICA DE CÁLCULO DE BUDGET (AUTOMAÇÃO) ===
+
+Esta automação substitui o processo manual que era realizado na aba "DADOS" do Excel original.
+
+1. IMPORTAÇÃO DOS DADOS AOP:
+O sistema lê automaticamente a aba "AOP 2026 PHC_Itupeva" do arquivo Excel importado.
+Ao invés de depender de percentuais fixos aplicados sobre o "Budget Total Flexibilizado", 
+o sistema agora localiza as linhas correspondentes a "M&R" (Manutenção), "Ferramentaria" e "Facilities" 
+na coluna de metas mensais. O valor puro e exato para cada área é capturado.
+O "Budget Total" é a soma exata desses três valores encontrados, eliminando a margem de erro de arredondamentos.
+
+2. DESDOBRAMENTO (META MÊS E META SEMANA):
+Seguindo o racional de distribuição do seu dashboard anterior:
+A meta total da área é dividida equitativamente (50% / 50%) entre os tipos "Serviço" e "Consumo".
+A Meta Semanal é a Meta Mês correspondente dividida por 5.
+A Estimativa Acumulada considera a Meta por Dia (Meta / 30) multiplicada pelo dia atual do mês.
+
+3. CONSOLIDAÇÃO DO REAL (CONSUMIDO):
+O valor "Real" de cada área e tipo é calculado somando o "Custo do Mês" de cada linha da aba "Movimento".
+Para determinar se a linha é "Consumo" ou "Serviço":
+- Se a coluna "Material" possui valor, o registro é classificado como "Consumo".
+- Caso contrário, o registro é classificado como "Serviço".
+Para determinar a área:
+- O sistema varre o Grupo, a Descrição da Conta e a Linha de Produto.
+- Se o registro mencionar "ferram", vai para Ferramentaria.
+- Se mencionar "facil", vai para Facilities.
+- Qualquer outro registro (ou explicitamente "manuten") vai para Manutenção.
+
+Com isso, não é mais necessário nenhum cálculo intermediário manual!
+`;
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Logica_Calculo_Budget.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+

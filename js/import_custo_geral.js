@@ -67,6 +67,53 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
 
         if (json.length === 0) throw new Error("A planilha está vazia ou não contém dados válidos abaixo do cabeçalho.");
 
+        // =============================
+        // Lógica: EXTRAIR BUDGETS (AOP)
+        // =============================
+        let budgetData = null;
+        try {
+          const aopSheetName = workbook.SheetNames.find(n => n.toLowerCase().includes('aop'));
+          if (aopSheetName) {
+            const aopSheet = workbook.Sheets[aopSheetName];
+            const aopJson = window.XLSX.utils.sheet_to_json(aopSheet, { header: 1, defval: null });
+            
+            let bManutencao = 0;
+            let bFerramentaria = 0;
+            let bFacilities = 0;
+            
+            for (let i = 0; i < Math.min(100, aopJson.length); i++) {
+              const row = aopJson[i];
+              if (!row) continue;
+              
+              const strContent = row.map(c => String(c || '').toLowerCase().trim()).join(' ');
+              
+              if (strContent.includes('m&r') && !strContent.includes('budget m&r')) {
+                const num = row.find(c => typeof c === 'number' && c > 10000);
+                if (num) bManutencao = num;
+              }
+              if (strContent.includes('ferramentaria')) {
+                const num = row.find(c => typeof c === 'number' && c > 10000);
+                if (num) bFerramentaria = num;
+              }
+              if (strContent.includes('facilities') && !strContent.includes('svc')) {
+                const num = row.find(c => typeof c === 'number' && c >= 10000);
+                if (num) bFacilities = num;
+              }
+            }
+            
+            if (bManutencao || bFerramentaria || bFacilities) {
+               budgetData = {
+                  manutencao: bManutencao,
+                  ferramentaria: bFerramentaria,
+                  facilities: bFacilities,
+                  total: bManutencao + bFerramentaria + bFacilities,
+                  data_importacao: new Date().toISOString()
+               };
+            }
+          }
+        } catch (e) { console.warn("Erro ao ler aba AOP:", e); }
+
+
         toast('Processando dados...', 'info');
         
         const records = json.map(rawRow => {
@@ -151,6 +198,17 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             descricao_db: String(row['descricao-db'] || ''),
           };
         }).filter(r => r.it_codigo || r.numero_ordem); // ignorar linhas vazias
+
+        // ADICIONA REGISTRO ESPECIAL DE BUDGET SE ENCONTRADO
+        if (budgetData) {
+          records.push({
+            it_codigo: 'BUDGET_METADATA',
+            descricao_codigo: JSON.stringify(budgetData),
+            ordem: 0,
+            quantidade: 0,
+            custo_do_mes: 0
+          });
+        }
 
         if (records.length === 0) {
           const colunasLidas = json.length > 0 ? Object.keys(json[0]).join(', ') : 'nenhuma coluna lida';
