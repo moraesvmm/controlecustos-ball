@@ -204,7 +204,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           records.push({
             it_codigo: 'BUDGET_METADATA',
             descricao_codigo: JSON.stringify(budgetData),
-            ordem: 0,
+            numero_ordem: '0',
             quantidade: 0,
             custo_do_mes: 0
           });
