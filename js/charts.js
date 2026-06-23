@@ -289,18 +289,6 @@ export function renderDashboardCharts(registros) {
 
   const ctx3 = document.getElementById('chartMaquina');
   if (ctx3) {
-    const paletteBorder = [
-      '#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444',
-      '#0ea5e9', '#ec4899', '#14b8a6', '#f97316', '#6366f1'
-    ];
-    const paletteBg = paletteBorder.map(color => {
-      // transform hex to rgba with 0.5 opacity for the neon effect
-      let r = parseInt(color.slice(1,3), 16);
-      let g = parseInt(color.slice(3,5), 16);
-      let b = parseInt(color.slice(5,7), 16);
-      return `rgba(${r}, ${g}, ${b}, 0.5)`;
-    });
-
     const ch3 = new Chart(ctx3, {
       type: 'bar',
       data: {
@@ -308,9 +296,7 @@ export function renderDashboardCharts(registros) {
         datasets: [{
           label: 'Valor Recebido',
           data: byMaquina.map((x) => x.valor),
-          backgroundColor: paletteBg,
-          borderColor: paletteBorder,
-          borderWidth: 1,
+          backgroundColor: (c) => gradient(c, 'rgba(212, 175, 55, 0.85)', 'rgba(180, 140, 40, 0.35)'),
           borderRadius: 8,
           barThickness: Math.min(24, Math.max(12, 300 / (byMaquina.length || 1))),
           maxBarThickness: 32
