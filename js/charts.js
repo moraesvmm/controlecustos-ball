@@ -348,6 +348,7 @@ export function renderDashboardCharts(registros) {
                       fillStyle: style.backgroundColor,
                       strokeStyle: style.borderColor,
                       lineWidth: style.borderWidth,
+                      fontColor: tc.tickColor,
                       hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
                       index: i
                     };
