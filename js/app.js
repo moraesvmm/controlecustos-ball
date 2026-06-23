@@ -4062,6 +4062,7 @@ document.getElementById('btnTogglePrivacy')?.addEventListener('click', () => {
 
 let chartEvolucaoCustoGeralInst = null;
 let chartEstratificacaoCCIst = null;
+let chartRadarTecnicosInst = null;
 
 function renderTabelaCustoGeral() {
   const thead = $('#tabelaHeadCustoGeral');
@@ -4442,6 +4443,91 @@ function renderTabelaCustoGeral() {
             y: {
               grid: { display: false },
               ticks: { color: '#a1a1aa', font: { size: 10 } }
+            }
+          }
+        }
+      });
+    }
+
+    // --- Processar dados para Radar (Técnico x Linha) ---
+    let linhaMap = {};
+    let tecnicoMap = {};
+    let relacao = {}; // { tecnico: { linha: custo } }
+    
+    for (let r of todosRegistros) {
+      if (r.it_codigo === 'BUDGET_METADATA') continue;
+      let custo = Number(r.custo_do_mes) || 0;
+      if (custo === 0) continue;
+      
+      let linha = String(r.linha || '').trim();
+      let tec = String(r.nome_solicitante || '').trim();
+      
+      if (!linha || !tec || linha === 'null' || tec === 'null' || linha === 'undefined' || tec === 'undefined') continue;
+      
+      linhaMap[linha] = (linhaMap[linha] || 0) + custo;
+      tecnicoMap[tec] = (tecnicoMap[tec] || 0) + custo;
+      
+      if (!relacao[tec]) relacao[tec] = {};
+      relacao[tec][linha] = (relacao[tec][linha] || 0) + custo;
+    }
+    
+    let topLinhas = Object.keys(linhaMap).map(k => ({nome: k, val: linhaMap[k]})).sort((a,b) => b.val - a.val).slice(0, 5).map(x => x.nome);
+    let topTecnicos = Object.keys(tecnicoMap).map(k => ({nome: k, val: tecnicoMap[k]})).sort((a,b) => b.val - a.val).slice(0, 5).map(x => x.nome);
+    
+    const colorsRadar = [
+      { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6' }, // Blue
+      { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6' }, // Purple
+      { bg: 'rgba(16, 185, 129, 0.2)', border: '#10b981' }, // Emerald
+      { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b' }, // Amber
+      { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444' }   // Red
+    ];
+    
+    let radarDatasets = topTecnicos.map((tec, i) => {
+      let data = topLinhas.map(l => (relacao[tec] && relacao[tec][l]) ? relacao[tec][l] : 0);
+      return {
+        label: tec.split(' ')[0], // Pega só o primeiro nome para a legenda não ficar gigante
+        data: data,
+        backgroundColor: colorsRadar[i % colorsRadar.length].bg,
+        borderColor: colorsRadar[i % colorsRadar.length].border,
+        pointBackgroundColor: colorsRadar[i % colorsRadar.length].border,
+        borderWidth: 2,
+        pointRadius: 3,
+        pointHoverRadius: 5
+      };
+    });
+
+    const ctxRadar = document.getElementById('chartRadarTecnicos');
+    if (ctxRadar) {
+      if (chartRadarTecnicosInst) chartRadarTecnicosInst.destroy();
+      
+      let radarLabels = topLinhas.map(l => l.length > 15 ? l.substring(0, 15) + '...' : l);
+      
+      chartRadarTecnicosInst = new Chart(ctxRadar, {
+        type: 'radar',
+        data: {
+          labels: radarLabels,
+          datasets: radarDatasets
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { color: '#a1a1aa', font: { size: 10 }, boxWidth: 10, padding: 8 }
+            },
+            tooltip: {
+              callbacks: {
+                label: function(context) { return context.dataset.label + ': ' + fmtMoeda(context.parsed.r); }
+              }
+            }
+          },
+          scales: {
+            r: {
+              angleLines: { color: 'rgba(255,255,255,0.1)' },
+              grid: { color: 'rgba(255,255,255,0.1)' },
+              pointLabels: { color: '#e4e4e7', font: { size: 10, family: 'Inter' } },
+              ticks: { display: false } // Ocultar os números feios do fundo da teia
             }
           }
         }

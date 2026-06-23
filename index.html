@@ -365,7 +365,7 @@
       </section>
 
       <!-- Gráficos Main Container -->
-      <section id="chartsContainer" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; min-height: 350px; flex-shrink: 0;">
+      <section id="chartsContainer" style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 1.5rem; margin-bottom: 1.5rem; min-height: 350px; flex-shrink: 0;">
         <!-- Gráfico de Evolução (Mensal) -->
         <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
           <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Evolução de Custos por Classificação</h3>
@@ -379,6 +379,14 @@
           <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Estratificação por C.C. (Top 10)</h3>
           <div style="flex: 1; position: relative;">
             <canvas id="chartEstratificacaoCC"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico de Radar: Técnico x Equipamento -->
+        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Técnicos x Linhas (Top 5)</h3>
+          <div style="flex: 1; position: relative; display: flex; justify-content: center; align-items: center;">
+            <canvas id="chartRadarTecnicos"></canvas>
           </div>
         </div>
       </section>
