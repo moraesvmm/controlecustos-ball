@@ -302,21 +302,23 @@ export function renderDashboardCharts(registros) {
     });
 
     const ch3 = new Chart(ctx3, {
-      type: 'doughnut',
+      type: 'bar',
       data: {
-        labels: byMaquina.map((x) => x.maquina_linha), // Nome completo para o drilldown funcionar
+        labels: byMaquina.map((x) => x.maquina_linha), // Nome completo na base para o drilldown
         datasets: [{
           label: 'Valor Recebido',
           data: byMaquina.map((x) => x.valor),
           backgroundColor: paletteBg,
           borderColor: paletteBorder,
-          borderWidth: 2,
-          hoverOffset: 15,
-          cutout: '65%'
+          borderWidth: 1,
+          borderRadius: 8,
+          barThickness: Math.min(24, Math.max(12, 300 / (byMaquina.length || 1))),
+          maxBarThickness: 32
         }],
       },
       options: {
         ...premiumDefaults,
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         onClick: makeClickHandler('maquina'),
@@ -330,42 +332,32 @@ export function renderDashboardCharts(registros) {
             padding: { top: 10, bottom: 20 }
           },
           legend: {
-            display: true,
-            position: 'right',
-            labels: { 
-              color: tc.tickColor, 
-              font: CHART_FONT, 
-              boxWidth: 12, 
-              padding: 15,
-              generateLabels: (chart) => {
-                const data = chart.data;
-                if (data.labels.length && data.datasets.length) {
-                  return data.labels.map((label, i) => {
-                    const meta = chart.getDatasetMeta(0);
-                    const style = meta.controller.getStyle(i);
-                    return {
-                      text: label.length > 22 ? label.substring(0, 22) + '...' : label,
-                      fillStyle: style.backgroundColor,
-                      strokeStyle: style.borderColor,
-                      lineWidth: style.borderWidth,
-                      fontColor: tc.tickColor,
-                      hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
-                      index: i
-                    };
-                  });
-                }
-                return [];
-              }
-            }
+            display: false // Esconde a legenda, pois o eixo Y já tem os nomes
           },
           tooltip: {
             callbacks: {
-              label: function(context) { 
-                const label = context.label || '';
-                return ' ' + label + ': ' + fmtMoeda(context.raw); 
-              }
+              label: function(context) { return ' ' + fmtMoeda(context.raw); }
             }
           }
+        },
+        scales: {
+          x: {
+            ticks: { color: tc.tickColor, font: CHART_FONT, callback: (v) => fmtMoeda(v) },
+            grid: { color: 'rgba(255,255,255,0.05)' },
+          },
+          y: { 
+            ticks: { 
+              color: tc.tickColor, 
+              font: CHART_FONT, 
+              maxRotation: 0,
+              callback: function(value, index, values) {
+                // Trunca o texto do eixo Y para manter elegância
+                const label = this.getLabelForValue(value);
+                return label.length > 25 ? label.substring(0, 25) + '...' : label;
+              }
+            }, 
+            grid: { display: false } 
+          },
         }
       },
     });
