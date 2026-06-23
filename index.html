@@ -298,39 +298,88 @@
         </div>
       </header>
       
-      <!-- KPIs do Custo Geral -->
-      <section class="kpi-grid" id="kpisCustoGeral" style="margin-bottom: 1.5rem; flex-shrink: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
-        <div class="kpi-card" style="border-left: 4px solid var(--primary);">
-          <span class="kpi-label">Material (Total)</span>
-          <strong class="kpi-value" id="kpiCustoMaterial">R$ 0,00</strong>
+      <!-- Dashboard Widgets -->
+      <section id="kpisCustoGeral" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0;">
+        
+        <!-- Widget 1: Desempenho do Budget -->
+        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Desempenho Geral do Budget</span>
+            <i class="fa-solid fa-bullseye" style="color: var(--primary); font-size: 1.2rem;"></i>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <strong id="kpiCustoMes" style="font-size: 2rem; color: #fff; line-height: 1;">R$ 0,00</strong>
+            <span style="color: var(--muted); font-size: 0.9rem;">/ <span id="kpiBudgetTotalResumo">R$ 0,00</span></span>
+          </div>
+          <!-- Barra de Progresso do Budget -->
+          <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 0.5rem;">
+            <div id="barBudgetConsumido" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--success), var(--warning)); transition: width 1s ease-in-out;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem; color: var(--muted);">
+            <span>Consumido: <strong id="lblPercentConsumido" style="color: #fff;">0%</strong></span>
+            <span>Resta: <strong id="lblSaldoBudget" style="color: var(--success);">R$ 0,00</strong></span>
+          </div>
         </div>
-        <div class="kpi-card" style="border-left: 4px solid #d4af37;">
-          <span class="kpi-label">Budget Total</span>
-          <strong class="kpi-value" id="kpiBudgetTotal">R$ 0,00</strong>
+
+        <!-- Widget 2: Composição do Budget -->
+        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Composição do Budget Anual</span>
+            <i class="fa-solid fa-chart-pie" style="color: #8b5cf6; font-size: 1.2rem;"></i>
+          </div>
+          <strong id="kpiBudgetTotal" style="font-size: 1.5rem; color: #fff; margin-bottom: 1rem; line-height: 1;">R$ 0,00</strong>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span> Manutenção</span>
+              <strong id="kpiBudgetManutencao">R$ 0,00</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6;"></span> Ferramentaria</span>
+              <strong id="kpiBudgetFerramentas">R$ 0,00</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span> Facilities</span>
+              <strong id="kpiBudgetFacilities">R$ 0,00</strong>
+            </div>
+          </div>
         </div>
-        <div class="kpi-card" style="border-left: 4px solid #3b82f6;">
-          <span class="kpi-label">Budget Manutenção</span>
-          <strong class="kpi-value" id="kpiBudgetManutencao">R$ 0,00</strong>
+
+        <!-- Widget 3: Controle Geral -->
+        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Validação de Custo</span>
+            <i class="fa-solid fa-file-invoice-dollar" style="color: #d4af37; font-size: 1.2rem;"></i>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div>
+              <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Total Centro de Custo</span>
+              <strong id="kpiCustoCC" style="font-size: 1.4rem; color: #fff;">R$ 0,00</strong>
+            </div>
+            <div>
+              <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Material (Total)</span>
+              <strong id="kpiCustoMaterial" style="font-size: 1.1rem; color: #ccc;">R$ 0,00</strong>
+            </div>
+          </div>
         </div>
-        <div class="kpi-card" style="border-left: 4px solid #8b5cf6;">
-          <span class="kpi-label">Budget Ferramentaria</span>
-          <strong class="kpi-value" id="kpiBudgetFerramentas">R$ 0,00</strong>
+      </section>
+
+      <!-- Gráficos Main Container -->
+      <section id="chartsContainer" style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; min-height: 350px;">
+        <!-- Gráfico de Evolução (Mensal) -->
+        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Evolução de Custos por Classificação</h3>
+          <div style="flex: 1; position: relative;">
+            <canvas id="chartEvolucaoCustos"></canvas>
+          </div>
         </div>
-        <div class="kpi-card" style="border-left: 4px solid #10b981;">
-          <span class="kpi-label">Budget Facilities</span>
-          <strong class="kpi-value" id="kpiBudgetFacilities">R$ 0,00</strong>
-        </div>
-        <div class="kpi-card" style="border-left: 4px solid var(--danger);">
-          <span class="kpi-label">Budget Consumido</span>
-          <strong class="kpi-value" id="kpiBudgetConsumido">R$ 0,00</strong>
-        </div>
-        <div class="kpi-card" style="border-left: 4px solid var(--success);">
-          <span class="kpi-label">Custo do Mês</span>
-          <strong class="kpi-value" id="kpiCustoMes">R$ 0,00</strong>
-        </div>
-        <div class="kpi-card" style="border-left: 4px solid var(--warning);">
-          <span class="kpi-label">Total C.C.</span>
-          <strong class="kpi-value" id="kpiCustoCC">R$ 0,00</strong>
+        
+        <!-- Gráfico de Estratificação por CC -->
+        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Estratificação por C.C. (Top 10)</h3>
+          <div style="flex: 1; position: relative;">
+            <canvas id="chartEstratificacaoCC"></canvas>
+          </div>
         </div>
       </section>
 

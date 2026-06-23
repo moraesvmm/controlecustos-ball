@@ -4060,6 +4060,9 @@ document.getElementById('btnTogglePrivacy')?.addEventListener('click', () => {
 // CUSTO GERAL (Integração Financeiro & Datasul)
 // ==========================================
 
+let chartEvolucaoCustoGeralInst = null;
+let chartEstratificacaoCCIst = null;
+
 function renderTabelaCustoGeral() {
   const thead = $('#tabelaHeadCustoGeral');
   const tbody = $('#tabelaBodyCustoGeral');
@@ -4176,16 +4179,38 @@ function renderTabelaCustoGeral() {
   const realFacil = rFacilServ + rFacilCons;
   const realTotal = realManut + realFerram + realFacil;
 
-  // Atualizando KPIs
+  // Atualizando KPIs (Novos Widgets)
   if ($('#kpiCustoMaterial')) $('#kpiCustoMaterial').textContent = fmtMoeda(totalMaterial);
-  if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(totalMes);
+  if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(realTotal);
   if ($('#kpiCustoCC')) $('#kpiCustoCC').textContent = fmtMoeda(totalCC);
 
+  let metaMesAnual = bTotal / 12; // Aproximação do budget mensal se o AOP for anual
+  
+  if ($('#kpiBudgetTotalResumo')) $('#kpiBudgetTotalResumo').textContent = fmtMoeda(metaMesAnual);
   if ($('#kpiBudgetTotal')) $('#kpiBudgetTotal').textContent = fmtMoeda(bTotal);
   if ($('#kpiBudgetManutencao')) $('#kpiBudgetManutencao').textContent = fmtMoeda(bManutencao);
   if ($('#kpiBudgetFerramentas')) $('#kpiBudgetFerramentas').textContent = fmtMoeda(bFerramentaria);
   if ($('#kpiBudgetFacilities')) $('#kpiBudgetFacilities').textContent = fmtMoeda(bFacilities);
-  if ($('#kpiBudgetConsumido')) $('#kpiBudgetConsumido').textContent = fmtMoeda(realTotal);
+  
+  // Progress Bar e Saldo
+  if (metaMesAnual > 0) {
+    let perc = (realTotal / metaMesAnual) * 100;
+    let color = perc > 100 ? 'var(--danger)' : (perc > 80 ? 'var(--warning)' : 'var(--success)');
+    if ($('#barBudgetConsumido')) {
+      $('#barBudgetConsumido').style.width = Math.min(perc, 100) + '%';
+      $('#barBudgetConsumido').style.background = color;
+    }
+    if ($('#lblPercentConsumido')) $('#lblPercentConsumido').textContent = perc.toFixed(1) + '%';
+    
+    let saldo = metaMesAnual - realTotal;
+    if ($('#lblSaldoBudget')) {
+      $('#lblSaldoBudget').textContent = fmtMoeda(saldo);
+      $('#lblSaldoBudget').style.color = saldo < 0 ? 'var(--danger)' : 'var(--success)';
+    }
+  }
+
+  // Chamar renderização dos gráficos
+  renderChartsCustoGeral(registrosCustoGeral || [], metaMesAnual);
 
   // Renderizando Tabela Detalhada
   const tabContainer = $('#tabelaBudgetsContainer');
@@ -4242,6 +4267,187 @@ function renderTabelaCustoGeral() {
   }
 
   // --- FIM DOS CÁLCULOS DO BUDGET ---
+
+  function renderChartsCustoGeral(todosRegistros, budgetMensal) {
+    if (!window.Chart) return;
+    
+    // 1. Processar dados para Gráfico de Evolução (Agrupado por Mês e Área)
+    let mesesArr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    let dadosManut = new Array(12).fill(0);
+    let dadosFerram = new Array(12).fill(0);
+    let dadosFacil = new Array(12).fill(0);
+    
+    // Processar Centros de Custo para o Gráfico de Estratificação
+    let ccMap = {};
+    
+    for (let r of todosRegistros) {
+      if (r.it_codigo === 'BUDGET_METADATA') continue;
+      
+      let custo = Number(r.custo_do_mes) || 0;
+      if (custo === 0) continue;
+      
+      let mStr = String(r.mes || '').trim();
+      let mesIdx = parseInt(mStr) - 1; 
+      
+      // Classificação de Área
+      const str = [r.grupo, r.descricao_conta, r.linha, r.descricao_db].join(' ').toLowerCase();
+      let areaNome = 'Manutenção';
+      if (str.includes('ferram')) areaNome = 'Ferramentaria';
+      else if (str.includes('facil') || str.includes('utilidades')) areaNome = 'Facilities';
+      else if (str.includes('manut') || str.includes('mecanica') || str.includes('eletrica') || str.includes('predial')) areaNome = 'Manutenção';
+      
+      if (mesIdx >= 0 && mesIdx <= 11) {
+        if (areaNome === 'Manutenção') dadosManut[mesIdx] += custo;
+        else if (areaNome === 'Ferramentaria') dadosFerram[mesIdx] += custo;
+        else if (areaNome === 'Facilities') dadosFacil[mesIdx] += custo;
+      }
+      
+      // Acumular por CC (apenas se tiver C.C.)
+      let cc = String(r.cc || '').trim();
+      if (cc && cc !== 'null' && cc !== 'undefined') {
+        ccMap[cc] = (ccMap[cc] || 0) + custo;
+      }
+    }
+    
+    // --- Renderizar Gráfico de Evolução (Misto) ---
+    const ctxEvolucao = document.getElementById('chartEvolucaoCustos');
+    if (ctxEvolucao) {
+      if (chartEvolucaoCustoGeralInst) chartEvolucaoCustoGeralInst.destroy();
+      
+      let budgetLine = new Array(12).fill(budgetMensal);
+      
+      chartEvolucaoCustoGeralInst = new Chart(ctxEvolucao, {
+        type: 'bar',
+        data: {
+          labels: mesesArr,
+          datasets: [
+            {
+              type: 'line',
+              label: 'Budget (Meta Mensal)',
+              data: budgetLine,
+              borderColor: 'rgba(255, 255, 255, 0.6)',
+              borderWidth: 2,
+              borderDash: [5, 5],
+              fill: false,
+              tension: 0.4,
+              pointRadius: 0,
+              pointHoverRadius: 4
+            },
+            {
+              label: 'Manutenção',
+              data: dadosManut,
+              backgroundColor: '#3b82f6',
+              borderRadius: 4,
+              stack: 'Stack 0',
+            },
+            {
+              label: 'Ferramentaria',
+              data: dadosFerram,
+              backgroundColor: '#8b5cf6',
+              borderRadius: 4,
+              stack: 'Stack 0',
+            },
+            {
+              label: 'Facilities',
+              data: dadosFacil,
+              backgroundColor: '#10b981',
+              borderRadius: 4,
+              stack: 'Stack 0',
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { color: '#a1a1aa', font: { family: 'Inter, sans-serif' } },
+              position: 'bottom'
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  let label = context.dataset.label || '';
+                  if (label) label += ': ';
+                  if (context.parsed.y !== null) label += fmtMoeda(context.parsed.y);
+                  return label;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { color: '#a1a1aa' }
+            },
+            y: {
+              stacked: true,
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { 
+                color: '#a1a1aa',
+                callback: function(value) { return 'R$ ' + (value/1000).toFixed(0) + 'k'; }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // --- Renderizar Gráfico de Estratificação por C.C. ---
+    const ctxCC = document.getElementById('chartEstratificacaoCC');
+    if (ctxCC) {
+      if (chartEstratificacaoCCIst) chartEstratificacaoCCIst.destroy();
+      
+      // Pegar top 10 maiores C.C.s
+      let ccArray = Object.keys(ccMap).map(key => ({ nome: key, valor: ccMap[key] }));
+      ccArray.sort((a, b) => b.valor - a.valor);
+      ccArray = ccArray.slice(0, 10);
+      
+      chartEstratificacaoCCIst = new Chart(ctxCC, {
+        type: 'bar',
+        data: {
+          labels: ccArray.map(item => item.nome),
+          datasets: [{
+            label: 'Custo Realizado (Acumulado)',
+            data: ccArray.map(item => item.valor),
+            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+            borderColor: '#3b82f6',
+            borderWidth: 1,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(context) { return fmtMoeda(context.parsed.x); }
+              }
+            }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(255,255,255,0.05)' },
+              ticks: { 
+                color: '#a1a1aa',
+                callback: function(value) { return 'R$ ' + (value/1000).toFixed(0) + 'k'; }
+              }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#a1a1aa', font: { size: 10 } }
+            }
+          }
+        }
+      });
+    }
+  }
 
   linhaSelecionadaCustoGeralId = null;
 
