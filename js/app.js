@@ -4155,8 +4155,9 @@ function renderTabelaCustoGeral() {
   for (let r of registrosReais) {
     let custo = Number(r.custo_do_mes) || 0;
     if (custo === 0) continue;
-    let mat = Number(r.material) || 0;
-    let isConsumo = (mat !== 0); // Se tem valor de material, consideramos consumo
+    // Regra oficial da planilha: se it-codigo começa com "SER", é serviço. Senão, é consumo.
+    let it_codigo = String(r.it_codigo || '').trim().toUpperCase();
+    let isConsumo = !it_codigo.startsWith('SER');
 
     const str = [r.grupo, r.descricao_conta, r.linha, r.descricao_db].join(' ').toLowerCase();
     
