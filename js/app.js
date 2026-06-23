@@ -968,7 +968,7 @@ function showView(name) {
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
-                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral', 'plano-mestre'].includes(name);
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral', 'custo-movimentacoes', 'plano-mestre'].includes(name);
 
   const isTask = ['gestao-tarefas', 'minhas-tarefas'].includes(name);
 

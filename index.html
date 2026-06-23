@@ -118,7 +118,17 @@
 
         <div>
           <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo Movimentações</div>
-          <button type="button" data-tab="custo-geral" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Custo Geral</button>
+          
+          <!-- Accordion: Custo Geral -->
+          <div class="nav-accordion">
+            <button type="button" class="nav-accordion-trigger" data-accordion="nav-movimentacoes">
+              Custo Geral <span class="nav-accordion-arrow">▾</span>
+            </button>
+            <div class="nav-sub-menu" id="nav-movimentacoes-sub">
+              <button type="button" data-tab="custo-geral" class="nav-item nav-sub-item">↳ Visão Geral / Budgets</button>
+              <button type="button" data-tab="custo-movimentacoes" class="nav-item nav-sub-item">↳ Movimentações</button>
+            </div>
+          </div>
         </div>
 
         <div>
@@ -348,8 +358,19 @@
           </tbody>
         </table>
       </section>
+      </div>
+    </div>
 
-      <!-- Filtros de Busca -->
+    <!-- VIEW: MOVIMENTAÇÕES (Tabela) -->
+    <div id="view-custo-movimentacoes" class="view" style="padding: 1.5rem;">
+      <div style="display: flex; flex-direction: column; height: calc(100vh - 3rem); overflow: hidden;">
+      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+        <div class="header-left">
+          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Movimentações</h1>
+          <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Dados detalhados do Custo Geral</p>
+        </div>
+      </header>
+      
       <!-- Filtros de Busca -->
       <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface); flex-shrink: 0;">
         <label class="search-field"><span>Busca</span><input type="search" id="filtroBuscaCustoGeral" placeholder="Buscar por Ordem, Item, Descrição..." /></label>
