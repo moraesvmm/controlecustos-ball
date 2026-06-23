@@ -78,7 +78,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             }
           }
 
-          const parseMoney = (v) => {
+          const parseMoney = (v, invert = false) => {
             if (v == null) return 0;
             let val = 0;
             if (typeof v === 'number') {
@@ -90,9 +90,9 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
               }
               val = Number(str) || 0;
             }
-            // Usa Math.abs para garantir que todos os valores fiquem positivos.
-            // Isso resolve o problema de 'Custo do Mês' vir negativo e 'Material' vir positivo.
-            return Math.abs(val);
+            // Inverte o sinal se for uma coluna de custo do ERP (que vêm negativo).
+            // Estornos vêm positivos no ERP, então ao inverter, viram negativos (abatimento).
+            return invert ? -val : val;
           };
 
           const parseDate = (val) => {
@@ -139,14 +139,14 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             solicitante: String(row['coluna1'] || row['nome-abrev'] || row['solicitante'] || ''),
             nome_solicitante: String(row['nome-aprov'] || row['nome_solicitante'] || ''),
             nat_operacao: String(row['nat-operacao'] || ''),
-            material: parseMoney(row['material'] || row['valor material'] || row['valor-mat-m']),
-            ggf: parseMoney(row['ggf'] || row['valor ggf'] || row['valor-ggf-m']),
-            valor_mob: parseMoney(row['valor-mob-m']),
-            valor_tt: parseMoney(row['valor tt']),
+            material: parseMoney(row['material'] || row['valor material'] || row['valor-mat-m'], false),
+            ggf: parseMoney(row['ggf'] || row['valor ggf'] || row['valor-ggf-m'], false),
+            valor_mob: parseMoney(row['valor-mob-m'], false),
+            valor_tt: parseMoney(row['valor tt'], false),
             quant_tt_ajustado: Number(row['quant tt ajustado']) || 0,
-            custo_do_mes: parseMoney(row['custo do mês'] || row['custo do mes']),
-            custo_mes_anterior: parseMoney(row['custo mês anterior'] || row['custo mes anterior']),
-            custo_de_entrada: parseMoney(row['custo de entrada']),
+            custo_do_mes: parseMoney(row['custo do mês'] || row['custo do mes'], true),
+            custo_mes_anterior: parseMoney(row['custo mês anterior'] || row['custo mes anterior'], true),
+            custo_de_entrada: parseMoney(row['custo de entrada'], true),
             sc_codigo: String(row['sc-codigo'] || ''),
             descricao_db: String(row['descricao-db'] || ''),
           };
