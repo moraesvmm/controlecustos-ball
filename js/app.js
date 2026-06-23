@@ -4209,6 +4209,7 @@ function renderTabelaCustoGeral() {
   }
 
   // Chamar renderização dos gráficos
+  let metaMesAnual = bTotal / 12;
   renderChartsCustoGeral(registrosCustoGeral || [], metaMesAnual);
 
   // Renderizando Tabela Detalhada
