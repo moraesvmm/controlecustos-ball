@@ -12,6 +12,7 @@
   --accent: #38bdf8;
   --danger: #f87171;
   --success: #34d399;
+  --warning: #fbbf24;
   --radius: 14px;
   --shadow: 0 24px 48px rgba(0, 0, 0, 0.45);
 }
@@ -31,6 +32,7 @@ body.light-mode {
   --accent: #0284c7;
   --danger: #dc2626;
   --success: #059669;
+  --warning: #f59e0b;
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
 }
 
