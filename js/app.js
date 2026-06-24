@@ -4192,16 +4192,7 @@ function renderTabelaCustoGeral() {
     // garantindo que os valores batam perfeitamente com a planilha original.
   }
 
-  // Reproduzindo fielmente a falha técnica do VLOOKUP do Excel:
-  // A planilha ignorava exatamente 118.624,09 em itens de Manutenção (devido ao cruzamento 
-  // incorreto de ordens formatadas com pontos ex: 000.204.081 vs Datasul).
-  // Abatemos esse excedente invisível ao Excel para que a Validação bata o exato 657.169,90 aprovado:
-  const excelVlookupMissing = 118624.09;
-  
   let realManut = rManutServ + rManutCons;
-  if (realManut >= excelVlookupMissing) {
-      realManut -= excelVlookupMissing;
-  }
   const realFerram = rFerramServ + rFerramCons;
   const realFacil = rFacilServ + rFacilCons;
   const realTotal = realManut + realFerram + realFacil;

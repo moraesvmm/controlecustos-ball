@@ -12,23 +12,9 @@ Este documento visa registrar as correções mais complexas e lógicas de negóc
 1. **O Comportamento do Excel:** Na planilha original, o Realizado é calculado por uma fórmula `=PROCV` (VLOOKUP) cruzando o número da ordem da aba `Financeiro` com a aba `Datasul`. No entanto, na aba Financeiro, alguns números de ordens de serviço chegam com pontos na formatação (ex: `000.204.081`), enquanto no Datasul as ordens não possuem essa formatação ou vêm com zeros à esquerda no formato texto (ex: `00204081`). O `PROCV` do Excel compara os tipos de dados crus da formatação, o que causa **falha** (retorna `#N/A`) para esses itens, deixando-os sem "Área" e, consequentemente, excluindo exatamente **R$ 118.624,09** referentes a serviços de manutenção do painel.
 2. **O Comportamento do Sistema Web:** O script de importação do sistema utilizava a biblioteca `xlsx`, que lia inteligentemente o valor real (número bruto, ex: `204081`) da célula, ignorando a máscara de formatação de pontos do Excel. Ao cruzar esse número com o Datasul no `db.js`, o sistema **encontrava** os solicitantes desses R$ 118k excedentes e os somava corretamente na Manutenção. Ou seja, o sistema estava tecnicamente mais correto, mas quebrava a paridade com o balanço contábil aprovado.
 
-### A Solução Implementada
-Uma vez que o objetivo principal do negócio é a equivalência total com os dados auditados do Excel, não podíamos deixar o sistema ser "inteligente" ao ponto de divergir os totais. Não havia um simples código `.replace(/\./g, '')` para ser removido, visto que a "limpeza" acontecia de forma implícita e nativa pela biblioteca de leitura do Excel importando valores numéricos em vez de texto formatado.
+### A Solução Implementada Anteriormente e sua Remoção (24/06)
+Inicialmente (ontem), havia sido adicionado um abatimento "hardcoded" fixo de `- R$ 118.624,09` direto na UI (`app.js`) para mascarar o problema e igualar o sistema ao Excel. 
+No entanto, isso provou-se uma má prática técnica! Quando novos dados foram importados hoje (Financeiro 24/06), o número de erros de formatação na planilha diminuiu, e o Excel subiu para R$ 806k. O nosso sistema, que continuava subtraindo os 118k fixos, despencou erroneamente para R$ 694k.
 
-Para atingir exatamente os 657k sem comprometer e corromper os dados relacionais salvos no banco (Supabase):
-1. Editou-se a agregação final do arquivo `js/app.js` (no bloco de Cálculos do Budget).
-2. Adicionou-se uma regra de paridade contábil explícita (um abatimento técnico).
-3. Foi identificada a constante exata da divergência (`118624.09`).
-4. Durante a totalização dos cartões (KPIs), o sistema deduz esse "falso excedente" invisível ao Excel, forçando os resultados a refletirem a falha do VLOOKUP do Excel de origem.
-
-```javascript
-  // Trecho implementado em js/app.js
-  const excelVlookupMissing = 118624.09;
-  let realManut = rManutServ + rManutCons;
-  if (realManut >= excelVlookupMissing) {
-      realManut -= excelVlookupMissing;
-  }
-```
-
-### Por que esta solução foi adotada?
-Tentar injetar pontos artificiais nas ordens e corromper strings diretamente no código de consulta do banco de dados (em `db.js` ou nas funções de upload em `import_custo_geral.js`) iria criar regras invisíveis muito perigosas para o relacionamento de dados em relatórios futuros (quando o problema real não está no banco e sim em como a planilha é construída e lida). Fazer o abatimento cirúrgico direto no fechamento total do painel do Dashboard (apenas na UI) preserva a integridade original dos dados no Supabase enquanto garante o objetivo de paridade visual mandatória para auditoria.
+**Ação Definitiva:**
+Removi a subtração fixa (hardcoded) do arquivo `app.js`. O sistema web agora mostrará o valor **real e matematicamente correto** de todo o custo de Manutenção (agora em torno de 813k), pois nossa lógica de "limpeza inteligente" no upload encontra os PROCVs que o Excel falha em encontrar por conta de pontuações indesejadas na string (`000.204.081` vs `204081`). Se houver uma leve diferença (ex: sistema em 813k vs Excel em 806k), é a prova de que o sistema está contabilizando 7k que o Excel "deixou passar" como `#N/A`.
