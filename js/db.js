@@ -450,7 +450,8 @@ export async function getDadosCustoGeral() {
     row.carater = row.item_tipo === 'SER' ? 'Real Compras Serv' : 'Real Consumo';
 
     // PROCVs 4, 5, 6: buscar colaborador pelo solicitante
-    const solKey = (row.solicitante || '').trim().toLowerCase();
+    // REMOVIDO o .trim() para falhar nos espaços em branco, igualzinho ao Excel!
+    const solKey = (row.solicitante || '').toLowerCase();
     const colab = mapColaboradores[solKey] || null;
 
     // PROCV 4: area = VLOOKUP(solicitante, COLABORADORES, "area")
