@@ -280,12 +280,25 @@ export function totaisKPI(registros) {
   let totalPrevisto = 0;
   let totalRecebido = 0;
   const porStatus = {};
+
+  const now = new Date();
+  const mesAtualKey = MESES_CURTOS[now.getMonth()];
+
   for (const r of registros) {
     totalValor += Number(r.valor) || 0;
     const vp = r.valor_previsto ?? calcularValorPrevisto(r);
     const vr = r.valor_recebido ?? calcularValorRecebido(r);
+    
     if (vp) totalPrevisto += Number(vp);
-    if (vr) totalRecebido += Number(vr);
+    
+    // KPI Recebido contabiliza apenas do mês presente
+    if (vr) {
+      const mesRec = mesChaveDeData(r.data_recebimento);
+      if (mesRec === mesAtualKey) {
+        totalRecebido += Number(vr);
+      }
+    }
+    
     const st = r.status || calcularStatus(r);
     porStatus[st] = (porStatus[st] || 0) + 1;
   }
