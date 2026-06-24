@@ -293,7 +293,8 @@ export function totaisKPI(registros) {
     
     // KPI Recebido contabiliza apenas do mês presente
     if (vr) {
-      const mesRec = mesChaveDeData(r.data_recebimento);
+      // Usa a mesma regra de fallback do gráfico para garantir paridade exata
+      const mesRec = mesChaveDeData(r.data_recebimento) || mesChaveDeData(r.previsao_entrega) || mesAtualKey;
       if (mesRec === mesAtualKey) {
         totalRecebido += Number(vr);
       }
