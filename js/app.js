@@ -4118,7 +4118,7 @@ function renderTabelaCustoGeral() {
 
   if (!registrosFiltrados || registrosFiltrados.length === 0) {
     tbody.innerHTML = `<tr><td colspan="${colunasAtuais.length}" class="empty">Nenhum registro de custo geral encontrado.</td></tr>`;
-    ['kpiCustoMaterial', 'kpiCustoGgf', 'kpiCustoMes', 'kpiCustoCC'].forEach(id => {
+    ['kpiManutencao', 'kpiFerramentaria', 'kpiFacilities', 'kpiCustoMes'].forEach(id => {
       if ($(id)) $(id).textContent = 'R$ 0,00';
     });
     return;
@@ -4187,9 +4187,10 @@ function renderTabelaCustoGeral() {
   const realTotal = realManut + realFerram + realFacil;
 
   // Atualizando KPIs (Novos Widgets)
-  if ($('#kpiCustoMaterial')) $('#kpiCustoMaterial').textContent = fmtMoeda(totalMaterial);
+  if ($('#kpiManutencao')) $('#kpiManutencao').textContent = fmtMoeda(realManut);
+  if ($('#kpiFerramentaria')) $('#kpiFerramentaria').textContent = fmtMoeda(realFerram);
+  if ($('#kpiFacilities')) $('#kpiFacilities').textContent = fmtMoeda(realFacil);
   if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(realTotal);
-  if ($('#kpiCustoCC')) $('#kpiCustoCC').textContent = fmtMoeda(totalCC);
 
   if ($('#kpiBudgetTotalResumo')) $('#kpiBudgetTotalResumo').textContent = fmtMoeda(bTotal);
   if ($('#kpiBudgetTotal')) $('#kpiBudgetTotal').textContent = fmtMoeda(bTotal);
