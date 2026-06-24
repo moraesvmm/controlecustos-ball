@@ -4163,16 +4163,22 @@ function renderTabelaCustoGeral() {
     let it_codigo = String(r.it_codigo || '').trim().toUpperCase();
     let isConsumo = !it_codigo.startsWith('SER');
 
-    const str = [r.grupo, r.descricao_conta, r.linha, r.descricao_db].join(' ').toLowerCase();
+    // Opção 1: Usar a "Área" do solicitante calculada no db.js (reproduzindo exatamente o Excel)
+    let area = String(r.area || '').trim().toUpperCase();
     
-    if (str.includes('ferram')) {
+    // Normalizando a string para evitar erros de acentuação
+    area = area.replace('Ç', 'C').replace('Ã', 'A');
+
+    if (area === 'FERRAMENTAS' || area === 'FERRAMENTARIA') {
       if (isConsumo) rFerramCons += custo; else rFerramServ += custo;
-    } else if (str.includes('facil')) {
+    } else if (area === 'FACILITIES') {
       if (isConsumo) rFacilCons += custo; else rFacilServ += custo;
-    } else {
-      // Default: Manutenção
+    } else if (area === 'MANUTENCAO') {
       if (isConsumo) rManutCons += custo; else rManutServ += custo;
     }
+    // Os custos que forem 'OUTROS' ou cujo solicitante não foi encontrado (area vazia)
+    // são ignorados do "Budget Consumido" composto de Manutenção+Ferramentaria+Facilities,
+    // garantindo que os valores batam perfeitamente com os ~657k da planilha original.
   }
 
   const realManut = rManutServ + rManutCons;
