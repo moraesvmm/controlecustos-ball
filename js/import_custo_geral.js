@@ -217,8 +217,14 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
 
         toast(`Salvando ${records.length} registros no banco...`, 'info');
 
-        const { error: delErr } = await supabase.from('custo_geral').delete().not('id', 'is', null);
-        if (delErr) throw delErr;
+        let delCount = 0;
+        while (true) {
+          const { data: delData, error: delErr } = await supabase.from('custo_geral').delete().not('id', 'is', null).select('id');
+          if (delErr) throw delErr;
+          if (!delData || delData.length === 0) break;
+          delCount += delData.length;
+        }
+        console.log(`Deletados ${delCount} registros antigos.`);
 
         for (let i = 0; i < records.length; i += 100) {
           const batch = records.slice(i, i + 100);

@@ -439,8 +439,13 @@ export async function getDadosCustoGeral() {
   // 5. Enriquecer cada registro com as fórmulas/PROCVs
   const dadosEnriquecidos = dataCusto.map(row => {
     // PROCV 1: solicitante_2 = IF(Coluna1 != "", Coluna1, VLOOKUP(nr_ord_produ, datasul, "requisitante"))
+    let originalSolicitante = row.solicitante;
     if (!row.solicitante || row.solicitante.trim() === '') {
       row.solicitante = mapDatasul[String(row.numero_ordem || '')] || null;
+      // Trata padding de zeros que o Excel tenta mas falha por causa de tipo
+      if (!row.solicitante && String(row.numero_ordem).length < 8) {
+         row.solicitante = mapDatasul[String(row.numero_ordem).padStart(8, '0')] || null;
+      }
     }
 
     // Fórmula 2: item_tipo = LEFT(it_codigo, 3)
@@ -454,11 +459,60 @@ export async function getDadosCustoGeral() {
     const solKey = (row.solicitante || '').toLowerCase();
     const colab = mapColaboradores[solKey] || null;
 
+    // LÓGICA DE SIMULAÇÃO DO EXCEL (Para o filtro Manutenção Visão Excel)
+    let isExcelFailed = false;
+
+    // Simulação: O Excel tenta achar o solicitante na aba Datasul pelo numero da ordem EXATO (sem formatar zeros).
+    let solToUse = originalSolicitante;
+    if (!solToUse || solToUse.trim() === '') {
+       let excelLookup = mapDatasul[String(row.numero_ordem || '')] || null;
+       
+       let systemLookup = excelLookup;
+       if (!systemLookup && String(row.numero_ordem).length < 8) {
+           systemLookup = mapDatasul[String(row.numero_ordem).padStart(8, '0')] || null;
+       }
+
+       // Se o sistema acha preenchendo zeros, mas o Excel não achou:
+       if (systemLookup && !excelLookup) {
+           isExcelFailed = true;
+       }
+       solToUse = systemLookup; // Sistema continua usando o correto
+    }
+    
+    const excelSolKey = (solToUse || '').toLowerCase(); // O Excel é case insensitive
+    const excelColab = mapColaboradores[excelSolKey] || null;
+    
+    // Se o colaborador não existir (Ex: o Excel procurou com espaço sobrando e falhou)
+    // O JS faz .trim() globalmente, mas para simular o Excel temos que ver se a string original falharia.
+    // Como aqui no sistema já importamos a aba Colaboradores com as chaves limpas,
+    // se !excelColab for true, significa que o Excel deu #N/D.
+    if (!excelColab && excelSolKey !== '') {
+        isExcelFailed = true;
+    } else if (excelSolKey === '' && (!originalSolicitante || originalSolicitante.trim() === '')) {
+        isExcelFailed = true;
+    }
+    
+    row.recuperado_datasul = isExcelFailed;
+
     // PROCV 4: area = VLOOKUP(solicitante, COLABORADORES, "area")
     row.area = colab?.area || row.area || null;
 
     // PROCV 5: nome_solicitante = VLOOKUP(solicitante, COLABORADORES, "nome")
     row.nome_solicitante = colab?.nome || row.nome_solicitante || null;
+
+    row.item_tipo = (row.it_codigo || '').substring(0, 3).toUpperCase();
+    row.carater = row.item_tipo === 'SER' ? 'Real Compras Serv' : 'Real Consumo';
+    
+    // Regra especial: Ignorar WZF
+    const emitenteStr = String(row.descricao_emitente || '').toUpperCase();
+    if (emitenteStr.includes('WZF')) {
+        row.area = 'OUTROS';
+        row.carater = 'IGNORADO WZF';
+    }
+
+    if (row.area) {
+      row.check = row.area === 'OUTROS' ? 'OUTROS' : `${row.area} - ${row.carater}`;
+    }
 
     // PROCV 6: cc = VLOOKUP(solicitante, COLABORADORES, "area_cc")
     row.cc = colab?.area_cc || row.cc || null;

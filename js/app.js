@@ -4081,6 +4081,7 @@ function renderTabelaCustoGeral() {
 
   const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
   const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
+  const filtroArea = $('#filtroAreaCustoGeral')?.value || 'todas';
 
   let budgetMetadata = null;
   let registrosReais = [];
@@ -4097,6 +4098,15 @@ function renderTabelaCustoGeral() {
     // Filtro de Ordem
     if (filtroOrdem === 'com_ordem' && !r.numero_ordem) return false;
     if (filtroOrdem === 'sem_ordem' && r.numero_ordem) return false;
+
+    // Filtro de Simulação Excel
+    if (filtroArea === 'manutencao_excel') {
+      let checkStr = String(r.check || '').toLowerCase().trim();
+      let isManut = checkStr.includes('manutenção') || checkStr.includes('manutencao');
+      if (!isManut) return false;
+      // Exclui os que o Excel perde porque a referência do PROCV quebrou (recuperados do Datasul)
+      if (r.recuperado_datasul) return false;
+    }
 
     // Busca textual
     if (!termoBusca) return true;
@@ -4155,8 +4165,8 @@ function renderTabelaCustoGeral() {
   let rFerramServ = 0, rFerramCons = 0;
   let rFacilServ = 0, rFacilCons = 0;
 
-  // Calculando Realizado
-  for (let r of registrosReais) {
+  // Calculando Realizado COM BASE NO FILTRO APLICADO NA TELA (Para que os KPIs reflitam o filtro Excel)
+  for (let r of registrosFiltrados) {
     let custo = Number(r.custo_cc) || 0;
     if (custo === 0) continue;
     // Regra oficial da planilha: se it-codigo começa com "SER", é serviço. Senão, é consumo.
@@ -4633,6 +4643,12 @@ if ($('#filtroOrdemCustoGeral')) {
   });
 }
 
+if ($('#filtroAreaCustoGeral')) {
+  $('#filtroAreaCustoGeral').addEventListener('change', () => {
+    renderTabelaCustoGeral();
+  });
+}
+
 if ($('#filtroModoColunasCustoGeral')) {
   $('#filtroModoColunasCustoGeral').addEventListener('change', () => {
     renderTabelaCustoGeral();
@@ -4643,6 +4659,7 @@ if ($('#btnLimparFiltrosCustoGeral')) {
   $('#btnLimparFiltrosCustoGeral').addEventListener('click', () => {
     if ($('#filtroBuscaCustoGeral')) $('#filtroBuscaCustoGeral').value = '';
     if ($('#filtroOrdemCustoGeral')) $('#filtroOrdemCustoGeral').value = 'todas';
+    if ($('#filtroAreaCustoGeral')) $('#filtroAreaCustoGeral').value = 'todas';
     if ($('#filtroModoColunasCustoGeral')) $('#filtroModoColunasCustoGeral').value = 'todas';
     renderTabelaCustoGeral();
   });

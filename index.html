@@ -189,8 +189,11 @@
         </div>
       </header>
 
-      <!-- KPIs + Filtros: faixa FIXA, fora do scroll -->
-      <div id="painel-fixo" style="flex-shrink: 0; background: var(--bg); padding: 1.5rem 4rem 0; max-width: 1680px; width: 100%; margin: 0 auto; align-self: center; box-sizing: border-box;">
+      <!-- Área scrollável principal -->
+      <main class="main-layout" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
+      
+        <!-- KPIs + Filtros agora rolam com a página -->
+        <div id="painel-fixo" style="flex-shrink: 0; margin-bottom: 1rem; width: 100%; box-sizing: border-box;">
         <section class="kpi-grid">
           <div class="kpi-card">
             <div class="label">Registros</div>
@@ -239,9 +242,6 @@
           <button type="button" class="btn btn-ghost" id="btnLimparFiltros">Limpar filtros</button>
         </section>
       </div>
-
-      <!-- Área scrollável: só as views -->
-      <main class="main-layout" style="flex: 1; overflow-y: auto; padding-top: 1rem;">
 
     <div id="view-dashboard" class="view active">
       <div id="secaoDashboard">
@@ -441,6 +441,13 @@
             <option value="todas">Todas as Ordens</option>
             <option value="com_ordem">Com Ordem (Atribuída)</option>
             <option value="sem_ordem">Sem Ordem (Em branco)</option>
+          </select>
+        </label>
+        <label>
+          <span>Área (Filtro)</span>
+          <select id="filtroAreaCustoGeral" style="border-color: var(--primary);">
+            <option value="todas">Todas (Visão Real do Banco)</option>
+            <option value="manutencao_excel">Apenas Manutenção (Visão Planilha: Falhas Ocultas)</option>
           </select>
         </label>
         <label>
