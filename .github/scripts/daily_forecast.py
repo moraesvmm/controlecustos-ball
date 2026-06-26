@@ -262,52 +262,110 @@ else:
 
 print(f"DEBUG: Dia {ultimo_dia_registrado}, Total Gasto Real: R$ {total_gasto}, Volume: {total_volume} ordens")
 
-# Calculo do Burn Rate com KNN (Mês Gêmeo)
+# ====================================================
+# KNN K=3 COM MEDIA PONDERADA E INTERVALO DE CONFIANCA
+# ====================================================
 total_dias_mes = calendar.monthrange(ano_atual, mes_atual)[1]
 projecao_final = total_gasto
+projecao_min = total_gasto
+projecao_max = total_gasto
 twin_month_name = "N/A"
 twin_month_dist = 0
+knn_vizinhos = []
+K = 3  # Numero de vizinhos
 
 if 'df_hist' in locals() and ultimo_dia_registrado > 0:
-    df_day_d = df_hist[df_hist['day'] == ultimo_dia_registrado]
-    
-    min_dist = float('inf')
-    best_frac = 0
-    best_month = None
-    
+    df_day_d = df_hist[df_hist['day'] == ultimo_dia_registrado].copy()
+
+    candidatos = []
     for _, row in df_day_d.iterrows():
         m_cum_y = row['cum_y']
         m_cum_vol = row['cum_vol']
         m_frac = row['fraction']
-        
-        if m_cum_y == 0: continue
-        
-        # Distancia Euclidiana Normalizada: (delta Gasto)^2 + (delta Volume)^2
-        diff_y = (m_cum_y - total_gasto) / total_gasto if total_gasto > 0 else 0
-        diff_vol = (m_cum_vol - total_volume) / total_volume if total_volume > 0 else 0
-        
+
+        if m_cum_y == 0 or m_frac <= 0.05:
+            continue
+
+        # Distancia Euclidiana Normalizada
+        diff_y   = (m_cum_y - total_gasto)   / total_gasto   if total_gasto   > 0 else 0
+        diff_vol = (m_cum_vol - total_volume) / total_volume  if total_volume  > 0 else 0
         dist = np.sqrt(diff_y**2 + diff_vol**2)
-        
-        if dist < min_dist:
-            min_dist = dist
-            best_month = row['month']
-            best_frac = m_frac
-            
-    if best_month is not None and best_frac > 0.05:
-        frac = best_frac
-        projecao_final = total_gasto / frac
-        twin_month_name = str(best_month)
-        twin_month_dist = min_dist
-        print(f"KNN Mês Gêmeo: Escolhido {twin_month_name} (Distância: {min_dist:.2f}). Multiplicador sazonal: {frac:.2f}")
+
+        # Projecao que este mes historico sugere
+        proj_mes = total_gasto / m_frac
+
+        candidatos.append({
+            'month': row['month'],
+            'dist': dist,
+            'frac': m_frac,
+            'proj': proj_mes
+        })
+
+    # Ordenar pelos K mais proximos
+    candidatos.sort(key=lambda x: x['dist'])
+    vizinhos = candidatos[:K]
+
+    if vizinhos:
+        # Pesos inversos da distancia (quanto mais proximo, mais peso)
+        # Evitar divisao por zero: se dist == 0, peso = 1e9
+        pesos = []
+        for v in vizinhos:
+            pesos.append(1.0 / v['dist'] if v['dist'] > 1e-9 else 1e9)
+        soma_pesos = sum(pesos)
+
+        # Projecao ponderada
+        projecao_final = sum(v['proj'] * p for v, p in zip(vizinhos, pesos)) / soma_pesos
+
+        # Intervalo de confianca: min e max dos K vizinhos
+        projecoes = [v['proj'] for v in vizinhos]
+        projecao_min = min(projecoes)
+        projecao_max = max(projecoes)
+
+        # Confianca: quanto mais tarde no mes e menor o spread, maior a confianca
+        spread_rel = (projecao_max - projecao_min) / projecao_final if projecao_final > 0 else 1
+        fator_dia  = ultimo_dia_registrado / total_dias_mes          # 0..1
+        confianca_pct = max(30, min(98, int((1 - spread_rel) * 60 + fator_dia * 40)))
+
+        # Melhor vizinho para exibicao
+        best = vizinhos[0]
+        twin_month_name = str(best['month'])
+        twin_month_dist = best['dist']
+
+        # Similaridade percentual (0..100) inversamente proporcional a distancia
+        similaridade = max(0, min(100, int((1 - best['dist']) * 100)))
+
+        knn_vizinhos = [
+            {
+                'month': str(v['month']),
+                'dist': round(v['dist'], 4),
+                'proj': round(v['proj'], 2),
+                'similaridade': max(0, min(100, int((1 - v['dist']) * 100)))
+            }
+            for v in vizinhos
+        ]
+
+        frac = best['frac']
+        print(f"KNN K={len(vizinhos)} vizinhos. Melhor: {twin_month_name} (Distância: {twin_month_dist:.3f}, Similaridade: {similaridade}%)")
+        print(f"Projecao ponderada: R$ {projecao_final:.2f} | Range: [R$ {projecao_min:.2f} – R$ {projecao_max:.2f}] | Confiança: {confianca_pct}%")
     else:
         # Fallback linear
-        ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
+        ritmo_diario  = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
         projecao_final = ritmo_diario * total_dias_mes
+        projecao_min   = projecao_final
+        projecao_max   = projecao_final
+        confianca_pct  = 40
         twin_month_name = "Média Linear (Fallback)"
+        similaridade    = 0
+        frac = 0.5
 else:
-    ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
+    ritmo_diario  = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
     projecao_final = ritmo_diario * total_dias_mes
+    projecao_min   = projecao_final
+    projecao_max   = projecao_final
+    confianca_pct  = 30
     twin_month_name = "Média Linear (Sem histórico)"
+    similaridade    = 0
+    frac = 0.5
 
 # Ajustar arrays projetados para o Frontend desenhar o cone
 historico_dias = []
@@ -340,12 +398,17 @@ resultado = {
     "dia_atual": int(ultimo_dia_registrado),
     "gasto_atual": float(total_gasto),
     "projecao_final": float(projecao_final),
+    "projecao_min": float(projecao_min),
+    "projecao_max": float(projecao_max),
+    "confianca_pct": int(confianca_pct),
     "budget": float(budget_alvo),
-    "overrun": float(projecao_final - budget_alvo), # Agora pode ser negativo (saldo)
+    "overrun": float(projecao_final - budget_alvo),
     "historico_dias": historico_dias,
     "alerts": alerts,
     "twin_month": twin_month_name,
     "twin_month_dist": float(twin_month_dist),
+    "twin_month_similaridade": int(similaridade),
+    "knn_vizinhos": knn_vizinhos,
     "volume_ordens_atual": float(total_volume),
     "atualizado_em": hoje.isoformat()
 }
