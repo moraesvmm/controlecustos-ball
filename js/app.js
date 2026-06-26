@@ -38,8 +38,7 @@ import { initExcelImportCustoGeral } from './import_custo_geral.js?v=4';
 import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
 import { initPlanoMestre } from './plano_mestre.js?v=1';
 import { initImportPlanoMestre } from './import_plano_mestre.js?v=1';
-
-
+import { renderPrevisoes } from './previsoes.js';
 
 let registros = [];
 let registrosCustoGeral = [];
@@ -968,7 +967,7 @@ function showView(name) {
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
-                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral', 'custo-movimentacoes', 'plano-mestre'].includes(name);
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral', 'custo-movimentacoes', 'plano-mestre', 'custo-previsoes'].includes(name);
 
   const isTask = ['gestao-tarefas', 'minhas-tarefas'].includes(name);
 
@@ -1003,6 +1002,8 @@ function showView(name) {
     window._refreshPlanoPreventivaFrontend?.();
   } else if (name === 'custo-geral') {
     renderTabelaCustoGeral();
+  } else if (name === 'custo-previsoes') {
+    renderPrevisoes();
   }
 
   const titles = {
@@ -1019,6 +1020,7 @@ function showView(name) {
     'plano-preventiva': 'Gerador de Planos — Back-end',
     'plano-preventiva-frontend': 'Gerador de Planos — Front-end',
     'custo-geral': 'Custo Geral',
+    'custo-previsoes': 'Previsões Preditivas',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
@@ -4309,7 +4311,7 @@ function renderTabelaCustoGeral() {
     let ccMap = {};
     
     for (let r of todosRegistros) {
-      if (r.it_codigo === 'BUDGET_METADATA') continue;
+      if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA') continue;
       
       let custo = Number(r.custo_do_mes) || 0;
       if (custo === 0) continue;
@@ -4482,7 +4484,7 @@ function renderTabelaCustoGeral() {
     let relacao = {}; // { tecnico: { linha: custo } }
     
     for (let r of todosRegistros) {
-      if (r.it_codigo === 'BUDGET_METADATA') continue;
+      if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA') continue;
       let custo = Number(r.custo_cc) || 0;
       if (custo === 0) continue;
       
