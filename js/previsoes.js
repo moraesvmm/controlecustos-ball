@@ -59,7 +59,9 @@ export async function renderPrevisoes() {
         <!-- Gráfico de Predição (Machine Learning) -->
         <div class="panel" style="padding: 1.5rem; border-radius: 8px; background: var(--surface);">
           <h4 style="margin: 0 0 1rem 0; color: var(--text); font-size: 1.1rem;">Curva de Sazonalidade & Burn Rate</h4>
-          <canvas id="predictiveChart" height="100"></canvas>
+          <div style="position: relative; height: 300px; width: 100%;">
+            <canvas id="predictiveChart"></canvas>
+          </div>
         </div>
 
         <!-- Informação do Modelo -->
@@ -144,6 +146,7 @@ export async function renderPrevisoes() {
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
             interaction: {
               mode: 'index',
               intersect: false,
