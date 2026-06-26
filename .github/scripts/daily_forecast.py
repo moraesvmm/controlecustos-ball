@@ -18,14 +18,36 @@ headers = {
 
 print("Iniciando previsao diaria...")
 
-# 1. Fetch custo_geral (limit 10000)
-url = f"{SUPABASE_URL}/rest/v1/custo_geral?select=*"
-response = requests.get(url, headers=headers)
-if response.status_code != 200:
-    print(f"Erro ao buscar dados: {response.text}")
-    exit(1)
+# 1. Fetch colaboradores para o PROCV exato
+colab_url = f"{SUPABASE_URL}/rest/v1/colaboradores?select=*"
+colab_res = requests.get(colab_url, headers=headers)
+map_colab = {}
+if colab_res.status_code == 200:
+    for c in colab_res.json():
+        if c.get('cod_req'):
+            map_colab[str(c['cod_req']).lower().strip()] = c
 
-dados = response.json()
+# 2. Fetch custo_geral com paginacao para nao perder dados (limite padrao eh 1000)
+limit = 1000
+offset = 0
+dados = []
+
+while True:
+    url = f"{SUPABASE_URL}/rest/v1/custo_geral?select=*&limit={limit}&offset={offset}"
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        print(f"Erro ao buscar dados na pagina {offset}: {response.text}")
+        exit(1)
+    
+    page_data = response.json()
+    if not page_data:
+        break
+        
+    dados.extend(page_data)
+    offset += limit
+    
+    if len(page_data) < limit:
+        break
 print(f"Buscados {len(dados)} registros da nuvem.")
 
 budget_alvo = 750000.0 # Default fallback
@@ -35,8 +57,8 @@ for r in dados:
     if r['it_codigo'] == 'BUDGET_METADATA':
         try:
             b_data = json.loads(r.get('descricao_codigo', '{}'))
-            if 'geral' in b_data:
-                budget_alvo = float(b_data['geral'])
+            if 'manutencao' in b_data:
+                budget_alvo = float(b_data['manutencao'])
         except:
             pass
         continue
@@ -44,51 +66,85 @@ for r in dados:
     if r['it_codigo'] == 'FORECAST_METADATA':
         continue
         
-    # Filtra apenas Area = MANUTENÇÃO se essa coluna existir localmente
-    # Como a API retorna dados crus do financeiro, a definicao de MANUTENCAO ocorre no JS.
-    # Porem, o historico puro do mes eh suficiente para calcular um burn rate global.
-    # Para espelhar o dashboard, focaremos em ordens UCMAN e valores validos.
-    df_raw.append(r)
+    # LOGICA DE PROCV DO DB.JS
+    original_solicitante = r.get('solicitante', '')
+    sol = r.get('solicitante_2') if r.get('solicitante_2') else original_solicitante
+    sol_key = str(sol).lower().strip() if sol else ''
+    colab = map_colab.get(sol_key)
+    
+    is_excel_failed = False
+    if not colab and sol_key != '':
+        is_excel_failed = True
+    elif sol_key == '' and (not original_solicitante or str(original_solicitante).strip() == ''):
+        is_excel_failed = True
+        
+    area = colab.get('area') if colab else r.get('area')
+    it_codigo = str(r.get('it_codigo', '')).upper()
+    
+    if not colab and it_codigo:
+        if it_codigo.startswith('UCMAN') or it_codigo.startswith('SER'):
+            area = 'MANUTENÇÃO'
+        else:
+            area = 'OUTROS'
+    elif not area:
+        area = 'OUTROS'
+        
+    item_tipo = it_codigo[:3]
+    carater = 'Real Compras Serv' if item_tipo == 'SER' else 'Real Consumo'
+    
+    emitente_str = str(r.get('descricao_emitente', '')).upper()
+    if 'WZF' in emitente_str:
+        area = 'OUTROS'
+        
+    if area and area.upper() == 'MANUTENÇÃO':
+        custo_do_mes = float(r.get('custo_do_mes') or 0)
+        custo_mes_anterior = float(r.get('custo_mes_anterior') or 0)
+        custo_de_entrada = float(r.get('custo_de_entrada') or 0)
+        r['custo_cc'] = custo_do_mes + custo_mes_anterior + custo_de_entrada
+        df_raw.append(r)
 
 if not df_raw:
-    print("Sem dados de movimentacao para calcular.")
+    print("Sem dados de manutencao para calcular.")
     exit(0)
 
 df = pd.DataFrame(df_raw)
 
-# Precisamos limpar e preparar a data e custo
+# Precisamos limpar e preparar a data e custo (usando custo_cc conforme regra do Budget no app.js)
 df['dt_trans'] = pd.to_datetime(df['dt_trans'], errors='coerce')
-df['custo_do_mes'] = pd.to_numeric(df['custo_do_mes'], errors='coerce').fillna(0)
-
-df = df.dropna(subset=['dt_trans'])
+df['custo_cc'] = pd.to_numeric(df.get('custo_cc', 0), errors='coerce').fillna(0)
 
 hoje = datetime.now()
 mes_atual = hoje.month
 ano_atual = hoje.year
 
-# Pega so o mes atual para a execucao
-df_mes = df[(df['dt_trans'].dt.month == mes_atual) & (df['dt_trans'].dt.year == ano_atual)].copy()
+# O TOTAL GASTO DEVE SER A SOMA DE TODOS OS REGISTROS (assim como o frontend faz, pois o DB reflete a foto do mes)
+total_gasto = df['custo_cc'].sum()
+
+# Para a projecao diaria, precisamos agrupar pelos dias validos do mes atual
+df_valid_dates = df.dropna(subset=['dt_trans']).copy()
+df_mes = df_valid_dates[(df_valid_dates['dt_trans'].dt.month == mes_atual) & (df_valid_dates['dt_trans'].dt.year == ano_atual)].copy()
 
 if df_mes.empty:
-    print("Nenhum dado para o mes corrente.")
-    exit(0)
+    print("Sem dias no mes atual para tracar projecao linear.")
+    ultimo_dia_registrado = hoje.day
+    daily = pd.DataFrame()
+else:
+    df_mes['dia'] = df_mes['dt_trans'].dt.day
+    daily = df_mes.groupby('dia')['custo_cc'].sum().reset_index()
+    daily = daily.sort_values('dia')
+    ultimo_dia_registrado = daily['dia'].max()
 
-df_mes['dia'] = df_mes['dt_trans'].dt.day
-daily = df_mes.groupby('dia')['custo_do_mes'].sum().reset_index()
-
-# Ordena por dia
-daily = daily.sort_values('dia')
-ultimo_dia_registrado = daily['dia'].max()
-total_gasto = daily['custo_do_mes'].sum()
+print(f"DEBUG: Dia {ultimo_dia_registrado}, Total Gasto Real: {total_gasto}")
 
 # Calculo simplificado de Burn Rate linear para o MVP Cloud
-# Gasto por dia = total_gasto / ultimo_dia_registrado
-# Projecao = (Gasto por dia) * total_dias_no_mes
 total_dias_mes = calendar.monthrange(ano_atual, mes_atual)[1]
 ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
 projecao_final = ritmo_diario * total_dias_mes
 
-historico_dias = [{"dia": int(row['dia']), "gasto": float(row['custo_do_mes'])} for _, row in daily.iterrows()]
+if not daily.empty:
+    historico_dias = [{"dia": int(row['dia']), "gasto": float(row['custo_cc'])} for _, row in daily.iterrows()]
+else:
+    historico_dias = []
 
 resultado = {
     "mes": mes_atual,
@@ -97,7 +153,7 @@ resultado = {
     "gasto_atual": float(total_gasto),
     "projecao_final": float(projecao_final),
     "budget": float(budget_alvo),
-    "overrun": float(projecao_final - budget_alvo) if projecao_final > budget_alvo else 0,
+    "overrun": float(projecao_final - budget_alvo), # Agora pode ser negativo (saldo)
     "historico_dias": historico_dias,
     "atualizado_em": hoje.isoformat()
 }
