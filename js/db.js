@@ -496,6 +496,16 @@ export async function getDadosCustoGeral() {
 
     // PROCV 4: area = VLOOKUP(solicitante, COLABORADORES, "area")
     row.area = colab?.area || row.area || null;
+    if (!colab && row.it_codigo) {
+        const prefix = row.it_codigo.toUpperCase();
+        if (prefix.startsWith('UCMAN') || prefix.startsWith('SER')) {
+            row.area = 'MANUTENÇÃO';
+        } else {
+            row.area = 'OUTROS';
+        }
+    } else if (!row.area) {
+        row.area = 'OUTROS';
+    }
 
     // PROCV 5: nome_solicitante = VLOOKUP(solicitante, COLABORADORES, "nome")
     row.nome_solicitante = colab?.nome || row.nome_solicitante || null;

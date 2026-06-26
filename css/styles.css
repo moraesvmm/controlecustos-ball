@@ -2036,9 +2036,3 @@ body.view-crud .crud-section {
 body.view-crud .kpi-grid {
   display: none !important;
 }
-
-body.view-crud .view.active {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
