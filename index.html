@@ -459,9 +459,9 @@
                 <i class="fa-solid fa-brain"></i> IA (Tomada de Decisão)
               </span>
             </div>
-            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); line-height: 1.5;">
-              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste mês em <strong id="aiProjFinal" style="color:#fff; font-size: 1rem;">R$ 0,00</strong>.</p>
-              <p style="margin-bottom: 0;"><strong>Lógica do Algoritmo:</strong> O motor K-Nearest Neighbors (KNN) rastreou nosso ritmo de gastos, o peso da análise diária e o volume de <span id="aiVolOrdens" style="color:#fff;">0</span> ordens abertas até agora. Ele identificou que o estresse e o comportamento financeiro atual têm similaridade matemática com o mês de <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong>. A reta final daquele mês está sendo usada como "Mês Gêmeo" para calcular nossa trajetória futura.</p>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
+              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste mês em <strong id="aiProjFinal" style="color:#fff; font-size: 1rem;">R$ 0,00</strong> com intervalo de incerteza de <span id="aiRangeMin" style="color:#ccc;">R$ 0</span> a <span id="aiRangeMax" style="color:#ccc;">R$ 0</span> (confiança: <strong id="aiConfianca" style="color:#facc15;">—</strong>).</p>
+              <p style="margin-bottom: 0;"><strong>Lógica do Algoritmo:</strong> O motor <strong>K-Nearest Neighbors (KNN K=3)</strong> analisou o ritmo de gastos acumulado e o volume de <span id="aiVolOrdens" style="color:#fff;">0</span> ordens até o dia atual. Ele identificou os <strong>3 meses históricos mais parecidos</strong> e calculou uma <strong>média ponderada</strong> — onde meses mais próximos recebem maior peso (inverso da distância euclidiana). O mês de maior similaridade foi <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong> (<span id="aiSimilaridade" style="color:#facc15;">—</span>% de semelhança), servindo como principal referência de sazonalidade.</p>
             </div>
           </div>
         </aside>

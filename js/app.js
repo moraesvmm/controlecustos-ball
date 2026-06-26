@@ -4268,9 +4268,13 @@ function renderTabelaCustoGeral() {
   if (widgetExplainability) {
     if (forecastMetadata && forecastMetadata.twin_month) {
       widgetExplainability.style.display = 'flex';
-      if ($('#aiProjFinal')) $('#aiProjFinal').textContent = fmtMoeda(forecastMetadata.projecao_final || 0);
-      if ($('#aiVolOrdens')) $('#aiVolOrdens').textContent = forecastMetadata.volume_ordens_atual || 0;
-      if ($('#aiTwinMonth')) $('#aiTwinMonth').textContent = forecastMetadata.twin_month;
+      if ($('#aiProjFinal'))    $('#aiProjFinal').textContent    = fmtMoeda(forecastMetadata.projecao_final || 0);
+      if ($('#aiVolOrdens'))    $('#aiVolOrdens').textContent    = forecastMetadata.volume_ordens_atual || 0;
+      if ($('#aiTwinMonth'))    $('#aiTwinMonth').textContent    = forecastMetadata.twin_month;
+      if ($('#aiRangeMin'))     $('#aiRangeMin').textContent     = fmtMoeda(forecastMetadata.projecao_min ?? forecastMetadata.projecao_final ?? 0);
+      if ($('#aiRangeMax'))     $('#aiRangeMax').textContent     = fmtMoeda(forecastMetadata.projecao_max ?? forecastMetadata.projecao_final ?? 0);
+      if ($('#aiConfianca'))    $('#aiConfianca').textContent    = (forecastMetadata.confianca_pct != null ? forecastMetadata.confianca_pct + '%' : '—');
+      if ($('#aiSimilaridade')) $('#aiSimilaridade').textContent = (forecastMetadata.twin_month_similaridade != null ? forecastMetadata.twin_month_similaridade : '—');
     } else {
       widgetExplainability.style.display = 'none';
     }
