@@ -1000,7 +1000,7 @@ function showView(name) {
     if (!estadoPlanosFrontend.mes) planosGoToStepFrontend('mes');
   } else if (name === 'plano-preventiva-frontend') {
     window._refreshPlanoPreventivaFrontend?.();
-  } else if (name === 'custo-geral') {
+  } else if (name === 'custo-geral' || name === 'custo-movimentacoes') {
     renderTabelaCustoGeral();
   } else if (name === 'custo-previsoes') {
     renderPrevisoes();
@@ -4067,10 +4067,14 @@ let chartEstratificacaoCCIst = null;
 let chartRadarTecnicosInst = null;
 
 function renderTabelaCustoGeral() {
+  console.log("renderTabelaCustoGeral CALLED!");
   const thead = $('#tabelaHeadCustoGeral');
   const tbody = $('#tabelaBodyCustoGeral');
   
-  if (!thead || !tbody) return;
+  if (!thead || !tbody) {
+    console.warn("thead or tbody not found!", {thead, tbody});
+    return;
+  }
 
   const modoColunas = $('#filtroModoColunasCustoGeral')?.value || 'todas';
   let colunasAtuais = COLUNAS_CUSTO_GERAL;
@@ -4080,6 +4084,7 @@ function renderTabelaCustoGeral() {
   }
 
   thead.innerHTML = '<tr>' + colunasAtuais.map(c => `<th style="min-width:${c.width}px">${c.label}</th>`).join('') + '</tr>';
+  console.log("thead rendered, columns:", colunasAtuais.length);
 
   const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
   const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
