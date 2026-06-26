@@ -20,15 +20,44 @@ headers = {
 print("Iniciando previsao diaria...")
 
 # 1. Fetch colaboradores para o PROCV exato
-colab_url = f"{SUPABASE_URL}/rest/v1/colaboradores?select=*"
-colab_res = requests.get(colab_url, headers=headers)
 map_colab = {}
-if colab_res.status_code == 200:
-    for c in colab_res.json():
-        if c.get('cod_req'):
-            map_colab[str(c['cod_req']).lower().strip()] = c
+offset_colab = 0
+while True:
+    colab_url = f"{SUPABASE_URL}/rest/v1/colaboradores?select=*&limit=1000&offset={offset_colab}"
+    colab_res = requests.get(colab_url, headers=headers)
+    if colab_res.status_code == 200:
+        c_data = colab_res.json()
+        if not c_data:
+            break
+        for c in c_data:
+            if c.get('cod_req'):
+                # IMPORTANT: DO NOT STRIP TO MATCH JS / EXCEL BEHAVIOR EXACTLY
+                map_colab[str(c['cod_req']).lower()] = c
+        offset_colab += 1000
+        if len(c_data) < 1000:
+            break
+    else:
+        break
 
-# 2. Fetch custo_geral com paginacao para nao perder dados (limite padrao eh 1000)
+# 1.5 Fetch datasul_ordens
+map_datasul = {}
+offset_ds = 0
+while True:
+    ds_url = f"{SUPABASE_URL}/rest/v1/datasul_ordens?select=*&limit=1000&offset={offset_ds}"
+    ds_res = requests.get(ds_url, headers=headers)
+    if ds_res.status_code == 200:
+        ds_data = ds_res.json()
+        if not ds_data:
+            break
+        for d in ds_data:
+            map_datasul[str(d.get('numero_ordem', ''))] = str(d.get('solicitante', ''))
+        offset_ds += 1000
+        if len(ds_data) < 1000:
+            break
+    else:
+        break
+
+# 2. Fetch custo_geral com paginacao para nao perder dados
 limit = 1000
 offset = 0
 dados = []
@@ -67,17 +96,23 @@ for r in dados:
     if r['it_codigo'] == 'FORECAST_METADATA':
         continue
         
-    # LOGICA DE PROCV DO DB.JS
-    original_solicitante = r.get('solicitante', '')
-    sol = r.get('solicitante_2') if r.get('solicitante_2') else original_solicitante
-    sol_key = str(sol).lower().strip() if sol else ''
-    colab = map_colab.get(sol_key)
+    # LOGICA DE PROCV DO DB.JS (EXATAMENTE COMO JS PARA BATER 750K)
+    original_solicitante = str(r.get('solicitante', ''))
+    numero_ordem = str(r.get('numero_ordem', ''))
     
-    is_excel_failed = False
-    if not colab and sol_key != '':
-        is_excel_failed = True
-    elif sol_key == '' and (not original_solicitante or str(original_solicitante).strip() == ''):
-        is_excel_failed = True
+    sol_to_use = original_solicitante
+    
+    if not sol_to_use or sol_to_use.strip() == '' or sol_to_use == 'None':
+        excel_lookup = map_datasul.get(numero_ordem)
+        system_lookup = excel_lookup
+        if not system_lookup and len(numero_ordem) < 8:
+            system_lookup = map_datasul.get(numero_ordem.zfill(8))
+            
+        sol_to_use = system_lookup if system_lookup else ''
+        
+    # IMPORTANT: DO NOT STRIP TO MATCH JS / EXCEL BEHAVIOR EXACTLY
+    excel_sol_key = sol_to_use.lower()
+    colab = map_colab.get(excel_sol_key)
         
     area = colab.get('area') if colab else r.get('area')
     it_codigo = str(r.get('it_codigo', '')).upper()
@@ -90,13 +125,11 @@ for r in dados:
     elif not area:
         area = 'OUTROS'
         
-    item_tipo = it_codigo[:3]
-    carater = 'Real Compras Serv' if item_tipo == 'SER' else 'Real Consumo'
-    
     emitente_str = str(r.get('descricao_emitente', '')).upper()
     if 'WZF' in emitente_str:
         area = 'OUTROS'
         
+    # SÓ ENTRA NA PREVISÃO SE FOR MANUTENÇÃO (Ignorando is_excel_failed, pois o Dashboard mostra a Visão Real (todas) como default)
     if area and area.upper() == 'MANUTENÇÃO':
         custo_do_mes = float(r.get('custo_do_mes') or 0)
         custo_mes_anterior = float(r.get('custo_mes_anterior') or 0)
