@@ -2,6 +2,7 @@ import requests
 import json
 import pandas as pd
 import numpy as np
+import os
 from datetime import datetime
 import calendar
 
@@ -120,12 +121,57 @@ ano_atual = hoje.year
 # O TOTAL GASTO DEVE SER A SOMA DE TODOS OS REGISTROS (assim como o frontend faz, pois o DB reflete a foto do mes)
 total_gasto = df['custo_cc'].sum()
 
+# Lendo historico de Machine Learning
+hist_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'historical_burn_rate.csv')
+avg_fraction = {}
+
+if os.path.exists(hist_path):
+    print("Carregando historico de Machine Learning para sazonalidade...")
+    df_hist = pd.read_csv(hist_path)
+    df_hist['ds'] = pd.to_datetime(df_hist['ds'])
+    
+    # Adicionar o mes atual para o historico? O mes atual esta incompleto, entao nao usamos para a curva
+    
+    # Calcular a fracao acumulada media por dia do mes
+    df_hist['month'] = df_hist['ds'].dt.to_period('M')
+    df_hist['day'] = df_hist['ds'].dt.day
+    
+    # Criar um grid completo de dias (1..31) para cada mes historico
+    months = df_hist['month'].unique()
+    grid = []
+    for m in months:
+        days_in_m = calendar.monthrange(m.year, m.month)[1]
+        for d in range(1, days_in_m + 1):
+            grid.append({'month': m, 'day': d})
+    
+    df_grid = pd.DataFrame(grid)
+    df_hist = pd.merge(df_grid, df_hist[['month', 'day', 'y']], on=['month', 'day'], how='left').fillna(0)
+    
+    # Cumulative sum
+    df_hist = df_hist.sort_values(['month', 'day'])
+    df_hist['cum_y'] = df_hist.groupby('month')['y'].cumsum()
+    
+    # Total per month
+    month_totals = df_hist.groupby('month')['y'].sum().reset_index().rename(columns={'y': 'total_m'})
+    df_hist = pd.merge(df_hist, month_totals, on='month')
+    
+    # Fraction
+    df_hist['fraction'] = df_hist['cum_y'] / df_hist['total_m']
+    
+    # Avoid div by zero
+    df_hist['fraction'] = df_hist['fraction'].fillna(0)
+    
+    # Average fraction per day across all months
+    avg_fraction_df = df_hist.groupby('day')['fraction'].mean()
+    avg_fraction = avg_fraction_df.to_dict()
+    print("Curva de sazonalidade treinada com sucesso!")
+
 # Para a projecao diaria, precisamos agrupar pelos dias validos do mes atual
 df_valid_dates = df.dropna(subset=['dt_trans']).copy()
 df_mes = df_valid_dates[(df_valid_dates['dt_trans'].dt.month == mes_atual) & (df_valid_dates['dt_trans'].dt.year == ano_atual)].copy()
 
 if df_mes.empty:
-    print("Sem dias no mes atual para tracar projecao linear.")
+    print("Sem dias no mes atual para tracar projecao.")
     ultimo_dia_registrado = hoje.day
     daily = pd.DataFrame()
 else:
@@ -136,15 +182,47 @@ else:
 
 print(f"DEBUG: Dia {ultimo_dia_registrado}, Total Gasto Real: {total_gasto}")
 
-# Calculo simplificado de Burn Rate linear para o MVP Cloud
+# Calculo do Burn Rate: Se tivermos a curva de sazonalidade ML e o dia > 0
 total_dias_mes = calendar.monthrange(ano_atual, mes_atual)[1]
-ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
-projecao_final = ritmo_diario * total_dias_mes
+projecao_final = total_gasto
 
-if not daily.empty:
-    historico_dias = [{"dia": int(row['dia']), "gasto": float(row['custo_cc'])} for _, row in daily.iterrows()]
+if avg_fraction and ultimo_dia_registrado in avg_fraction:
+    frac = avg_fraction[ultimo_dia_registrado]
+    if frac > 0.05: # Evitar projecoes malucas nos primeiros dias do mes
+        projecao_final = total_gasto / frac
+        print(f"Machine Learning: usando multiplicador sazonal de {frac:.2f} para o dia {ultimo_dia_registrado}")
+    else:
+        # Fallback linear se fracao muito pequena
+        ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
+        projecao_final = ritmo_diario * total_dias_mes
 else:
-    historico_dias = []
+    ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
+    projecao_final = ritmo_diario * total_dias_mes
+
+# Ajustar arrays projetados para o Frontend desenhar o cone
+historico_dias = []
+if not daily.empty:
+    cum_atual = 0
+    for _, row in daily.iterrows():
+        historico_dias.append({
+            "dia": int(row['dia']), 
+            "gasto_diario": float(row['custo_cc']),
+            "is_projecao": False
+        })
+        
+    # Adicionar a projecao futura para os graficos
+    if avg_fraction:
+        for d in range(int(ultimo_dia_registrado) + 1, total_dias_mes + 1):
+            if d in avg_fraction:
+                frac = avg_fraction[d]
+                # Quanto o ML acha que teremos gasto ACUMULADO neste dia?
+                estimativa_acumulada_dia = projecao_final * frac
+                # Para simplificar no json, mandamos a projecao final e a frac do dia
+                historico_dias.append({
+                    "dia": d,
+                    "fracao_sazonal": float(frac),
+                    "is_projecao": True
+                })
 
 resultado = {
     "mes": mes_atual,
