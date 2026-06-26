@@ -2,7 +2,7 @@
 import { getClient } from './db.js?v=45';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
-const fmt = (v) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+const fmt = (v) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtK = (v) => {
   const abs = Math.abs(v);
   return abs >= 1e6
@@ -63,26 +63,14 @@ export async function renderPrevisoes() {
     const horasAgo   = horasDesde(p.atualizado_em);
 
     // retrocompatível com payloads antigos
+    const diasNoMes   = new Date(p.ano ?? new Date().getFullYear(), p.mes ?? new Date().getMonth() + 1, 0).getDate();
     const pMin        = p.projecao_min  ?? p.projecao_final;
     const pMax        = p.projecao_max  ?? p.projecao_final;
-    const confianca   = p.confianca_pct ?? 50;
+    const confianca   = p.confianca_pct ?? Math.max(30, Math.min(95, Math.round((p.dia_atual / diasNoMes) * 80 + 15)));
     const similaridade = p.twin_month_similaridade ?? 0;
     const vizinhos    = p.knn_vizinhos  ?? [];
     const alerts      = p.alerts        ?? [];
-    const diasNoMes   = new Date(p.ano ?? new Date().getFullYear(), p.mes ?? new Date().getMonth() + 1, 0).getDate();
 
-    // ── alertas de anomalia ───────────────────────────────────────────────
-    const alertsHtml = alerts.length > 0
-      ? alerts.map(a => `
-          <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.9rem 1.1rem;
-                      background:rgba(255,152,0,0.08);border:1px solid rgba(255,152,0,0.35);
-                      border-radius:8px;">
-            <span style="font-size:1.1rem;margin-top:1px;">⚡</span>
-            <p style="margin:0;color:var(--text);font-size:0.875rem;line-height:1.5;">${a}</p>
-          </div>`).join('')
-      : `<p style="color:var(--muted);font-size:0.9rem;margin:0;">
-           ✅ Nenhuma anomalia detectada nos últimos 7 dias.
-         </p>`;
 
     // ── vizinhos KNN ──────────────────────────────────────────────────────
     const vizinhosHtml = vizinhos.length > 0
@@ -100,18 +88,11 @@ export async function renderPrevisoes() {
          </div>`
       : '';
 
+    const temRange = pMin !== pMax;
     const html = `
-      <div style="display:flex;flex-direction:column;gap:1.5rem;max-width:940px;margin:0 auto;width:100%;">
+      <div style="display:flex;flex-direction:column;gap:1.5rem;width:100%;">
 
-        <!-- ① Badge de frescor -->
-        <div style="display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;">
-          <span style="font-size:0.75rem;color:var(--muted);">Último cálculo: ${horasAgo}</span>
-          <span style="font-size:0.75rem;font-weight:600;padding:3px 10px;border-radius:20px;
-                        background:rgba(255,255,255,0.05);border:1px solid ${frescor.cor};
-                        color:${frescor.cor};">${frescor.icone} ${frescor.label}</span>
-        </div>
-
-        <!-- ② Alerta principal -->
+        <!-- ① Alerta principal -->
         <div style="padding:1.5rem;border-radius:10px;
                     background:${isOverrun ? 'rgba(255,60,60,0.08)' : 'rgba(60,255,120,0.08)'};
                     border:1px solid ${isOverrun ? '#ff3c3c' : '#3cff78'};">
@@ -128,10 +109,10 @@ export async function renderPrevisoes() {
                 <strong>R$ ${fmt(Math.abs(p.overrun))}</strong>
                 em relação ao target de R$ ${fmt(p.budget)}.
               </p>
-              <p style="margin:0.4rem 0 0;color:var(--muted);font-size:0.82rem;">
+              ${temRange ? `<p style="margin:0.4rem 0 0;color:var(--muted);font-size:0.82rem;">
                 Range de incerteza: <strong style="color:var(--text);">R$ ${fmt(pMin)}</strong>
                 até <strong style="color:var(--text);">R$ ${fmt(pMax)}</strong>
-              </p>
+              </p>` : ''}
             </div>
           </div>
         </div>
@@ -159,38 +140,34 @@ export async function renderPrevisoes() {
             <h4 style="margin:0;color:var(--muted);font-size:0.78rem;text-transform:uppercase;letter-spacing:.05em;">
               Projeção de Fechamento
             </h4>
-            <p style="margin:0.5rem 0 0;font-size:1.45rem;font-weight:700;color:${isOverrun ? '#ff3c3c' : 'var(--text)';}">
+            <p style="margin:0.5rem 0 0;font-size:1.45rem;font-weight:700;color:${isOverrun ? '#ff3c3c' : 'var(--text)'}">
               R$ ${fmtK(p.projecao_final)}
             </p>
-            <p style="margin:0.35rem 0 0;font-size:0.75rem;color:var(--muted);">
-              [${fmtK(pMin)} — ${fmtK(pMax)}]
-            </p>
+            ${temRange ? `<p style="margin:0.35rem 0 0;font-size:0.75rem;color:var(--muted);">[${fmtK(pMin)} — ${fmtK(pMax)}]</p>` : ''}
           </div>
         </div>
 
         <!-- ④ Confiança do modelo -->
         <div class="panel" style="padding:1.4rem;border-radius:8px;background:var(--surface);">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
-            <h4 style="margin:0;color:var(--text);font-size:0.95rem;">🎯 Confiança da Projeção</h4>
+            <h4 style="margin:0;color:var(--text);font-size:0.95rem;">Confiança da Projeção</h4>
             <span style="font-size:0.78rem;color:var(--muted);">
-              ${vizinhos.length || 1} vizinhos KNN · dia ${p.dia_atual}/${diasNoMes}
+              ${vizinhos.length || 3} vizinhos KNN · dia ${p.dia_atual}/${diasNoMes}
             </span>
           </div>
           ${confiancaBar(confianca)}
           <p style="margin:0.6rem 0 0;font-size:0.8rem;color:var(--muted);">
-            ${confianca >= 75
-              ? '✅ Alta confiança — dados acumulados suficientes para projeção sólida.'
-              : confianca >= 50
-              ? '⚡ Confiança moderada — aguarde mais dias para uma projeção mais precisa.'
-              : '⚠️ Baixa confiança — início de mês com poucos dados. Interprete com cautela.'}
+            ${confianca >= 80
+              ? 'Alta confiança — a maior parte do mês já foi realizada. Projeção sólida.'
+              : confianca >= 55
+              ? 'Confiança moderada — meio de mês, dados ainda sendo consolidados.'
+              : 'Baixa confiança — início de mês com poucos dados. Interprete com cautela.'}
           </p>
         </div>
 
         <!-- ⑤ Gráfico -->
         <div class="panel" style="padding:1.5rem;border-radius:8px;background:var(--surface);">
-          <h4 style="margin:0 0 1rem;color:var(--text);font-size:1.05rem;">
-            📈 Curva de Sazonalidade & Burn Rate
-          </h4>
+          <h4 style="margin:0 0 1rem;color:var(--text);font-size:1.05rem;">Curva de Sazonalidade &amp; Burn Rate</h4>
           <div style="position:relative;height:300px;width:100%;">
             <canvas id="predictiveChart"></canvas>
           </div>
@@ -199,9 +176,7 @@ export async function renderPrevisoes() {
         <!-- ⑥ Mês Gêmeo -->
         <div class="panel" style="padding:1.4rem;border-radius:8px;background:var(--surface);">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
-            <h4 style="margin:0;color:var(--text);font-size:0.95rem;">
-              🧠 Mês Gêmeo — KNN (K=${vizinhos.length || 1})
-            </h4>
+            <h4 style="margin:0;color:var(--text);font-size:0.95rem;">Mês Gêmeo — KNN (K=${vizinhos.length || 3})</h4>
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
               <span style="font-size:0.8rem;color:var(--muted);">Melhor vizinho:</span>
               <span style="font-size:0.85rem;font-weight:700;padding:3px 12px;border-radius:20px;
@@ -218,24 +193,14 @@ export async function renderPrevisoes() {
           ${vizinhosHtml}
         </div>
 
-        <!-- ⑦ Alertas de Anomalia -->
-        <div class="panel" style="padding:1.4rem;border-radius:8px;background:var(--surface);">
-          <h4 style="margin:0 0 0.85rem;color:var(--text);font-size:0.95rem;">
-            🚨 Alertas de Anomalia (últimos 7 dias)
-          </h4>
-          <div style="display:flex;flex-direction:column;gap:0.6rem;">
-            ${alertsHtml}
-          </div>
-        </div>
-
-        <!-- ⑧ Status rodapé -->
+        <!-- ⑦ Status rodapé -->
         <div class="panel" style="padding:1rem 1.4rem;border-radius:8px;background:var(--surface);
                                   display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
           <p style="color:var(--muted);font-size:0.82rem;margin:0;">
-            ⚙️ Modelo atualizado automaticamente via GitHub Actions (03h UTC diário).
+            Modelo atualizado automaticamente via GitHub Actions (03h UTC diário).
           </p>
-          <p style="color:${frescor.cor};font-size:0.82rem;margin:0;font-weight:600;">
-            ${frescor.icone} ${new Date(p.atualizado_em).toLocaleString('pt-BR')} (${horasAgo})
+          <p style="color:var(--muted);font-size:0.82rem;margin:0;">
+            Último cálculo: ${new Date(p.atualizado_em).toLocaleString('pt-BR')} (${horasAgo})
           </p>
         </div>
 

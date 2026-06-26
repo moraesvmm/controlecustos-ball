@@ -4,6 +4,16 @@ Este documento registra a necessidade de vistorias técnicas após alterações 
 
 ## Histórico de Modificações
 
+### 🔴 26/06/2026 — VISTORIA PENDENTE — Upgrade do Motor de IA (Módulo Previsões)
+**Status: PENDENTE — Vistoria obrigatória o mais rápido possível.**
+
+- Alterações realizadas:
+  - `.github/scripts/daily_forecast.py`: KNN K=1 → **KNN K=3 com média ponderada** (peso = inverso da distância euclidiana). Adicionados campos `projecao_min`, `projecao_max`, `confianca_pct`, `twin_month_similaridade`, `knn_vizinhos[]` ao payload salvo no Supabase.
+  - `js/previsoes.js`: Reescrito completamente. Agora exibe alertas de anomalia (`alerts[]`), painel Mês Gêmeo com lista dos K vizinhos e similaridade %, barra de confiança visual, range de incerteza [mín–máx] nos KPIs, cone de incerteza no gráfico (banda min/max), badge de frescor dos dados (verde/amarelo/vermelho). Retrocompatível com payloads antigos via operador `??`.
+  - `index.html`: Card `#widgetExplainability` atualizado — texto agora descreve corretamente KNN K=3, média ponderada, intervalo de incerteza e similaridade %. Adicionados spans `#aiRangeMin`, `#aiRangeMax`, `#aiConfianca`, `#aiSimilaridade`.
+  - `js/app.js`: Bloco de preenchimento do `widgetExplainability` expandido para popular os 4 novos campos.
+
+
 ### ✅ 01/06/2026 — VISTORIA CONCLUÍDA — Separação Front-end / Back-end (Planos de Manutenção)
 **Status: CONCLUÍDO.**
 

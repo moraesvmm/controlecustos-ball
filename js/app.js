@@ -1,3 +1,4 @@
+import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA, GITHUB_PAT, GITHUB_REPO_OWNER, GITHUB_REPO_NAME, GITHUB_WORKFLOW_ID } from './config.js';
 import {
   aplicarFiltros,
   opcoesUnicas,
@@ -4266,8 +4267,10 @@ function renderTabelaCustoGeral() {
   }
 
   if (widgetExplainability) {
+    const aside = $('#asideExplainability');
     if (forecastMetadata && forecastMetadata.twin_month) {
       widgetExplainability.style.display = 'flex';
+      if (aside) aside.style.display = 'block';
       if ($('#aiProjFinal'))    $('#aiProjFinal').textContent    = fmtMoeda(forecastMetadata.projecao_final || 0);
       if ($('#aiVolOrdens'))    $('#aiVolOrdens').textContent    = forecastMetadata.volume_ordens_atual || 0;
       if ($('#aiTwinMonth'))    $('#aiTwinMonth').textContent    = forecastMetadata.twin_month;
@@ -4277,6 +4280,7 @@ function renderTabelaCustoGeral() {
       if ($('#aiSimilaridade')) $('#aiSimilaridade').textContent = (forecastMetadata.twin_month_similaridade != null ? forecastMetadata.twin_month_similaridade : '—');
     } else {
       widgetExplainability.style.display = 'none';
+      if (aside) aside.style.display = 'none';
     }
   }
 
@@ -4868,6 +4872,51 @@ $('#btnSalvarModalCustoGeral')?.addEventListener('click', async () => {
   }
 });
 
+
+// DISPARO MANUAL DA IA (GitHub Actions)
+$('#btnRunForecast')?.addEventListener('click', async () => {
+  if (!GITHUB_PAT) {
+    toast('Erro: GITHUB_PAT não configurado. Adicione no env.runtime.js ou config.js', 'danger');
+    return;
+  }
+  
+  try {
+    const btn = $('#btnRunForecast');
+    const icon = btn.querySelector('i');
+    
+    btn.disabled = true;
+    if (icon) icon.classList.add('fa-spin');
+    toast('Disparando modelo preditivo na nuvem...', 'info');
+
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/actions/workflows/${GITHUB_WORKFLOW_ID}/dispatches`, {
+      method: 'POST',
+      headers: {
+        'Accept': 'application/vnd.github+json',
+        'Authorization': `Bearer ${GITHUB_PAT}`,
+        'X-GitHub-Api-Version': '2022-11-28'
+      },
+      body: JSON.stringify({ ref: 'main' })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Erro ${res.status}: ${await res.text()}`);
+    }
+
+    toast('IA ativada com sucesso! Atualize a página em ~2 minutos.', 'success');
+  } catch (err) {
+    console.error(err);
+    toast('Falha ao acionar a IA: ' + err.message, 'danger');
+  } finally {
+    setTimeout(() => {
+      const btn = $('#btnRunForecast');
+      if (btn) {
+        btn.disabled = false;
+        const icon = btn.querySelector('i');
+        if (icon) icon.classList.remove('fa-spin');
+      }
+    }, 2500);
+  }
+});
 
 // PLANO MESTRE INIT
 initPlanoMestre();

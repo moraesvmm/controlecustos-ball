@@ -444,6 +444,11 @@
           <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Previsões (Burn Rate)</h1>
           <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Modelagem Preditiva de Estouro de Budget</p>
         </div>
+        <div class="header-right">
+          <button id="btnRunForecast" type="button" class="btn btn-outline" style="display: flex; align-items: center; gap: 0.5rem; border-color: rgba(255,255,255,0.1); color: var(--text); font-size: 0.85rem;">
+            <i class="fa-solid fa-rotate"></i> Recalcular Modelo
+          </button>
+        </div>
       </header>
       
       <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
@@ -451,7 +456,7 @@
           <p style="color: #888;">Carregando modelo preditivo...</p>
         </div>
         
-        <aside style="flex: 0 0 320px;">
+        <aside id="asideExplainability" style="flex: 0 0 300px; display: none;">
           <!-- Widget 5: Motor de Inteligência Artificial (Explainability) -->
           <div class="panel" id="widgetExplainability" style="background: linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
@@ -460,8 +465,8 @@
               </span>
             </div>
             <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
-              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste mês em <strong id="aiProjFinal" style="color:#fff; font-size: 1rem;">R$ 0,00</strong> com intervalo de incerteza de <span id="aiRangeMin" style="color:#ccc;">R$ 0</span> a <span id="aiRangeMax" style="color:#ccc;">R$ 0</span> (confiança: <strong id="aiConfianca" style="color:#facc15;">—</strong>).</p>
-              <p style="margin-bottom: 0;"><strong>Lógica do Algoritmo:</strong> O motor <strong>K-Nearest Neighbors (KNN K=3)</strong> analisou o ritmo de gastos acumulado e o volume de <span id="aiVolOrdens" style="color:#fff;">0</span> ordens até o dia atual. Ele identificou os <strong>3 meses históricos mais parecidos</strong> e calculou uma <strong>média ponderada</strong> — onde meses mais próximos recebem maior peso (inverso da distância euclidiana). O mês de maior similaridade foi <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong> (<span id="aiSimilaridade" style="color:#facc15;">—</span>% de semelhança), servindo como principal referência de sazonalidade.</p>
+              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste mês em <strong id="aiProjFinal" style="color:#fff; font-size: 1rem;">R$ 0,00</strong>, podendo variar de <span id="aiRangeMin" style="color:#ccc;">R$ 0</span> a <span id="aiRangeMax" style="color:#ccc;">R$ 0</span> (confiança: <strong id="aiConfianca" style="color:#facc15;">—</strong>).</p>
+              <p style="margin-bottom: 0;"><strong>Como a IA aprende:</strong> Nosso modelo inteligente aprende diariamente com as cargas de dados feitas via <strong>Importar Financeiro</strong> (que processou <span id="aiVolOrdens" style="color:#fff;">0</span> ordens este mês). Ele analisa seu ritmo de gasto atual e vasculha o histórico buscando meses com padrão de consumo semelhante. O mês que a IA julgou ter o comportamento mais parecido com o cenário de agora foi <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong> (<span id="aiSimilaridade" style="color:#facc15;">—</span>% de semelhança). A IA projeta a curva futura usando o padrão desses meses históricos como referência, prevendo estolhos antes de acontecerem.</p>
             </div>
           </div>
         </aside>
