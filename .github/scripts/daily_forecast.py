@@ -197,15 +197,20 @@ hist_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'historical_bu
 avg_fraction = {}
 
 if os.path.exists(hist_path):
-    print("Carregando historico de Machine Learning para sazonalidade...")
+    print("Carregando historico de Machine Learning para sazonalidade e Mês Gêmeo...")
     df_hist = pd.read_csv(hist_path)
     df_hist['ds'] = pd.to_datetime(df_hist['ds'])
     
-    # Adicionar o mes atual para o historico? O mes atual esta incompleto, entao nao usamos para a curva
+    # Garantir que os custos historicos sejam interpretados como positivos (ja que na nuvem current=positivo)
+    if 'y' in df_hist.columns:
+        df_hist['y'] = df_hist['y'].abs()
     
-    # Calcular a fracao acumulada media por dia do mes
     df_hist['month'] = df_hist['ds'].dt.to_period('M')
     df_hist['day'] = df_hist['ds'].dt.day
+    
+    # Se nao tiver volume_ordens (historico velho), cria dummy
+    if 'volume_ordens' not in df_hist.columns:
+        df_hist['volume_ordens'] = 1
     
     # Criar um grid completo de dias (1..31) para cada mes historico
     months = df_hist['month'].unique()
@@ -216,11 +221,12 @@ if os.path.exists(hist_path):
             grid.append({'month': m, 'day': d})
     
     df_grid = pd.DataFrame(grid)
-    df_hist = pd.merge(df_grid, df_hist[['month', 'day', 'y']], on=['month', 'day'], how='left').fillna(0)
+    df_hist = pd.merge(df_grid, df_hist[['month', 'day', 'y', 'volume_ordens']], on=['month', 'day'], how='left').fillna(0)
     
     # Cumulative sum
     df_hist = df_hist.sort_values(['month', 'day'])
     df_hist['cum_y'] = df_hist.groupby('month')['y'].cumsum()
+    df_hist['cum_vol'] = df_hist.groupby('month')['volume_ordens'].cumsum()
     
     # Total per month
     month_totals = df_hist.groupby('month')['y'].sum().reset_index().rename(columns={'y': 'total_m'})
@@ -228,47 +234,80 @@ if os.path.exists(hist_path):
     
     # Fraction
     df_hist['fraction'] = df_hist['cum_y'] / df_hist['total_m']
-    
-    # Avoid div by zero
     df_hist['fraction'] = df_hist['fraction'].fillna(0)
     
-    # Average fraction per day across all months
+    # Average fraction (fallback)
     avg_fraction_df = df_hist.groupby('day')['fraction'].mean()
     avg_fraction = avg_fraction_df.to_dict()
-    print("Curva de sazonalidade treinada com sucesso!")
+    print("Base do Mês Gêmeo (KNN) preparada com sucesso!")
 
 # Para a projecao diaria, precisamos agrupar pelos dias validos do mes atual
 df_valid_dates = df_manut.dropna(subset=['dt_trans']).copy()
 df_mes = df_valid_dates[(df_valid_dates['dt_trans'].dt.month == mes_atual) & (df_valid_dates['dt_trans'].dt.year == ano_atual)].copy()
 
+total_volume = 0
 if df_mes.empty:
     print("Sem dias no mes atual para tracar projecao.")
     ultimo_dia_registrado = hoje.day
     daily = pd.DataFrame()
 else:
     df_mes['dia'] = df_mes['dt_trans'].dt.day
-    daily = df_mes.groupby('dia')['custo_cc'].sum().reset_index()
+    daily = df_mes.groupby('dia').agg(
+        custo_cc=('custo_cc', 'sum'),
+        volume_ordens=('custo_cc', 'count')
+    ).reset_index()
     daily = daily.sort_values('dia')
     ultimo_dia_registrado = daily['dia'].max()
+    total_volume = daily['volume_ordens'].sum()
 
-print(f"DEBUG: Dia {ultimo_dia_registrado}, Total Gasto Real: {total_gasto}")
+print(f"DEBUG: Dia {ultimo_dia_registrado}, Total Gasto Real: R$ {total_gasto}, Volume: {total_volume} ordens")
 
-# Calculo do Burn Rate: Se tivermos a curva de sazonalidade ML e o dia > 0
+# Calculo do Burn Rate com KNN (Mês Gêmeo)
 total_dias_mes = calendar.monthrange(ano_atual, mes_atual)[1]
 projecao_final = total_gasto
+twin_month_name = "N/A"
+twin_month_dist = 0
 
-if avg_fraction and ultimo_dia_registrado in avg_fraction:
-    frac = avg_fraction[ultimo_dia_registrado]
-    if frac > 0.05: # Evitar projecoes malucas nos primeiros dias do mes
+if 'df_hist' in locals() and ultimo_dia_registrado > 0:
+    df_day_d = df_hist[df_hist['day'] == ultimo_dia_registrado]
+    
+    min_dist = float('inf')
+    best_frac = 0
+    best_month = None
+    
+    for _, row in df_day_d.iterrows():
+        m_cum_y = row['cum_y']
+        m_cum_vol = row['cum_vol']
+        m_frac = row['fraction']
+        
+        if m_cum_y == 0: continue
+        
+        # Distancia Euclidiana Normalizada: (delta Gasto)^2 + (delta Volume)^2
+        diff_y = (m_cum_y - total_gasto) / total_gasto if total_gasto > 0 else 0
+        diff_vol = (m_cum_vol - total_volume) / total_volume if total_volume > 0 else 0
+        
+        dist = np.sqrt(diff_y**2 + diff_vol**2)
+        
+        if dist < min_dist:
+            min_dist = dist
+            best_month = row['month']
+            best_frac = m_frac
+            
+    if best_month is not None and best_frac > 0.05:
+        frac = best_frac
         projecao_final = total_gasto / frac
-        print(f"Machine Learning: usando multiplicador sazonal de {frac:.2f} para o dia {ultimo_dia_registrado}")
+        twin_month_name = str(best_month)
+        twin_month_dist = min_dist
+        print(f"KNN Mês Gêmeo: Escolhido {twin_month_name} (Distância: {min_dist:.2f}). Multiplicador sazonal: {frac:.2f}")
     else:
-        # Fallback linear se fracao muito pequena
+        # Fallback linear
         ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
         projecao_final = ritmo_diario * total_dias_mes
+        twin_month_name = "Média Linear (Fallback)"
 else:
     ritmo_diario = total_gasto / ultimo_dia_registrado if ultimo_dia_registrado > 0 else 0
     projecao_final = ritmo_diario * total_dias_mes
+    twin_month_name = "Média Linear (Sem histórico)"
 
 # Ajustar arrays projetados para o Frontend desenhar o cone
 historico_dias = []
@@ -305,6 +344,9 @@ resultado = {
     "overrun": float(projecao_final - budget_alvo), # Agora pode ser negativo (saldo)
     "historico_dias": historico_dias,
     "alerts": alerts,
+    "twin_month": twin_month_name,
+    "twin_month_dist": float(twin_month_dist),
+    "volume_ordens_atual": float(total_volume),
     "atualizado_em": hoje.isoformat()
 }
 

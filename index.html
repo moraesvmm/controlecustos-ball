@@ -379,6 +379,8 @@
             <!-- Alertas renderizados via JS -->
           </div>
         </div>
+        
+
       </section>
 
       <!-- Gráficos Main Container -->
@@ -444,8 +446,25 @@
         </div>
       </header>
       
-      <div id="previsoes-container">
-        <p style="color: #888;">Carregando modelo preditivo...</p>
+      <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+        <div id="previsoes-container" style="flex: 1;">
+          <p style="color: #888;">Carregando modelo preditivo...</p>
+        </div>
+        
+        <aside style="flex: 0 0 320px;">
+          <!-- Widget 5: Motor de Inteligência Artificial (Explainability) -->
+          <div class="panel" id="widgetExplainability" style="background: linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="color: #3b82f6; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-brain"></i> IA (Tomada de Decisão)
+              </span>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); line-height: 1.5;">
+              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste mês em <strong id="aiProjFinal" style="color:#fff; font-size: 1rem;">R$ 0,00</strong>.</p>
+              <p style="margin-bottom: 0;"><strong>Lógica do Algoritmo:</strong> O motor K-Nearest Neighbors (KNN) rastreou nosso ritmo de gastos, o peso da análise diária e o volume de <span id="aiVolOrdens" style="color:#fff;">0</span> ordens abertas até agora. Ele identificou que o estresse e o comportamento financeiro atual têm similaridade matemática com o mês de <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong>. A reta final daquele mês está sendo usada como "Mês Gêmeo" para calcular nossa trajetória futura.</p>
+            </div>
+          </div>
+        </aside>
       </div>
     </div>
 

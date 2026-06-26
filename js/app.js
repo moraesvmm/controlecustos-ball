@@ -4246,9 +4246,11 @@ function renderTabelaCustoGeral() {
     }
   }
 
-  // Alertas Inteligentes (Detecção de Anomalias)
+  // Alertas Inteligentes e Explainability da IA
   const widgetAlertas = $('#widgetAlertasInteligentes');
   const containerAlertas = $('#alertasInteligentesContainer');
+  const widgetExplainability = $('#widgetExplainability');
+  
   if (widgetAlertas && containerAlertas) {
     if (forecastMetadata && forecastMetadata.alerts && forecastMetadata.alerts.length > 0) {
       widgetAlertas.style.display = 'flex';
@@ -4260,6 +4262,17 @@ function renderTabelaCustoGeral() {
     } else {
       widgetAlertas.style.display = 'none';
       containerAlertas.innerHTML = '';
+    }
+  }
+
+  if (widgetExplainability) {
+    if (forecastMetadata && forecastMetadata.twin_month) {
+      widgetExplainability.style.display = 'flex';
+      if ($('#aiProjFinal')) $('#aiProjFinal').textContent = fmtMoeda(forecastMetadata.projecao_final || 0);
+      if ($('#aiVolOrdens')) $('#aiVolOrdens').textContent = forecastMetadata.volume_ordens_atual || 0;
+      if ($('#aiTwinMonth')) $('#aiTwinMonth').textContent = forecastMetadata.twin_month;
+    } else {
+      widgetExplainability.style.display = 'none';
     }
   }
 
