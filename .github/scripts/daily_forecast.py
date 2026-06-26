@@ -144,13 +144,15 @@ if not df_raw:
 
 df = pd.DataFrame(df_raw)
 
+# Convert string dates to datetime objects for ALL dataframes
+df['dt_trans'] = pd.to_datetime(df['dt_trans'], errors='coerce')
+
 # Filtrar apenas Manutencao para o modelo de ML de previsao
 df_manut = df[df['area_normalizada'] == 'MANUTENÇÃO'].copy()
 
 # Anomaly Detection Module (Para todas as áreas)
 alerts = []
 try:
-    df['dt_trans'] = pd.to_datetime(df['dt_trans'], errors='coerce')
     df_valid = df.dropna(subset=['dt_trans']).copy()
     
     if not df_valid.empty:
@@ -236,7 +238,7 @@ if os.path.exists(hist_path):
     print("Curva de sazonalidade treinada com sucesso!")
 
 # Para a projecao diaria, precisamos agrupar pelos dias validos do mes atual
-df_valid_dates = df.dropna(subset=['dt_trans']).copy()
+df_valid_dates = df_manut.dropna(subset=['dt_trans']).copy()
 df_mes = df_valid_dates[(df_valid_dates['dt_trans'].dt.month == mes_atual) & (df_valid_dates['dt_trans'].dt.year == ano_atual)].copy()
 
 if df_mes.empty:
