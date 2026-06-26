@@ -122,37 +122,73 @@ for r in dados:
             area = 'MANUTENÇÃO'
         else:
             area = 'OUTROS'
-    elif not area:
+    if not area:
         area = 'OUTROS'
         
     emitente_str = str(r.get('descricao_emitente', '')).upper()
     if 'WZF' in emitente_str:
         area = 'OUTROS'
         
-    # SÓ ENTRA NA PREVISÃO SE FOR MANUTENÇÃO (Ignorando is_excel_failed, pois o Dashboard mostra a Visão Real (todas) como default)
-    if area and area.upper() == 'MANUTENÇÃO':
-        custo_do_mes = float(r.get('custo_do_mes') or 0)
-        custo_mes_anterior = float(r.get('custo_mes_anterior') or 0)
-        custo_de_entrada = float(r.get('custo_de_entrada') or 0)
-        r['custo_cc'] = custo_do_mes + custo_mes_anterior + custo_de_entrada
-        df_raw.append(r)
+    custo_do_mes = float(r.get('custo_do_mes') or 0)
+    custo_mes_anterior = float(r.get('custo_mes_anterior') or 0)
+    custo_de_entrada = float(r.get('custo_de_entrada') or 0)
+    r['custo_cc'] = custo_do_mes + custo_mes_anterior + custo_de_entrada
+    
+    # Adicionamos TODOS os registros para deteccao de anomalia, mas a previsao sera so para manutencao
+    r['area_normalizada'] = area.upper()
+    df_raw.append(r)
 
 if not df_raw:
-    print("Sem dados de manutencao para calcular.")
+    print("Sem dados para calcular.")
     exit(0)
 
 df = pd.DataFrame(df_raw)
 
-# Precisamos limpar e preparar a data e custo (usando custo_cc conforme regra do Budget no app.js)
-df['dt_trans'] = pd.to_datetime(df['dt_trans'], errors='coerce')
-df['custo_cc'] = pd.to_numeric(df.get('custo_cc', 0), errors='coerce').fillna(0)
+# Filtrar apenas Manutencao para o modelo de ML de previsao
+df_manut = df[df['area_normalizada'] == 'MANUTENÇÃO'].copy()
 
+# Anomaly Detection Module (Para todas as áreas)
+alerts = []
+try:
+    df['dt_trans'] = pd.to_datetime(df['dt_trans'], errors='coerce')
+    df_valid = df.dropna(subset=['dt_trans']).copy()
+    
+    if not df_valid.empty:
+        max_date = df_valid['dt_trans'].max()
+        cutoff_date = max_date - pd.Timedelta(days=7)
+        
+        areas = df_valid['area_normalizada'].unique()
+        for a in areas:
+            df_a = df_valid[df_valid['area_normalizada'] == a]
+            
+            recent = df_a[df_a['dt_trans'] > cutoff_date]
+            past = df_a[df_a['dt_trans'] <= cutoff_date]
+            
+            recent_total = recent['custo_cc'].sum()
+            past_total = past['custo_cc'].sum()
+            
+            recent_days = (max_date - cutoff_date).days
+            past_days = (cutoff_date - df_a['dt_trans'].min()).days if not past.empty else 1
+            if past_days <= 0: past_days = 1
+            
+            recent_avg = recent_total / recent_days
+            past_avg = past_total / past_days
+            
+            # Se gastou mais de 5k na ultima semana e a media diaria foi 50% maior que antes
+            if recent_total > 5000 and past_avg > 0 and recent_avg > (past_avg * 1.5):
+                ratio = (recent_avg / past_avg)
+                alerts.append(f"A área {a.capitalize()} apresentou pico de gastos: R$ {recent_total:,.2f} nos últimos 7 dias ({ratio:.1f}x a média do início do mês).".replace(',','_').replace('.',',').replace('_','.'))
+except Exception as e:
+    print(f"Erro no módulo de anomalias: {e}")
+
+# ====================================================
+# ML FORECASTING (Apenas Manutencao)
+# ====================================================
 hoje = datetime.now()
 mes_atual = hoje.month
 ano_atual = hoje.year
 
-# O TOTAL GASTO DEVE SER A SOMA DE TODOS OS REGISTROS (assim como o frontend faz, pois o DB reflete a foto do mes)
-total_gasto = df['custo_cc'].sum()
+total_gasto = df_manut['custo_cc'].sum()
 
 # Lendo historico de Machine Learning
 hist_path = os.path.join(os.path.dirname(__file__), '..', 'data', 'historical_burn_rate.csv')
@@ -266,6 +302,7 @@ resultado = {
     "budget": float(budget_alvo),
     "overrun": float(projecao_final - budget_alvo), # Agora pode ser negativo (saldo)
     "historico_dias": historico_dias,
+    "alerts": alerts,
     "atualizado_em": hoje.isoformat()
 }
 

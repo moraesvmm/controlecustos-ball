@@ -4086,11 +4086,14 @@ function renderTabelaCustoGeral() {
   const filtroArea = $('#filtroAreaCustoGeral')?.value || 'todas';
 
   let budgetMetadata = null;
+  let forecastMetadata = null;
   let registrosReais = [];
 
   for (let r of (registrosCustoGeral || [])) {
     if (r.it_codigo === 'BUDGET_METADATA') {
       try { budgetMetadata = JSON.parse(r.descricao_codigo); } catch(e){}
+    } else if (r.it_codigo === 'FORECAST_METADATA') {
+      try { forecastMetadata = JSON.parse(r.descricao_codigo); } catch(e){}
     } else {
       registrosReais.push(r);
     }
@@ -4235,6 +4238,23 @@ function renderTabelaCustoGeral() {
     if ($('#lblSaldoBudget')) {
       $('#lblSaldoBudget').textContent = fmtMoeda(saldo);
       $('#lblSaldoBudget').style.color = saldo < 0 ? 'var(--danger)' : 'var(--success)';
+    }
+  }
+
+  // Alertas Inteligentes (Detecção de Anomalias)
+  const widgetAlertas = $('#widgetAlertasInteligentes');
+  const containerAlertas = $('#alertasInteligentesContainer');
+  if (widgetAlertas && containerAlertas) {
+    if (forecastMetadata && forecastMetadata.alerts && forecastMetadata.alerts.length > 0) {
+      widgetAlertas.style.display = 'flex';
+      containerAlertas.innerHTML = forecastMetadata.alerts.map(a => `
+        <div style="background: rgba(239, 68, 68, 0.1); border-left: 3px solid var(--danger); padding: 0.75rem 1rem; border-radius: 4px; font-size: 0.85rem; color: #fff;">
+          ${a}
+        </div>
+      `).join('');
+    } else {
+      widgetAlertas.style.display = 'none';
+      containerAlertas.innerHTML = '';
     }
   }
 
