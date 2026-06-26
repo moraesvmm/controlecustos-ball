@@ -425,17 +425,15 @@
 
     <!-- VIEW: PREVISÕES PREDITIVAS -->
     <div id="view-custo-previsoes" class="view" style="padding: 1.5rem;">
-      <div style="display: flex; flex-direction: column; height: calc(100vh - 3rem); overflow: hidden;">
-        <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
-          <div class="header-left">
-            <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Previsões (Burn Rate)</h1>
-            <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Modelagem Preditiva de Estouro de Budget</p>
-          </div>
-        </header>
-        
-        <div id="previsoes-container" style="flex: 1; overflow-y: auto;">
-          <p style="color: #888;">Carregando modelo preditivo...</p>
+      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+        <div class="header-left">
+          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Previsões (Burn Rate)</h1>
+          <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Modelagem Preditiva de Estouro de Budget</p>
         </div>
+      </header>
+      
+      <div id="previsoes-container">
+        <p style="color: #888;">Carregando modelo preditivo...</p>
       </div>
     </div>
 
