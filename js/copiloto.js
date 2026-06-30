@@ -27,9 +27,6 @@ const tools = [
   }
 ];
 
-let contextoFinanceiro = null;
-let isOpen = false;
-let isThinking = false;
 
 const SUGESTOES = [
   'Posso aprovar R$ 50k agora?',
