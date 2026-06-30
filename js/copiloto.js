@@ -1,5 +1,6 @@
 import { getClient } from './db.js?v=45';
 import { GROQ_API_KEY } from './keys.js?v=1';
+import { agregarRecebidosPrevistos } from './logic.js?v=9';
 
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
@@ -72,6 +73,19 @@ function buildContextStr() {
     ? `A projeção de fechamento (R$ ${fmt(projecao)}) indica que o mês VAI ESTOURAR em R$ ${fmt(projecao - budget)}.`
     : `A projeção de fechamento (R$ ${fmt(projecao)}) indica que o mês fechará DENTRO do budget.`;
 
+  let kpisStr = '';
+  if (window._registrosGlobais && window._registrosGlobais.length > 0) {
+    try {
+      const kpis = agregarRecebidosPrevistos(window._registrosGlobais);
+      kpisStr = `\n\n=== DASHBOARD: PREVISTO VS RECEBIDO POR MÊS ===\n`;
+      kpis.forEach(m => {
+        kpisStr += `Mês: ${m.mes} | Previsto (a receber no mês+): R$ ${fmt(m.previsto)} | Recebido: R$ ${fmt(m.recebido)}\n`;
+      });
+    } catch(e) {
+      console.warn('Erro ao agregar KPIs para o AI', e);
+    }
+  }
+
   return `=== SITUAÇÃO FINANCEIRA — MÊS ATUAL ===
 Data: ${new Date().toLocaleDateString('pt-BR')} | Dia ${p.dia_atual} de ${diasNoMes} (${diasRestantes} dia(s) restante(s))
 
@@ -87,7 +101,7 @@ CONFIANÇA DA PROJEÇÃO: ${p.confianca_pct}%
 MÊS HISTÓRICO MAIS SIMILAR: ${p.twin_month || 'N/A'} (${p.twin_month_similaridade || 0}% de similaridade)
 VOLUME DE ORDENS: ${p.volume_ordens_atual || 0} ordens abertas
 
-ALERTAS ATIVOS: ${(p.alerts || []).join(' | ') || 'Nenhum alerta identificado.'}
+ALERTAS ATIVOS: ${(p.alerts || []).join(' | ') || 'Nenhum alerta identificado.'}${kpisStr}
 ===========================================`;
 }
 
