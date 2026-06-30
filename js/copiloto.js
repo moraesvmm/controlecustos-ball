@@ -76,6 +76,8 @@ function findRelevantOrders(texto) {
   
   const query = texto.toLowerCase();
   let matches = [];
+  let agregadoCount = 0;
+  let agregadoTotal = 0;
 
   const mapRecord = r => {
     const req = r.requisitante || r.solicitante || '';
@@ -106,14 +108,20 @@ function findRelevantOrders(texto) {
     const words = query.replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length > 2 && !ignore.includes(w));
     
     if (words.length > 0) {
-      matches = window._registrosGlobais.map(mapRecord).map(m => {
+      const allMatches = window._registrosGlobais.map(mapRecord).map(m => {
         const r = m.record;
         const searchable = `${r.numero_ordem || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''}`.toLowerCase();
         words.forEach(w => {
           if (searchable.includes(w)) m.score++;
         });
         return m;
-      }).filter(m => m.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+      }).filter(m => m.score > 0).sort((a, b) => b.score - a.score);
+
+      if (allMatches.length > 0) {
+        agregadoTotal = allMatches.reduce((acc, m) => acc + m.val, 0);
+        agregadoCount = allMatches.length;
+        matches = allMatches.slice(0, 5);
+      }
     }
   }
 
@@ -121,7 +129,14 @@ function findRelevantOrders(texto) {
 
   const fmt = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
   
-  let result = `\n\n=== REGISTROS / RC'S DA BASE (CONTROLE GLOBAL) ===\nEstes são os registros/RCs/Ordens encontrados na base de dados que batem com o que o usuário pediu:\n`;
+  let result = `\n\n=== REGISTROS / RC'S DA BASE (CONTROLE GLOBAL) ===\n`;
+  if (agregadoCount > 0) {
+    result += `[ATENÇÃO] A busca encontrou ${agregadoCount} registros no total, somando um valor de R$ ${fmt(agregadoTotal)}.\n`;
+    result += `Para não sobrecarregar sua memória, listei abaixo apenas os ${matches.length} mais relevantes:\n`;
+  } else {
+    result += `Estes são os registros/RCs/Ordens encontrados na base de dados que batem com o que o usuário pediu:\n`;
+  }
+
   matches.forEach(m => {
     const r = m.record;
     const n = m.nome ? ` (${m.nome})` : '';
