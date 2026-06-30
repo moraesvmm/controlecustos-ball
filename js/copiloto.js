@@ -74,26 +74,48 @@ ALERTAS ATIVOS: ${(p.alerts || []).join(' | ') || 'Nenhum alerta identificado.'}
 function findRelevantOrders(texto) {
   if (!window._registrosGlobais || window._registrosGlobais.length === 0) return '';
   
-  const ignore = ['o','a','os','as','de','do','da','dos','das','em','no','na','nos','nas','por','para','com','sem','qual','quem','onde','quando','que','e','ou','mas','ordem','setor','conta','requisitante','feita','pelo','pela', 'colaborador'];
-  const words = texto.toLowerCase().replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length > 2 && !ignore.includes(w));
-  
-  if (words.length === 0) return '';
+  const query = texto.toLowerCase();
+  let matches = [];
 
-  const matches = window._registrosGlobais.map(r => {
-    let score = 0;
+  const mapRecord = r => {
     const req = r.requisitante || r.solicitante || '';
     const nome = r.nome_solicitante || '';
     const set = r.setor || r.area || '';
     const desc = r.descricao_servico || r.descricao_falha || r.item || '';
     const cc = r.centro_custo || r.cc || '';
+    const val = Number(r.valor_total_brl || r.valor || 0);
+    return { record: r, score: 0, req, nome, set, desc, val, cc };
+  };
+
+  if (query.includes('última') || query.includes('ultima') || query.includes('recent')) {
+    matches = window._registrosGlobais
+      .map(mapRecord)
+      .sort((a, b) => {
+        const idA = Number(a.record.item_id || a.record.id) || 0;
+        const idB = Number(b.record.item_id || b.record.id) || 0;
+        return idB - idA;
+      })
+      .slice(0, 5);
+  } else if (query.includes('maior') || query.includes('mais cara') || query.includes('mais caro')) {
+    matches = window._registrosGlobais
+      .map(mapRecord)
+      .sort((a, b) => b.val - a.val)
+      .slice(0, 5);
+  } else {
+    const ignore = ['o','a','os','as','de','do','da','dos','das','em','no','na','nos','nas','por','para','com','sem','qual','quem','onde','quando','que','e','ou','mas','ordem','setor','conta','requisitante','feita','pelo','pela', 'colaborador'];
+    const words = query.replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length > 2 && !ignore.includes(w));
     
-    const searchable = `${r.numero_ordem || ''} ${req} ${nome} ${set} ${desc} ${r.conta || ''} ${cc} ${r.fornecedor || ''}`.toLowerCase();
-    
-    words.forEach(w => {
-      if (searchable.includes(w)) score++;
-    });
-    return { record: r, score, req, nome, set, desc, val: r.valor_total_brl || r.valor || 0 };
-  }).filter(m => m.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+    if (words.length > 0) {
+      matches = window._registrosGlobais.map(mapRecord).map(m => {
+        const r = m.record;
+        const searchable = `${r.numero_ordem || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''}`.toLowerCase();
+        words.forEach(w => {
+          if (searchable.includes(w)) m.score++;
+        });
+        return m;
+      }).filter(m => m.score > 0).sort((a, b) => b.score - a.score).slice(0, 5);
+    }
+  }
 
   if (matches.length === 0) return '';
 
