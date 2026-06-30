@@ -66,6 +66,7 @@ export const COLUNAS_TABELA = [
   { key: 'valor', label: 'Valor', width: 100, fmt: 'moeda' },
   { key: 'previsao_entrega', label: 'Previsão', width: 100, fmt: 'data' },
   { key: 'data_recebimento', label: 'Recebimento', width: 110, fmt: 'data' },
+  { key: 'nota_retorno', label: 'Nota Retorno', width: 120 },
   { key: 'status', label: 'Status', width: 150, computed: true },
   { key: 'valor_previsto', label: 'V. Previsto', width: 100, fmt: 'moeda', computed: true },
   { key: 'valor_recebido', label: 'V. Recebido', width: 100, fmt: 'moeda', computed: true },

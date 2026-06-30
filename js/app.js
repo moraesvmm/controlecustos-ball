@@ -40,6 +40,8 @@ import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
 import { initPlanoMestre } from './plano_mestre.js?v=1';
 import { initImportPlanoMestre } from './import_plano_mestre.js?v=1';
 import { renderPrevisoes } from './previsoes.js';
+import { initAlertas, toggleAlertasPanel } from './alertas.js?v=2';
+import { initCopiloto } from './copiloto.js?v=2';
 
 let registros = [];
 let registrosCustoGeral = [];
@@ -1187,6 +1189,9 @@ async function init() {
     try {
       registrosCustoGeral = await getDadosCustoGeral();
     } catch (e) { console.warn('Custo Geral table not ready yet', e.message); }
+
+    // Expor TUDO para o Copiloto poder buscar ordens de todos os módulos
+    window._registrosGlobais = [...registros, ...(registrosCustoGeral || [])];
     try {
       tarefasDelegadas = await getTarefasDelegadas();
       renderGestaoTarefas();
@@ -2999,6 +3004,11 @@ onAuthStateChange((user) => {
       isAppInitialized = true;
       init().then(() => {
         initCalendario(registros);
+        // Inicializar módulos de IA
+        initAlertas();
+        initCopiloto();
+        // Sininho de alertas
+        document.getElementById('btnAlertaBell')?.addEventListener('click', toggleAlertasPanel);
       });
     }
   } else {
@@ -4090,6 +4100,8 @@ function renderTabelaCustoGeral() {
   const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
   const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
   const filtroArea = $('#filtroAreaCustoGeral')?.value || 'todas';
+  const filtroDataDe  = $('#filtroDataDeCustoGeral')?.value  || '';  // formato YYYY-MM-DD
+  const filtroDataAte = $('#filtroDataAteCustoGeral')?.value || '';
 
   let budgetMetadata = null;
   let forecastMetadata = null;
@@ -4117,6 +4129,26 @@ function renderTabelaCustoGeral() {
       if (!isManut) return false;
       // Exclui os que o Excel perde porque a referência do PROCV quebrou (recuperados do Datasul)
       if (r.recuperado_datasul) return false;
+    }
+
+    // Filtro de Data (dt_trans)
+    if (filtroDataDe || filtroDataAte) {
+      // dt_trans pode vir como '2026-06-28', '28/06/2026' ou timestamp ISO
+      let dtRaw = String(r.dt_trans || '');
+      let dtParsed = null;
+      if (/\d{4}-\d{2}-\d{2}/.test(dtRaw)) {
+        dtParsed = dtRaw.substring(0, 10); // já está em YYYY-MM-DD
+      } else if (/\d{2}\/\d{2}\/\d{4}/.test(dtRaw)) {
+        const [d, m, y] = dtRaw.split('/');
+        dtParsed = `${y}-${m}-${d}`;
+      }
+      if (dtParsed) {
+        if (filtroDataDe  && dtParsed < filtroDataDe)  return false;
+        if (filtroDataAte && dtParsed > filtroDataAte) return false;
+      } else {
+        // se não conseguiu parsear e há filtro de data, exclui o registro
+        if (filtroDataDe || filtroDataAte) return false;
+      }
     }
 
     // Busca textual
@@ -4703,12 +4735,26 @@ if ($('#filtroModoColunasCustoGeral')) {
   });
 }
 
+if ($('#filtroDataDeCustoGeral')) {
+  $('#filtroDataDeCustoGeral').addEventListener('change', () => {
+    renderTabelaCustoGeral();
+  });
+}
+
+if ($('#filtroDataAteCustoGeral')) {
+  $('#filtroDataAteCustoGeral').addEventListener('change', () => {
+    renderTabelaCustoGeral();
+  });
+}
+
 if ($('#btnLimparFiltrosCustoGeral')) {
   $('#btnLimparFiltrosCustoGeral').addEventListener('click', () => {
-    if ($('#filtroBuscaCustoGeral')) $('#filtroBuscaCustoGeral').value = '';
-    if ($('#filtroOrdemCustoGeral')) $('#filtroOrdemCustoGeral').value = 'todas';
-    if ($('#filtroAreaCustoGeral')) $('#filtroAreaCustoGeral').value = 'todas';
-    if ($('#filtroModoColunasCustoGeral')) $('#filtroModoColunasCustoGeral').value = 'todas';
+    if ($('#filtroBuscaCustoGeral'))        $('#filtroBuscaCustoGeral').value = '';
+    if ($('#filtroOrdemCustoGeral'))        $('#filtroOrdemCustoGeral').value = 'todas';
+    if ($('#filtroAreaCustoGeral'))         $('#filtroAreaCustoGeral').value = 'todas';
+    if ($('#filtroModoColunasCustoGeral'))  $('#filtroModoColunasCustoGeral').value = 'todas';
+    if ($('#filtroDataDeCustoGeral'))       $('#filtroDataDeCustoGeral').value = '';
+    if ($('#filtroDataAteCustoGeral'))      $('#filtroDataAteCustoGeral').value = '';
     renderTabelaCustoGeral();
   });
 }
@@ -4872,6 +4918,157 @@ $('#btnSalvarModalCustoGeral')?.addEventListener('click', async () => {
   }
 });
 
+
+// EXPORTAÇÃO DE RELATÓRIO PREDITIVO A4 (Ollama)
+$('#btnExportarRelatorioIA')?.addEventListener('click', async () => {
+  const btn = $('#btnExportarRelatorioIA');
+  btn.disabled = true;
+  const originalText = btn.innerHTML;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A IA está redigindo o relatório...';
+
+  try {
+    // Busca dados atualizados da nuvem
+    const supabase = getClient();
+    const { data: mData } = await supabase.from('custo_geral').select('descricao_codigo').eq('it_codigo', 'FORECAST_METADATA').maybeSingle();
+    if (!mData) throw new Error("Metadata preditivo não encontrado");
+    const p = JSON.parse(mData.descricao_codigo);
+
+    const dataAtual = new Date().toLocaleDateString('pt-BR');
+    
+    // Prompt para o Ollama — versão detalhada e exigente
+    const diasNoMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+    const diasRestantes = diasNoMes - (p.dia_atual || new Date().getDate());
+    const overrunFormatado = Number(p.overrun || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    const rangeMin = Number(p.projecao_min || p.projecao_final || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    const rangeMax = Number(p.projecao_max || p.projecao_final || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    const gastoAtual = Number(p.gasto_atual || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    const budget = Number(p.budget || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
+    const alertas = p.alerts && p.alerts.length > 0 ? p.alerts.join('\n- ') : 'Nenhum alerta crítico identificado.';
+
+    const sysPrompt = `Você é um Controller Financeiro Sênior especializado em gestão de custos de manutenção industrial.
+Sua missão é redigir um RELATÓRIO EXECUTIVO COMPLETO E DETALHADO para ser apresentado à diretoria da fábrica Ball Beverage.
+O relatório deve ter aproximadamente 700 a 1000 palavras de conteúdo textual — NÃO seja breve. Cada seção deve ter pelo menos 2 a 4 parágrafos longos e bem desenvolvidos.
+
+REGRAS DE FORMATAÇÃO (OBRIGATÓRIAS E CRÍTICAS):
+- Responda APENAS com código HTML válido, sem blocos de markdown (sem crases, sem \`\`\`html).
+- Não inclua as tags <html>, <head> ou <body>. Apenas o conteúdo interno.
+- Você DEVE usar tags <p> para separar os parágrafos. O espaçamento é fundamental!
+- Use um bloco <style> interno no início para estilizar elegantemente: adicione "p { margin-bottom: 1.2em; line-height: 1.6; text-align: justify; }" para garantir o espaçamento correto entre parágrafos.
+- Tipografia: font-family sans-serif, cores corporativas (azul escuro #1a3a5c, cinza #555, preto #222).
+- Cabeçalho com logo textual "BALL BEVERAGE — MANUTENÇÃO", título do relatório, data e uma linha divisória.
+- Cada seção com título em azul escuro bold (tag <h3> ou <h2>), separada por divisórias horizontais sutis.
+- Números financeiros em negrito e cor azul.
+- Caixas de alerta com fundo amarelo-claro para avisos.
+- Layout profissional e denso, adequado para impressão A4.
+- IMPORTANTE: NUNCA use jargões técnicos de inteligência artificial (como KNN, algoritmos, machine learning). Explique tudo em termos de negócios (ex: "análise de padrões históricos").
+
+DADOS REAIS DO SISTEMA (use todos eles no relatório):
+- Data do Relatório: ${dataAtual}
+- Dia Atual no Mês: ${p.dia_atual || new Date().getDate()} de ${diasNoMes} (${diasRestantes} dias restantes)
+- Gasto Acumulado até hoje: R$ ${gastoAtual}
+- Budget Mensal (Meta): R$ ${budget}
+- Projeção de Fechamento: R$ ${Number(p.projecao_final || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+- Estouro / Economia projetada: R$ ${overrunFormatado} ${(p.overrun || 0) > 0 ? '(ESTOURO)' : '(ECONOMIA)'}
+- Range de Incerteza: R$ ${rangeMin} até R$ ${rangeMax}
+- Volume de Ordens Abertas: ${p.volume_ordens_atual || 0} ordens
+- Mês Gêmeo (Mês Histórico mais similar): ${p.twin_month || 'N/A'}
+- Nível de Similaridade com o Mês Gêmeo: ${p.twin_month_similaridade || 0}%
+- Confiança da Projeção: ${p.confianca_pct}%
+- Alertas Identificados:
+- ${alertas}
+
+ESTRUTURA OBRIGATÓRIA DO RELATÓRIO (escreva TODAS as seções com profundidade):
+
+1. CABEÇALHO CORPORATIVO
+   Título: "Relatório Preditivo de Custos de Manutenção"
+   Subtítulo: "Análise de Fechamento Mensal — ${dataAtual}"
+   Emitido por: Controle RC — Inteligência Preditiva
+
+2. RESUMO EXECUTIVO (2–3 parágrafos)
+   Faça uma síntese executiva do momento financeiro da manutenção: o quanto foi gasto, o quanto resta de budget, o que o sistema projeta e qual o risco de estouro. Escreva como se estivesse reportando à diretoria, com linguagem formal mas clara. Mencione o percentual do mês consumido (${p.dia_atual} de ${diasNoMes} dias = ${Math.round(((p.dia_atual||1)/diasNoMes)*100)}% do mês), o ritmo de gastos e se estamos acima ou abaixo do ritmo esperado. Lembre-se de usar <p> para separar os parágrafos.
+
+3. ANÁLISE DO MÊS GÊMEO E PADRÕES HISTÓRICOS (2–3 parágrafos)
+   Explique com riqueza de detalhes O QUE É o "Mês Gêmeo", por que o sistema identificou ${p.twin_month} como o período mais similar no passado, o que isso significa na prática (ritmo de gastos, volume de ordens similares). Fale sobre a similaridade de ${p.twin_month_similaridade}% e o que ela implica para a confiabilidade da projeção. Mencione o range de incerteza e o que o cenário pessimista vs otimista representa. IMPORTANTE: Fale apenas em termos de negócios, comportamento e histórico, SEM citar algoritmos. Lembre-se de usar <p> para separar os parágrafos.
+
+4. DIAGNÓSTICO DE RISCO (2 parágrafos)
+   Com base nos dados, classifique o risco: ALTO, MÉDIO ou BAIXO. Justifique com base no estouro projetado de R$ ${overrunFormatado}, nos ${diasRestantes} dias restantes e nos alertas identificados. Fale sobre o "Efeito Fechamento" — o fenômeno em que os últimos dias do mês concentram faturamentos represados de notas fiscais, contratos mensais e requisições aprovadas. Dê uma estimativa de quanto pode ainda entrar nesses últimos dias.
+
+5. ALERTAS E ÁREAS DE ATENÇÃO (bullets + parágrafo explicativo)
+   Liste cada alerta de forma detalhada. Para cada alerta, explique o que ele significa, qual área está impactada, e qual ação preventiva ou corretiva deveria ser tomada. Se não houver alertas, explique por que isso é positivo e quais métricas sustentam essa afirmação.
+
+6. RECOMENDAÇÕES ESTRATÉGICAS PARA O FECHAMENTO (lista numerada, 4–5 itens)
+   Sugira ações concretas e específicas que a equipe de manutenção e o controller devem tomar nos próximos ${diasRestantes} dias para minimizar o estouro ou garantir a economia. Seja prático e acionável.
+
+7. CONCLUSÃO (1 parágrafo)
+   Encerre com uma avaliação geral do mês, um comentário sobre a maturidade do processo de gestão e uma mensagem motivacional para a equipe de manutenção.
+
+Lembre-se: o relatório deve ser LONGO, RICO e DETALHADO. Não resuma. Desenvolva cada seção completamente.`;
+
+    const res = await fetch('http://localhost:11434/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'llama3',
+        prompt: sysPrompt,
+        stream: false,
+        options: {
+          num_predict: 4096,
+          temperature: 0.7
+        }
+      })
+    });
+
+    if (!res.ok) throw new Error("Falha ao comunicar com Ollama. Verifique se OLLAMA_ORIGINS='*' está configurado e o Ollama rodando.");
+    
+    const ollamaResponse = await res.json();
+    let htmlContent = ollamaResponse.response;
+    
+    // Remove possíveis blocos de markdown no início/fim
+    htmlContent = htmlContent.replace(/^```html/i, '').replace(/```$/i, '').trim();
+
+    // Container oculto para PDF — largura equivalente a A4 em 96dpi (794px) menos margens
+    const printContainer = document.createElement('div');
+    printContainer.style.width = '710px';
+    printContainer.style.padding = '0';
+    printContainer.style.background = '#fff';
+    printContainer.style.color = '#222';
+    printContainer.style.fontSize = '13px';
+    printContainer.style.lineHeight = '1.6';
+    printContainer.style.fontFamily = 'Arial, sans-serif';
+    printContainer.style.boxSizing = 'border-box';
+    printContainer.style.overflowWrap = 'break-word';
+    printContainer.style.wordBreak = 'break-word';
+    printContainer.innerHTML = htmlContent;
+    
+    // Injeta gráfico (opcional)
+    const canvasChart = document.getElementById('predictiveChart');
+    if (canvasChart) {
+      const imgData = canvasChart.toDataURL('image/png');
+      const imgHtml = `<div style="margin-top: 20px; text-align: center;"><img src="${imgData}" style="max-width: 100%; height: auto; border: 1px solid #eee;" /></div>`;
+      printContainer.innerHTML += imgHtml;
+    }
+
+    // Gera PDF
+    const opt = {
+      margin:       [10, 10, 10, 10],
+      filename:     `Relatorio_Preditivo_IA_${dataAtual.replace(/\//g, '-')}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    html2pdf().set(opt).from(printContainer).save();
+
+    toast('Relatório Preditivo gerado e baixado!', 'success');
+
+  } catch (e) {
+    console.error(e);
+    toast('Erro na Geração por IA: ' + e.message, 'danger');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+});
 
 // DISPARO MANUAL DA IA (GitHub Actions)
 $('#btnRunForecast')?.addEventListener('click', async () => {

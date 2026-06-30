@@ -16,6 +16,10 @@ echo O sistema esta ligando na porta %PORT% (Modo: Localhost)...
 echo Aguarde 2 segundos, o navegador vai abrir sozinho...
 echo.
 
+:: Inicia o motor de Inteligencia Artificial (Ollama) em segundo plano, habilitando acesso web (CORS)
+set "OLLAMA_ORIGINS=*"
+start /B ollama serve >nul 2>&1
+
 :: Usa o caminho atual (letra de disco ex: Z:\) - sem passar parametro -Pasta para evitar corrupcao de caracteres
 start /B powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Get-Content 'servidor.ps1' -Raw))) -Porta %PORT%"
 

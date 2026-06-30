@@ -19,6 +19,7 @@
   <link rel="stylesheet" href="css/sweetalert2-dark.css" />
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
   <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
       /* Remove as setinhas dos inputs de dia */
@@ -35,6 +36,19 @@
 
 <body>
   <div class="app-bg"></div>
+
+  <!-- PAINEL DE ALERTAS -->
+  <div id="alertas-painel-overlay" onclick="import('./js/alertas.js').then(m=>m.fecharAlertasPanel())"></div>
+  <aside id="alertas-painel">
+    <div class="alertas-header">
+      <h3>🔔 Alertas de Tendência</h3>
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;" onclick="import('./js/alertas.js').then(m=>m.fecharAlertasPanel())">×</button>
+    </div>
+    <div class="alertas-body" id="alertas-body"></div>
+  </aside>
+
+  <!-- TOOLTIP IA -->
+  <div id="ai-tooltip-bubble"></div>
 
   <!-- TELA DE LOGIN -->
   <div id="login-container" style="display: none; height: 100vh; align-items: center; justify-content: center; position: relative; z-index: 10;">
@@ -179,6 +193,11 @@
         <div style="display: flex; gap: 1rem; align-items: center;">
           <input type="file" id="fileImportExcel" accept=".xlsx, .xls" style="display: none;" />
           <button type="button" class="btn btn-outline" id="btnImportarExcel" style="font-size: 0.85rem;">Importar Base de Dados</button>
+          <!-- Sininho de Alertas -->
+          <button type="button" class="alert-bell-btn" id="btnAlertaBell" title="Alertas de Tendência">
+            🔔
+            <span class="alert-badge" id="alertaBadgeCount" style="display:none;">0</span>
+          </button>
           <button type="button" id="btnTogglePrivacy" title="Ocultar valores financeiros" style="background: transparent; border: none; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; opacity: 0.6; transition: opacity 0.2s;">
             <svg id="iconPrivacyOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
             <svg id="iconPrivacyClosed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
@@ -445,6 +464,9 @@
           <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Modelagem Preditiva de Estouro de Budget</p>
         </div>
         <div class="header-right">
+          <button id="btnExportarRelatorioIA" class="btn btn-primary" style="display: flex; gap: 0.5rem; align-items: center; background: linear-gradient(145deg, #10b981 0%, #059669 100%); border-color: #059669;">
+            <i class="fa-solid fa-file-pdf"></i> Exportar Relatório IA
+          </button>
           <button id="btnRunForecast" type="button" class="btn btn-outline" style="display: flex; align-items: center; gap: 0.5rem; border-color: rgba(255,255,255,0.1); color: var(--text); font-size: 0.85rem;">
             <i class="fa-solid fa-rotate"></i> Recalcular Modelo
           </button>
@@ -507,6 +529,14 @@
             <option value="resumo">Visão Resumo (Ordem, Solicitante, Material, Área)</option>
             <option value="todas">Todas as Colunas</option>
           </select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 0.25rem;">
+          <span>Data De</span>
+          <input type="date" id="filtroDataDeCustoGeral" style="background: var(--bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text); padding: 0.35rem 0.6rem; font-size: 0.85rem;" />
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 0.25rem;">
+          <span>Data Até</span>
+          <input type="date" id="filtroDataAteCustoGeral" style="background: var(--bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text); padding: 0.35rem 0.6rem; font-size: 0.85rem;" />
         </label>
         <button type="button" class="btn btn-ghost" id="btnLimparFiltrosCustoGeral">Limpar filtros</button>
       </section>
@@ -1681,6 +1711,7 @@
             <label><span>Valor (R$)</span><input name="valor" type="number" step="0.01" /></label>
             <label><span>Previsão entrega</span><input name="previsao_entrega" type="date" /></label>
             <label><span>Data recebimento</span><input name="data_recebimento" type="date" /></label>
+            <label><span>Nota Retorno</span><input name="nota_retorno" type="text" placeholder="Número da NF de retorno (opcional)" /></label>
             <label class="full"><span>Comentário</span><textarea name="comentario" rows="2"></textarea></label>
           </div>
         </div>
@@ -1944,7 +1975,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=72"></script>
+  <script type="module" src="js/app.js?v=75"></script>
 
   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
   <div class="modal-overlay" id="modalEditarAtividadePM">
@@ -1993,4 +2024,24 @@ Segue abaixo itens para verificação de atraso.</textarea>
   </div>
 
 </body>
+  <!-- COPILOTO DO CONTROLLER -->
+  <button id="copiloto-fab" title="Copiloto do Controller">🤖</button>
+
+  <div id="copiloto-window">
+    <div class="copiloto-header">
+      <div class="cop-avatar">🤖</div>
+      <div>
+        <h4>Copiloto do Controller</h4>
+        <p>Powered by IA Local (Ollama)</p>
+      </div>
+      <button class="cop-close" id="copiloto-close">×</button>
+    </div>
+    <div id="copiloto-messages"></div>
+    <div class="cop-suggestion-chips" id="copiloto-chips"></div>
+    <div class="copiloto-footer">
+      <textarea id="copiloto-input" placeholder="Pergunte sobre os custos do mês..." rows="1"></textarea>
+      <button class="cop-send" id="copiloto-send">➤</button>
+    </div>
+  </div>
+
 </html>

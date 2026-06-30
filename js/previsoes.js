@@ -1,5 +1,6 @@
 // js/previsoes.js
 import { getClient } from './db.js?v=45';
+import { showAITooltip } from './ai_tooltip.js';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 const fmt = (v) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -53,9 +54,13 @@ export async function renderPrevisoes() {
       .from('custo_geral')
       .select('descricao_codigo')
       .eq('it_codigo', 'FORECAST_METADATA')
-      .single();
+      .maybeSingle();
 
     if (error) throw error;
+    if (!data) {
+      container.innerHTML = '<p style="color:#facc15; padding: 1rem;">O modelo preditivo não foi encontrado. Clique em "Recalcular Modelo" ou aguarde a rotina noturna.</p>';
+      return;
+    }
 
     const p          = JSON.parse(data.descricao_codigo);
     const isOverrun  = p.overrun > 0;
@@ -152,7 +157,7 @@ export async function renderPrevisoes() {
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;">
             <h4 style="margin:0;color:var(--text);font-size:0.95rem;">Confiança da Projeção</h4>
             <span style="font-size:0.78rem;color:var(--muted);">
-              ${vizinhos.length || 3} vizinhos KNN · dia ${p.dia_atual}/${diasNoMes}
+              ${vizinhos.length || 3} meses históricos gêmeos — dia ${p.dia_atual}/${diasNoMes}
             </span>
           </div>
           ${confiancaBar(confianca)}
@@ -176,7 +181,9 @@ export async function renderPrevisoes() {
         <!-- ⑥ Mês Gêmeo -->
         <div class="panel" style="padding:1.4rem;border-radius:8px;background:var(--surface);">
           <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem;">
-            <h4 style="margin:0;color:var(--text);font-size:0.95rem;">Mês Gêmeo — KNN (K=${vizinhos.length || 3})</h4>
+            <h4 style="margin:0;color:var(--text);font-size:0.95rem;">Mês Gêmeo - Inteligência Preditiva
+              <button id="btnTooltipGemeo" title="Pedir explicação da IA" style="background:none;border:none;cursor:pointer;font-size:0.9rem;opacity:0.7;margin-left:0.3rem;vertical-align:middle;" onclick="window._tooltipGemeoClick && window._tooltipGemeoClick(event)">✨</button>
+            </h4>
             <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
               <span style="font-size:0.8rem;color:var(--muted);">Melhor vizinho:</span>
               <span style="font-size:0.85rem;font-weight:700;padding:3px 12px;border-radius:20px;
@@ -208,6 +215,15 @@ export async function renderPrevisoes() {
     `;
 
     container.innerHTML = html;
+
+    // ── Tooltip do card Mês Gêmeo ────────────────────────────────────────
+    window._tooltipGemeoClick = (evt) => {
+      const btn = document.getElementById('btnTooltipGemeo');
+      if (!btn) return;
+      const rect = btn.getBoundingClientRect();
+      const ctx3 = `Mês Gêmeo identificado: ${p.twin_month || 'N/A'} | Similaridade: ${p.twin_month_similaridade || 0}% | Fechamento histórico do Mês Gêmeo: R$ ${Number(vizinhos[0]?.proj || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})} | Gasto atual do mês corrente: R$ ${Number(p.gasto_atual||0).toLocaleString('pt-BR', {minimumFractionDigits:2})} | Projeção de fechamento: R$ ${Number(p.projecao_final||0).toLocaleString('pt-BR', {minimumFractionDigits:2})}`;
+      showAITooltip(rect.left, rect.bottom + 10, ctx3);
+    };
 
     // ── gráfico ───────────────────────────────────────────────────────────
     if (p.historico_dias && p.historico_dias.length > 0) {
@@ -270,7 +286,7 @@ export async function renderPrevisoes() {
                 order: 1
               },
               {
-                label: 'Projeção KNN (Ponderada)',
+                label: 'Projeção IA (Ponderada)',
                 data: dataProjected,
                 borderColor: 'rgba(255,215,0,0.9)',
                 backgroundColor: 'rgba(255,215,0,0.07)',
@@ -311,6 +327,16 @@ export async function renderPrevisoes() {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
+            onClick: (evt, elements, chart) => {
+              if (!elements.length) return;
+              const el = elements[0];
+              const diaLabel = chart.data.labels[el.index];
+              const valorReal = chart.data.datasets[0].data[el.index];
+              const valorProj = chart.data.datasets[1].data[el.index];
+              const fmt2 = v => v != null ? 'R$ ' + Number(v).toLocaleString('pt-BR', {minimumFractionDigits:2}) : 'N/A';
+              const ctx2 = `${diaLabel} do mês | Consumo real acumulado: ${fmt2(valorReal)} | Projeção IA acumulada: ${fmt2(valorProj)} | Budget mensal: R$ ${Number(p.budget||0).toLocaleString('pt-BR',{minimumFractionDigits:2})} | Estouro projetado: R$ ${Number(p.overrun||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}`;
+              showAITooltip(evt.native.clientX, evt.native.clientY + 20, ctx2);
+            },
             plugins: {
               legend: {
                 labels: {

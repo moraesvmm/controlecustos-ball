@@ -367,6 +367,27 @@ else:
     similaridade    = 0
     frac = 0.5
 
+# ── REGRA DE CONVERGÊNCIA FINAL (últimos 2 dias do mês) ──────────────────────
+# Nos 2 últimos dias, a projeção crava no menor valor dos meses gêmeos (cenário realista de fim de mês),
+# DESDE QUE o gasto atual não seja maior que esse valor mínimo.
+dias_restantes = total_dias_mes - ultimo_dia_registrado
+if dias_restantes <= 2:  # 0, 1 ou 2 dias restantes
+    projecao_final_original = projecao_final
+    
+    if total_gasto >= projecao_min:
+        # Se já gastamos mais que o mínimo histórico, usamos o Gasto Atual + média diária até o fim
+        ritmo_residual = (total_gasto / ultimo_dia_registrado) if ultimo_dia_registrado > 0 else 0
+        projecao_final = total_gasto + (ritmo_residual * dias_restantes)
+        print(f"CONVERGENCIA FINAL: total_gasto (R$ {total_gasto:.2f}) já superou projecao_min (R$ {projecao_min:.2f}). Ajustando para Gasto Atual + Ritmo Residual: R$ {projecao_final:.2f}")
+    else:
+        # Crava no menor valor dos meses gêmeos
+        projecao_final = projecao_min
+        print(f"CONVERGENCIA FINAL (dias restantes={dias_restantes}): Cravando projeção no Menor Mês Gêmeo. R$ {projecao_final_original:.2f} -> R$ {projecao_final:.2f}")
+
+    # Confiança sobe pois a incerteza é quase nula no fim do mês
+    confianca_pct = 99
+# ─────────────────────────────────────────────────────────────────────────────
+
 # Ajustar arrays projetados para o Frontend desenhar o cone
 historico_dias = []
 if not daily.empty:

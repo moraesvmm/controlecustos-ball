@@ -40,6 +40,7 @@ function mapFromExcel(row) {
     valor: Number(row.VALOR ?? row.valor) || 0,
     previsao_entrega: parseDateField(row.PREVISAO_ENTREGA || row.previsao_entrega),
     data_recebimento: parseDateField(row['DATA RECEBIMENTO'] || row.data_recebimento),
+    nota_retorno: row['NOTA RETORNO'] != null ? String(row['NOTA RETORNO']) : (row.nota_retorno || null),
     comentario: row.comentario,
     foto_url: row.foto_url || null,
   });
@@ -85,6 +86,7 @@ export async function salvarRegistro(registro) {
     valor: registro.valor,
     previsao_entrega: registro.previsao_entrega,
     data_recebimento: registro.data_recebimento,
+    nota_retorno: registro.nota_retorno || null,
     comentario: registro.comentario,
     foto_url: registro.foto_url || null,
   };

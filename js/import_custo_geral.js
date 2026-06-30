@@ -217,6 +217,11 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
 
         toast(`Salvando ${records.length} registros no banco...`, 'info');
 
+        // Salva o FORECAST_METADATA atual para não perdê-lo na exclusão
+        let forecastData = null;
+        const { data: fc } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'FORECAST_METADATA').maybeSingle();
+        if (fc) forecastData = fc;
+
         let delCount = 0;
         while (true) {
           const { data: delData, error: delErr } = await supabase.from('custo_geral').delete().not('id', 'is', null).select('id');
@@ -225,6 +230,12 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           delCount += delData.length;
         }
         console.log(`Deletados ${delCount} registros antigos.`);
+
+        // Restaura o FORECAST_METADATA se ele existia
+        if (forecastData) {
+          delete forecastData.id; // deleta id antigo para inserir novo
+          records.push(forecastData);
+        }
 
         for (let i = 0; i < records.length; i += 100) {
           const batch = records.slice(i, i + 100);
