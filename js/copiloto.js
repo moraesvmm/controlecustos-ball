@@ -91,9 +91,9 @@ function findRelevantOrders(texto) {
     matches = window._registrosGlobais
       .map(mapRecord)
       .sort((a, b) => {
-        const idA = Number(a.record.item_id || a.record.id) || 0;
-        const idB = Number(b.record.item_id || b.record.id) || 0;
-        return idB - idA;
+        const dateA = new Date(a.record.data_emissao || a.record.dt_trans || a.record.created_at || 0).getTime();
+        const dateB = new Date(b.record.data_emissao || b.record.dt_trans || b.record.created_at || 0).getTime();
+        return dateB - dateA;
       })
       .slice(0, 5);
   } else if (query.includes('maior') || query.includes('mais cara') || query.includes('mais caro')) {
@@ -125,7 +125,8 @@ function findRelevantOrders(texto) {
   matches.forEach(m => {
     const r = m.record;
     const n = m.nome ? ` (${m.nome})` : '';
-    result += `- Ordem: ${r.numero_ordem || 'S/N'} | Requisitante: ${m.req}${n} | Setor: ${m.set} | Valor: R$ ${fmt(m.val)} | Descrição: ${m.desc}\n`;
+    const ident = r.item_id ? `ID: ${r.item_id}` : `ID: ${String(r.id).split('-')[0]}`;
+    result += `- ${ident} | Ordem: ${r.numero_ordem || 'S/N'} | Requisitante: ${m.req}${n} | Setor: ${m.set} | Valor: R$ ${fmt(m.val)} | Descrição: ${m.desc}\n`;
   });
   result += `==============================================\n`;
   
