@@ -121,11 +121,11 @@ function findRelevantOrders(texto) {
 
   const fmt = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
   
-  let result = `\n\n=== POSSÍVEIS ORDENS/REGISTROS MENCIONADOS ===\nEncontrei estes registros na base local que parecem bater com a pergunta:\n`;
+  let result = `\n\n=== REGISTROS / RC'S DA BASE (CONTROLE GLOBAL) ===\nEstes são os registros/RCs/Ordens encontrados na base de dados que batem com o que o usuário pediu:\n`;
   matches.forEach(m => {
     const r = m.record;
     const n = m.nome ? ` (${m.nome})` : '';
-    const ident = r.item_id ? `ID: ${r.item_id}` : `ID: ${String(r.id).split('-')[0]}`;
+    const ident = r.item_id ? `ID / RC: ${r.item_id}` : `ID / RC: ${String(r.id).split('-')[0]}`;
     result += `- ${ident} | Ordem: ${r.numero_ordem || 'S/N'} | Requisitante: ${m.req}${n} | Setor: ${m.set} | Valor: R$ ${fmt(m.val)} | Descrição: ${m.desc}\n`;
   });
   result += `==============================================\n`;
