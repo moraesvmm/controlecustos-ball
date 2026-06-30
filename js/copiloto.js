@@ -109,41 +109,52 @@ function findRelevantOrders(texto) {
     return { record: r, score: 0, req, nome, set, desc, val, cc };
   };
 
+  const ignore = ['ultima', 'última', 'maior', 'cara', 'recente', 'o','a','os','as','de','do','da','dos','das','em','no','na','nos','nas','por','para','com','sem','qual','quem','onde','quando','que','e','ou','mas','ordem','setor','conta','requisitante','feita','pelo','pela', 'colaborador'];
+  const words = query.replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length > 2 && !ignore.includes(w));
+  
+  let allMatches = window._registrosGlobais.map(mapRecord);
+
+  // Filtrar primeiro pelas palavras
+  if (words.length > 0) {
+    allMatches.forEach(m => {
+      const r = m.record;
+      const searchable = `${r.numero_ordem || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''}`.toLowerCase();
+      words.forEach(w => {
+        if (searchable.includes(w)) m.score++;
+      });
+    });
+    allMatches = allMatches.filter(m => m.score > 0);
+  }
+
+  if (allMatches.length === 0) return '';
+
+  agregadoTotal = allMatches.reduce((acc, m) => acc + m.val, 0);
+  agregadoCount = allMatches.length;
+
+  // Ordenar conforme a intenção
   if (query.includes('última') || query.includes('ultima') || query.includes('recent')) {
-    matches = window._registrosGlobais
-      .map(mapRecord)
-      .sort((a, b) => {
+    allMatches.sort((a, b) => {
+      const dateA = new Date(a.record.data_emissao || a.record.dt_trans || a.record.created_at || 0).getTime();
+      const dateB = new Date(b.record.data_emissao || b.record.dt_trans || b.record.created_at || 0).getTime();
+      return dateB - dateA;
+    });
+  } else if (query.includes('maior') || query.includes('cara') || query.includes('caro')) {
+    allMatches.sort((a, b) => b.val - a.val);
+  } else {
+    // Ordenar por relevância (score) se houver pesquisa
+    if (words.length > 0) {
+      allMatches.sort((a, b) => b.score - a.score);
+    } else {
+      // Se não houver intenção nem filtro, ordena pelas mais recentes
+      allMatches.sort((a, b) => {
         const dateA = new Date(a.record.data_emissao || a.record.dt_trans || a.record.created_at || 0).getTime();
         const dateB = new Date(b.record.data_emissao || b.record.dt_trans || b.record.created_at || 0).getTime();
         return dateB - dateA;
-      })
-      .slice(0, 5);
-  } else if (query.includes('maior') || query.includes('mais cara') || query.includes('mais caro')) {
-    matches = window._registrosGlobais
-      .map(mapRecord)
-      .sort((a, b) => b.val - a.val)
-      .slice(0, 5);
-  } else {
-    const ignore = ['o','a','os','as','de','do','da','dos','das','em','no','na','nos','nas','por','para','com','sem','qual','quem','onde','quando','que','e','ou','mas','ordem','setor','conta','requisitante','feita','pelo','pela', 'colaborador'];
-    const words = query.replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length > 2 && !ignore.includes(w));
-    
-    if (words.length > 0) {
-      const allMatches = window._registrosGlobais.map(mapRecord).map(m => {
-        const r = m.record;
-        const searchable = `${r.numero_ordem || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''}`.toLowerCase();
-        words.forEach(w => {
-          if (searchable.includes(w)) m.score++;
-        });
-        return m;
-      }).filter(m => m.score > 0).sort((a, b) => b.score - a.score);
-
-      if (allMatches.length > 0) {
-        agregadoTotal = allMatches.reduce((acc, m) => acc + m.val, 0);
-        agregadoCount = allMatches.length;
-        matches = allMatches.slice(0, 5);
-      }
+      });
     }
   }
+
+  matches = allMatches.slice(0, 5);
 
   if (matches.length === 0) return '';
 
@@ -182,6 +193,7 @@ function addMsg(texto, tipo) {
 function getSystemPrompt() {
   return `Você é o Copiloto do Controller da Ball Beverage, especialista em gestão de custos de manutenção industrial.
 Responda em português, de forma CURTA e DIRETA (máximo 4 frases). Seja objetivo e prático.
+SEMPRE forneça uma resposta em texto para o usuário, nunca retorne vazio.
 NUNCA invente dados. Se não souber, use a ferramenta "consultar_ordens" para descobrir.
 NUNCA diga que estamos dentro do orçamento se o campo "SITUAÇÃO ATUAL" disser "JÁ ESTOURADO".
 
