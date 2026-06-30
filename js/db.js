@@ -497,7 +497,8 @@ export async function getDadosCustoGeral() {
     row.recuperado_datasul = isExcelFailed;
 
     // PROCV 4: area = VLOOKUP(solicitante, COLABORADORES, "area")
-    row.area = colab?.area || row.area || null;
+    // Se a area já existir no banco (edição manual), ela tem precedência!
+    row.area = row.area || colab?.area || null;
     if (!colab && row.it_codigo) {
         const prefix = row.it_codigo.toUpperCase();
         if (prefix.startsWith('UCMAN') || prefix.startsWith('SER')) {
@@ -510,7 +511,7 @@ export async function getDadosCustoGeral() {
     }
 
     // PROCV 5: nome_solicitante = VLOOKUP(solicitante, COLABORADORES, "nome")
-    row.nome_solicitante = colab?.nome || row.nome_solicitante || null;
+    row.nome_solicitante = row.nome_solicitante || colab?.nome || null;
 
     row.item_tipo = (row.it_codigo || '').substring(0, 3).toUpperCase();
     row.carater = row.item_tipo === 'SER' ? 'Real Compras Serv' : 'Real Consumo';
@@ -527,7 +528,7 @@ export async function getDadosCustoGeral() {
     }
 
     // PROCV 6: cc = VLOOKUP(solicitante, COLABORADORES, "area_cc")
-    row.cc = colab?.area_cc || row.cc || null;
+    row.cc = row.cc || colab?.area_cc || null;
 
     // Fórmula 7: check = IF(area == "OUTROS", "OUTROS", area & " - " & carater)
     if (row.area) {
