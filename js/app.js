@@ -35,7 +35,7 @@ import { initExcelImport } from './import_excel.js?v=8';
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
 
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=12';
-import { initExcelImportCustoGeral } from './import_custo_geral.js?v=4';
+import { initExcelImportCustoGeral } from './import_custo_geral.js?v=5';
 import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
 import { initPlanoMestre } from './plano_mestre.js?v=1';
 import { initImportPlanoMestre } from './import_plano_mestre.js?v=1';
@@ -47,21 +47,23 @@ let registros = [];
 let registrosCustoGeral = [];
 let linhaSelecionadaCustoGeralId = null;
 let registrosPreventiva = [];
+Object.defineProperty(window, '_registrosPreventiva', { get: () => registrosPreventiva });
 window.fornecedoresContatosData = [];
 
 // =============================
 // GESTÃO DE TAREFAS DELEGADAS
 // =============================
 let tarefasDelegadas = [];
+Object.defineProperty(window, '_tarefasDelegadas', { get: () => tarefasDelegadas });
 let intervalTarefas = null;
 
 const usersHierarchy = {
-  'Vitor Moraes': { role: 'ADM' }, 
-  'João Silva': { role: 'Master' },
-  'Vinicius Marques': { role: 'Master' },
-  'Gelcino Júnior': { role: 'Master' },
-  'Victor Mello': { role: 'Pupil' },
-  'Beatriz Moraes': { role: 'Pupil' },
+  'Vitor Moraes': { role: 'ADM', budget_areas: [] }, 
+  'João Silva': { role: 'Master', budget_areas: [] },
+  'Vinicius Marques': { role: 'Master', budget_areas: ['materiais_reparo', 'debito_direto'] },
+  'Gelcino Júnior': { role: 'Master', budget_areas: [] },
+  'Victor Mello': { role: 'Pupil', budget_areas: ['materiais_reparo', 'debito_direto'] },
+  'Beatriz Moraes': { role: 'Pupil', budget_areas: ['materiais_reparo', 'debito_direto'] },
 };
 const pupilosDisponiveis = ['Victor Mello', 'Beatriz Moraes'];
 // =============================
@@ -83,6 +85,7 @@ let isAppInitialized = false;
 let machines = [];
 let selectedMachineId = null;
 let registrosPreventivaFrontend = []; // Registros com setor = 'frontend'
+Object.defineProperty(window, '_registrosPreventivaFrontend', { get: () => registrosPreventivaFrontend });
 
 const $ = (sel) => document.querySelector(sel);
 
@@ -4109,7 +4112,15 @@ function renderTabelaCustoGeral() {
 
   for (let r of (registrosCustoGeral || [])) {
     if (r.it_codigo === 'BUDGET_METADATA') {
-      try { budgetMetadata = JSON.parse(r.descricao_codigo); } catch(e){}
+      try { 
+        budgetMetadata = JSON.parse(r.descricao_codigo); 
+        window.budgetMetadata = budgetMetadata;
+        if (budgetMetadata.responsaveis) {
+          Object.keys(budgetMetadata.responsaveis).forEach(u => {
+            if (usersHierarchy[u]) usersHierarchy[u].budget_areas = budgetMetadata.responsaveis[u];
+          });
+        }
+      } catch(e){}
     } else if (r.it_codigo === 'FORECAST_METADATA') {
       try { forecastMetadata = JSON.parse(r.descricao_codigo); } catch(e){}
     } else {
@@ -4373,6 +4384,112 @@ function renderTabelaCustoGeral() {
       tabContainer.style.display = 'none';
     }
   }
+
+  
+  // --- INÍCIO ALERTAS DE BUDGET POR CAIXINHA ---
+  if (budgetMetadata && budgetMetadata.categorias) {
+    const cats = budgetMetadata.categorias;
+    const limitMO = cats.mo_terceiros || 0;
+    const limitCorretiva = cats.pecas_corretiva || 0;
+    const limitPreventiva = cats.pecas_preventiva || 0;
+    const limitReparo = cats.materiais_reparo || 0;
+    const limitDebito = cats.debito_direto || 0;
+
+    let consMO = 0;
+    let consCorretiva = 0;
+    let consPreventiva = 0;
+    let consReparo = 0;
+    let consDebito = 0;
+
+    // Calcular Consertos (Reparo) e Compras (Débito)
+    registros.forEach(r => {
+      if (r.natureza === 'CONSERTO') consReparo += (Number(r.valor) || 0);
+      if (r.natureza === 'COMPRA') consDebito += (Number(r.valor) || 0);
+    });
+
+    // Calcular do Custo Geral (M.O Terceiros, Peças)
+    if (window.registrosCustoGeralGlobais) {
+      window.registrosCustoGeralGlobais.forEach(r => {
+        if (!r.descricao_codigo) return;
+        const desc = r.descricao_codigo.toLowerCase();
+        const valor = Number(r.custo_do_mes) || 0;
+        if (desc.includes('m.o terceiros') || desc.includes('m.o. terceiros')) consMO += valor;
+        else if (desc.includes('peças corretiva') || desc.includes('pecas corretiva')) consCorretiva += valor;
+        else if (desc.includes('peças preventiva') || desc.includes('pecas preventiva')) consPreventiva += valor;
+      });
+    }
+
+    const verificacoes = [
+      { id: 'mo_terceiros', nome: 'M.O Terceiros', limit: limitMO, cons: consMO },
+      { id: 'pecas_corretiva', nome: 'Peças Corretiva', limit: limitCorretiva, cons: consCorretiva },
+      { id: 'pecas_preventiva', nome: 'Peças Preventiva', limit: limitPreventiva, cons: consPreventiva },
+      { id: 'materiais_reparo', nome: 'Materiais Reparo (Consertos)', limit: limitReparo, cons: consReparo },
+      { id: 'debito_direto', nome: 'Débito Direto (Compras)', limit: limitDebito, cons: consDebito }
+    ];
+
+    window._budgetVerificacoes = verificacoes; // save for alerts.js to consume
+  }
+  // --- FIM ALERTAS DE BUDGET POR CAIXINHA ---
+    // Disparar Alertas de Budget
+    if (window._budgetVerificacoes && !window._budgetAlertaDisparado) {
+      window._budgetAlertaDisparado = true;
+      let estourados = [];
+      window._budgetVerificacoes.forEach(v => {
+        if (v.limit > 0) {
+          const perc = (v.cons / v.limit) * 100;
+          if (perc > 100) estourados.push(v);
+        }
+      });
+
+      
+        // Avisos no Sininho (Acima de 85%)
+        let qteAvisos = 0;
+        window._budgetVerificacoes.forEach(v => {
+          if (v.limit > 0) {
+            const perc = (v.cons / v.limit) * 100;
+            if (perc >= 85 && perc <= 100) {
+              // Simular a injeção no sininho
+              qteAvisos++;
+            }
+          }
+        });
+        if (qteAvisos > 0) {
+           const badge = document.getElementById('alertaBadgeCount');
+           if (badge) {
+             let atual = parseInt(badge.textContent || '0');
+             badge.textContent = atual + qteAvisos;
+             badge.style.display = 'flex';
+           }
+        }
+
+      if (estourados.length > 0) {
+        // Encontrar os responsaveis por essas areas
+        let msgs = [];
+        estourados.forEach(e => {
+          let responsaveis = [];
+          Object.keys(usersHierarchy).forEach(u => {
+            if (usersHierarchy[u].budget_areas && usersHierarchy[u].budget_areas.includes(e.id)) {
+              responsaveis.push(u);
+            }
+          });
+          msgs.push(`A área <b>${e.nome}</b> atingiu ${((e.cons/e.limit)*100).toFixed(1)}% do limite. <br><small>Responsáveis: ${responsaveis.length ? responsaveis.join(', ') : 'Nenhum'}</small>`);
+        });
+
+        setTimeout(() => {
+          Swal.fire({
+            title: 'Alerta de Orçamento',
+            html: msgs.join('<br><br>'),
+            icon: 'warning',
+            background: '#1e293b',
+            color: '#f8fafc',
+            confirmButtonColor: '#facc15',
+            confirmButtonText: 'Ciente',
+            backdrop: `rgba(0,0,0,0.8)`
+          });
+        }, 1500); // Dar tempo para a tela carregar
+      }
+    }
+
 
   // --- FIM DOS CÁLCULOS DO BUDGET ---
 
@@ -5164,4 +5281,88 @@ Com isso, não é mais necessário nenhum cálculo intermediário manual!
     URL.revokeObjectURL(url);
   });
 }
+function renderBudgetConfigUI() {
+  if (!document.getElementById('tabelaVinculoBudget')) return;
+  const tbody = document.querySelector('#tabelaVinculoBudget tbody');
+  let html = '';
+  Object.keys(usersHierarchy).forEach(user => {
+    const areas = usersHierarchy[user].budget_areas || [];
+    html += `
+      <tr>
+        <td style="text-align: left; font-weight: 500;">${user}</td>
+        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="mo_terceiros" ${areas.includes('mo_terceiros') ? 'checked' : ''}></td>
+        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="pecas_corretiva" ${areas.includes('pecas_corretiva') ? 'checked' : ''}></td>
+        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="pecas_preventiva" ${areas.includes('pecas_preventiva') ? 'checked' : ''}></td>
+        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="materiais_reparo" ${areas.includes('materiais_reparo') ? 'checked' : ''}></td>
+        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="debito_direto" ${areas.includes('debito_direto') ? 'checked' : ''}></td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
 
+  if (window.budgetMetadata) {
+    const c = window.budgetMetadata.categorias || {};
+    if (document.getElementById('cfgBudgetTotal')) document.getElementById('cfgBudgetTotal').value = window.budgetMetadata.total || 786000;
+    if (document.getElementById('cfgBudgetMO')) document.getElementById('cfgBudgetMO').value = c.mo_terceiros || 160000;
+    if (document.getElementById('cfgBudgetCorretiva')) document.getElementById('cfgBudgetCorretiva').value = c.pecas_corretiva || 180000;
+    if (document.getElementById('cfgBudgetPreventiva')) document.getElementById('cfgBudgetPreventiva').value = c.pecas_preventiva || 150000;
+    if (document.getElementById('cfgBudgetReparo')) document.getElementById('cfgBudgetReparo').value = c.materiais_reparo || 200000;
+    if (document.getElementById('cfgBudgetDebito')) document.getElementById('cfgBudgetDebito').value = c.debito_direto || 96000;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => renderBudgetConfigUI(), 2000); // wait for data to load
+  
+  const btnSalvar = document.getElementById('btnSalvarConfigBudget');
+  if (btnSalvar) {
+    btnSalvar.addEventListener('click', async () => {
+      // 1. Coletar Inputs
+      const total = Number(document.getElementById('cfgBudgetTotal').value);
+      const cats = {
+        mo_terceiros: Number(document.getElementById('cfgBudgetMO').value),
+        pecas_corretiva: Number(document.getElementById('cfgBudgetCorretiva').value),
+        pecas_preventiva: Number(document.getElementById('cfgBudgetPreventiva').value),
+        materiais_reparo: Number(document.getElementById('cfgBudgetReparo').value),
+        debito_direto: Number(document.getElementById('cfgBudgetDebito').value),
+      };
+
+      // 2. Coletar Checkboxes
+      const checkboxes = document.querySelectorAll('.chk-budget');
+      const userAreas = {};
+      checkboxes.forEach(chk => {
+        const u = chk.dataset.user;
+        const a = chk.dataset.area;
+        if (!userAreas[u]) userAreas[u] = [];
+        if (chk.checked) userAreas[u].push(a);
+      });
+
+      // Atualiza localmente
+      Object.keys(userAreas).forEach(u => {
+        if (usersHierarchy[u]) usersHierarchy[u].budget_areas = userAreas[u];
+      });
+
+      if (!window.budgetMetadata) window.budgetMetadata = {};
+      window.budgetMetadata.categorias = cats;
+      window.budgetMetadata.total = total;
+      window.budgetMetadata.responsaveis = userAreas;
+
+      // Salvar no Supabase
+      import('./db.js?v=45').then(async (m) => {
+        const supabase = m.getClient();
+        await supabase.from('custo_geral').delete().eq('it_codigo', 'BUDGET_METADATA');
+        await supabase.from('custo_geral').insert([{
+          it_codigo: 'BUDGET_METADATA',
+          descricao_codigo: JSON.stringify(window.budgetMetadata),
+          numero_ordem: '0', quantidade: 0, custo_do_mes: 0
+        }]);
+        Swal.fire({
+          icon: 'success',
+          title: 'Configurações Salvas!',
+          text: 'Os limites de orçamento e as áreas dos colaboradores foram atualizados.',
+          background: '#161f33', color: '#f1f5f9', confirmButtonColor: '#d4af37'
+        });
+      });
+    });
+  }
+});

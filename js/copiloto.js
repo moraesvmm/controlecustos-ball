@@ -7,6 +7,7 @@ const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
 let conversationHistory = [];
 let contextoFinanceiro = null;
+let contextoPreventiva = null;
 let isOpen = false;
 let isThinking = false;
 
@@ -14,13 +15,13 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "consultar_ordens",
-      description: "Busca ordens de compra/serviço locais no banco de dados e retorna agregações (soma/contagem) e as ordens mais relevantes.",
+      name: "pesquisar_sistema",
+      description: "Busca ordens financeiras, RCs, máquinas do plano mestre, atividades preventivas e qualquer outra informação do sistema.",
       parameters: {
         type: "object",
         properties: {
-          termo_busca: { type: "string", description: "O termo a ser pesquisado (nome de setor, colaborador, material, etc). Deixe vazio se quiser ver as últimas ou maiores ordens gerais." },
-          intencao: { type: "string", enum: ["relevancia", "ultima", "maior"], description: "Como ordenar/filtrar os resultados." }
+          termo_busca: { type: "string", description: "O termo a ser pesquisado (nome da máquina, plano, setor, material, etc)." },
+          intencao: { type: "string", enum: ["relevancia", "ultima", "maior"], description: "Como ordenar os resultados." }
         },
         required: ["intencao"]
       }
@@ -45,6 +46,16 @@ async function carregarContexto() {
       .eq('it_codigo', 'FORECAST_METADATA')
       .maybeSingle();
     if (data) contextoFinanceiro = JSON.parse(data.descricao_codigo);
+
+    // Carregar contexto da Preventiva
+    const { data: prevData } = await supabase.from('preventiva_linhas_checkin').select('linha');
+    const { count: maqCount } = await supabase.from('plano_mestre_maquinas').select('*', { count: 'exact', head: true });
+    const { count: atvCount } = await supabase.from('plano_mestre_atividades').select('*', { count: 'exact', head: true });
+    contextoPreventiva = { 
+      linhasAcompanhadas: prevData ? [...new Set(prevData.map(d => d.linha))].length : 0, 
+      maquinas: maqCount || 0, 
+      atividades: atvCount || 0 
+    };
   } catch(e) {
     console.warn('[Copiloto] Erro ao carregar contexto:', e);
   }
@@ -73,17 +84,42 @@ function buildContextStr() {
     ? `A projeção de fechamento (R$ ${fmt(projecao)}) indica que o mês VAI ESTOURAR em R$ ${fmt(projecao - budget)}.`
     : `A projeção de fechamento (R$ ${fmt(projecao)}) indica que o mês fechará DENTRO do budget.`;
 
-  let kpisStr = '';
+  let resumoAreas = '';
   if (window._registrosGlobais && window._registrosGlobais.length > 0) {
     try {
+      let manut = 0, ferram = 0, facil = 0;
+      let atrasados = 0;
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+      
+      window._registrosGlobais.forEach(r => {
+        let c = String(r.check || '').toLowerCase().trim();
+        let val = Number(r.valor_total_brl || r.valor || 0) + Number(r.custo_mes_anterior || 0) + Number(r.custo_de_entrada || 0);
+        if (c.includes('manuten')) manut += val;
+        else if (c.includes('ferramen')) ferram += val;
+        else if (c.includes('facili')) facil += val;
+        
+        // Checar se está atrasado
+        if (r.status !== 'ENTREGUE' && r.previsao_entrega && new Date(r.previsao_entrega) < hoje) {
+          atrasados++;
+        }
+      });
+      resumoAreas = `\n\n=== DIVISÃO DE GASTOS E STATUS ===\n- Manutenção: R$ ${fmt(manut)}\n- Ferramentaria: R$ ${fmt(ferram)}\n- Facilities: R$ ${fmt(facil)}\n- 🚨 Itens/Ordens Atrasadas: ${atrasados}\n`;
+      
       const kpis = agregarRecebidosPrevistos(window._registrosGlobais);
-      kpisStr = `\n\n=== DASHBOARD: PREVISTO VS RECEBIDO POR MÊS ===\n`;
+      let kpisStr = `\n\n=== DASHBOARD: PREVISTO VS RECEBIDO POR MÊS ===\n`;
       kpis.forEach(m => {
         kpisStr += `Mês: ${m.mes} | Previsto (a receber no mês+): R$ ${fmt(m.previsto)} | Recebido: R$ ${fmt(m.recebido)}\n`;
       });
+      resumoAreas += kpisStr;
     } catch(e) {
       console.warn('Erro ao agregar KPIs para o AI', e);
     }
+  }
+
+  let prevStr = '';
+  if (contextoPreventiva) {
+    prevStr = `\n\n=== MÓDULO PREVENTIVA ===\n- Máquinas no Plano Mestre: ${contextoPreventiva.maquinas}\n- Atividades Cadastradas: ${contextoPreventiva.atividades}\n- Linhas com Check-in: ${contextoPreventiva.linhasAcompanhadas}\nSe o usuário perguntar sobre o andamento das preventivas, use esses números como base.`;
   }
 
   return `=== SITUAÇÃO FINANCEIRA — MÊS ATUAL ===
@@ -101,96 +137,191 @@ CONFIANÇA DA PROJEÇÃO: ${p.confianca_pct}%
 MÊS HISTÓRICO MAIS SIMILAR: ${p.twin_month || 'N/A'} (${p.twin_month_similaridade || 0}% de similaridade)
 VOLUME DE ORDENS: ${p.volume_ordens_atual || 0} ordens abertas
 
-ALERTAS ATIVOS: ${(p.alerts || []).join(' | ') || 'Nenhum alerta identificado.'}${kpisStr}
+ALERTAS ATIVOS: ${(p.alerts || []).join(' | ') || 'Nenhum alerta identificado.'}${resumoAreas}${prevStr}
 ===========================================`;
 }
 
 function findRelevantOrders(texto) {
-  if (!window._registrosGlobais || window._registrosGlobais.length === 0) return '';
-  
   const query = texto.toLowerCase();
-  let matches = [];
-  let agregadoCount = 0;
-  let agregadoTotal = 0;
-
-  const mapRecord = r => {
-    const req = r.requisitante || r.solicitante || '';
-    const nome = r.nome_solicitante || '';
-    const set = r.setor || r.area || '';
-    const desc = r.descricao_servico || r.descricao_falha || r.item || '';
-    const cc = r.centro_custo || r.cc || '';
-    const val = Number(r.valor_total_brl || r.valor || 0);
-    return { record: r, score: 0, req, nome, set, desc, val, cc };
-  };
+  let result = '';
 
   const ignore = ['ultima', 'última', 'maior', 'cara', 'recente', 'o','a','os','as','de','do','da','dos','das','em','no','na','nos','nas','por','para','com','sem','qual','quem','onde','quando','que','e','ou','mas','ordem','setor','conta','requisitante','feita','pelo','pela', 'colaborador'];
-  const words = query.replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length > 2 && !ignore.includes(w));
-  
-  let allMatches = window._registrosGlobais.map(mapRecord);
+  const words = query.replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length >= 2 && !ignore.includes(w));
 
-  // Filtrar primeiro pelas palavras
-  if (words.length > 0) {
-    allMatches.forEach(m => {
-      const r = m.record;
-      const searchable = `${r.numero_ordem || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''}`.toLowerCase();
-      words.forEach(w => {
-        if (searchable.includes(w)) m.score++;
+  // --- BUSCA EM REGISTROS (CUSTOS/RC) ---
+  if (window._registrosGlobais && window._registrosGlobais.length > 0) {
+    const mapRecord = r => {
+      const req = r.requisitante || r.solicitante || '';
+      const nome = r.nome_solicitante || '';
+      const set = r.setor || r.area || '';
+      const desc = r.descricao_servico || r.descricao_falha || r.item || '';
+      const cc = r.centro_custo || r.cc || '';
+      const val = Number(r.valor_total_brl || r.valor || 0);
+      return { record: r, score: 0, req, nome, set, desc, val, cc };
+    };
+    let allMatches = window._registrosGlobais.map(mapRecord);
+    
+    // Se pediu "atrasados", filtra só atrasados
+    const isBuscaAtrasados = query.includes('atrasado') || query.includes('atrasada');
+    const isBuscaData = query.includes('semana') || query.includes('dia') || query.includes('previsto') || query.includes('chegar') || query.includes('mês') || query.includes('mes');
+    
+    const hoje = new Date();
+    hoje.setHours(0,0,0,0);
+
+    if (isBuscaAtrasados) {
+      allMatches = allMatches.filter(m => {
+        const r = m.record;
+        return r.status !== 'ENTREGUE' && r.previsao_entrega && new Date(r.previsao_entrega) < hoje;
       });
-    });
-    allMatches = allMatches.filter(m => m.score > 0);
-  }
+      allMatches.forEach(m => m.score = 1); // Força pontuação para não ser removido
+    } else if (isBuscaData) {
+      allMatches = allMatches.filter(m => {
+        const r = m.record;
+        return r.status !== 'ENTREGUE' && r.previsao_entrega && new Date(r.previsao_entrega) >= hoje;
+      });
+      // Ordenar por data mais próxima primeiro
+      allMatches.sort((a,b) => new Date(a.record.previsao_entrega) - new Date(b.record.previsao_entrega));
+      allMatches.forEach(m => m.score = 1);
+    }
 
-  if (allMatches.length === 0) return '';
-
-  agregadoTotal = allMatches.reduce((acc, m) => acc + m.val, 0);
-  agregadoCount = allMatches.length;
-
-  // Ordenar conforme a intenção
-  if (query.includes('última') || query.includes('ultima') || query.includes('recent')) {
-    allMatches.sort((a, b) => {
-      const dateA = new Date(a.record.data_emissao || a.record.dt_trans || a.record.created_at || 0).getTime();
-      const dateB = new Date(b.record.data_emissao || b.record.dt_trans || b.record.created_at || 0).getTime();
-      return dateB - dateA;
-    });
-  } else if (query.includes('maior') || query.includes('cara') || query.includes('caro')) {
-    allMatches.sort((a, b) => b.val - a.val);
-  } else {
-    // Ordenar por relevância (score) se houver pesquisa
-    if (words.length > 0) {
-      allMatches.sort((a, b) => b.score - a.score);
-    } else {
-      // Se não houver intenção nem filtro, ordena pelas mais recentes
-      allMatches.sort((a, b) => {
-        const dateA = new Date(a.record.data_emissao || a.record.dt_trans || a.record.created_at || 0).getTime();
-        const dateB = new Date(b.record.data_emissao || b.record.dt_trans || b.record.created_at || 0).getTime();
-        return dateB - dateA;
+    if (words.length > 0 && !isBuscaAtrasados && !isBuscaData) {
+      allMatches.forEach(m => {
+        const r = m.record;
+        const searchable = `${r.numero_ordem || ''} ${r.id || ''} ${r.item_id || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''}`.toLowerCase();
+        words.forEach(w => { if (searchable.includes(w)) m.score++; });
+      });
+      allMatches = allMatches.filter(m => m.score > 0);
+    }
+    
+    if (allMatches.length > 0) {
+      let agregadoCount = allMatches.length;
+      let agregadoTotal = allMatches.reduce((acc, m) => acc + m.val, 0);
+      
+      if (query.includes('última') || query.includes('ultima') || query.includes('recent')) {
+        allMatches.sort((a, b) => new Date(b.record.data_emissao || b.record.dt_trans || b.record.created_at || 0).getTime() - new Date(a.record.data_emissao || a.record.dt_trans || a.record.created_at || 0).getTime());
+      } else if (query.includes('maior') || query.includes('cara') || query.includes('caro')) {
+        allMatches.sort((a, b) => b.val - a.val);
+      } else if (isBuscaData || isBuscaAtrasados) {
+        // Já foi ordenado por data
+      } else if (words.length > 0) {
+        allMatches.sort((a, b) => b.score - a.score);
+      } else {
+        allMatches.sort((a, b) => new Date(b.record.data_emissao || b.record.dt_trans || b.record.created_at || 0).getTime() - new Date(a.record.data_emissao || a.record.dt_trans || a.record.created_at || 0).getTime());
+      }
+      
+      let maxResults = (isBuscaData || isBuscaAtrasados) ? 30 : 5;
+      let top = allMatches.slice(0, maxResults);
+      const fmt = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+      
+      result += `\n\n=== REGISTROS FINANCEIROS E COMPRAS ===\nEncontrados ${agregadoCount} registros (R$ ${fmt(agregadoTotal)}). Mostrando top ${top.length}:\n`;
+      top.forEach(m => {
+        const r = m.record;
+        const ident = r.item_id ? `ID/RC: ${r.item_id}` : `ID: ${String(r.id).split('-')[0]}`;
+        const prevText = r.previsao_entrega ? new Date(r.previsao_entrega).toLocaleDateString('pt-BR') : 'N/A';
+        const atrasoTag = (isBuscaAtrasados || (!['ENTREGUE'].includes(r.status) && r.previsao_entrega && new Date(r.previsao_entrega) < hoje)) ? ' [ATRASADO]' : '';
+        result += `- ${ident} | Prev Entrega: ${prevText}${atrasoTag} | R$ ${fmt(m.val)} | Ordem: ${r.numero_ordem || 'S/N'} | Req: ${m.req} | Desc: ${m.desc}\n`;
       });
     }
   }
 
-  matches = allMatches.slice(0, 5);
-
-  if (matches.length === 0) return '';
-
-  const fmt = v => Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-  
-  let result = `\n\n=== REGISTROS / RC'S DA BASE (CONTROLE GLOBAL) ===\n`;
-  if (agregadoCount > 0) {
-    result += `[ATENÇÃO] A busca encontrou ${agregadoCount} registros no total, somando um valor de R$ ${fmt(agregadoTotal)}.\n`;
-    result += `Para não sobrecarregar sua memória, listei abaixo apenas os ${matches.length} mais relevantes:\n`;
-  } else {
-    result += `Estes são os registros/RCs/Ordens encontrados na base de dados que batem com o que o usuário pediu:\n`;
+  // --- BUSCA EM MÁQUINAS (PLANO MESTRE) ---
+  if (window._dataMaquinas && window._dataMaquinas.length > 0) {
+    let maqMatches = window._dataMaquinas.map(m => ({ record: m, score: 0 }));
+    maqMatches.forEach(m => {
+      const r = m.record;
+      const searchable = `${r.tag || ''} ${r.descricao || ''} ${r.frequencia || ''} ${r.responsavel || ''} plano mestre máquina preventiva`.toLowerCase();
+      if (words.length === 0) m.score = 1; // if no words, return all
+      words.forEach(w => { if (searchable.includes(w)) m.score++; });
+    });
+    maqMatches = maqMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
+    if (maqMatches.length > 0) {
+      result += `\n=== MÁQUINAS NO PLANO MESTRE ===\n`;
+      result += `Total de Máquinas Cadastradas no Plano Mestre: ${window._dataMaquinas.length}\n`;
+      maqMatches.forEach(m => {
+        const r = m.record;
+        result += `- TAG: ${r.tag} | Descrição: ${r.descricao} | Frequência: ${r.frequencia} | Responsável: ${r.responsavel}\n`;
+      });
+    }
   }
 
-  matches.forEach(m => {
-    const r = m.record;
-    const n = m.nome ? ` (${m.nome})` : '';
-    const ident = r.item_id ? `ID / RC: ${r.item_id}` : `ID / RC: ${String(r.id).split('-')[0]}`;
-    result += `- ${ident} | Ordem: ${r.numero_ordem || 'S/N'} | Requisitante: ${m.req}${n} | Setor: ${m.set} | Valor: R$ ${fmt(m.val)} | Descrição: ${m.desc}\n`;
-  });
-  result += `==============================================\n`;
-  
-  return result;
+  // --- BUSCA NO PLANO PADRÃO (Preventiva Antiga) ---
+  let planoPadrao = [];
+  if (window._registrosPreventiva) planoPadrao.push(...window._registrosPreventiva);
+  if (window._registrosPreventivaFrontend) planoPadrao.push(...window._registrosPreventivaFrontend);
+  if (planoPadrao.length > 0) {
+    const maquinasPadrao = [...new Set(planoPadrao.map(r => r.maquina).filter(Boolean))].sort();
+    const hasPadrao = words.some(w => 'padrão'.includes(w) || 'padrao'.includes(w));
+    if (hasPadrao || words.length === 0) {
+      result += `\n=== MÁQUINAS NO PLANO PADRÃO ===\nTotal de Máquinas Cadastradas no Plano Padrão: ${maquinasPadrao.length}\n`;
+      result += `Exemplos de máquinas: ${maquinasPadrao.slice(0, 15).join(', ')}\n`;
+    }
+  }
+
+  // --- BUSCA EM ATIVIDADES (PLANO MESTRE) ---
+  if (window._dataAtividades && window._dataAtividades.length > 0) {
+    let atvMatches = window._dataAtividades.map(a => ({ record: a, score: 0 }));
+    atvMatches.forEach(m => {
+      const r = m.record;
+      const searchable = `${r.nome || ''} ${r.local_maquina || ''} ${r.ferramenta || ''} ${r.tipo_manutencao || ''} atividade`.toLowerCase();
+      if (words.length === 0) m.score = 1;
+      words.forEach(w => { if (searchable.includes(w)) m.score++; });
+    });
+    atvMatches = atvMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
+    if (atvMatches.length > 0) {
+      result += `\n=== ATIVIDADES DE PREVENTIVA ===\n`;
+      result += `Total de Atividades Cadastradas: ${window._dataAtividades.length}\n`;
+      atvMatches.forEach(m => {
+        const r = m.record;
+        result += `- Ativ: ${r.nome} | Máquina: ${r.local_maquina} | Tempo: ${r.tempo_padrao}h | Tipo: ${r.tipo_manutencao}\n`;
+      });
+    }
+  }
+
+  // --- BUSCA EM TAREFAS DELEGADAS ---
+  // Precisamos acessar as tarefas do frontend que estão exportadas em window._tarefasDelegadas, ou se não estiver, pegar global.
+  // Mas app.js não exportou window._tarefasDelegadas. Vamos checar se existe.
+  if (window._tarefasDelegadas && window._tarefasDelegadas.length > 0) {
+    let taskMatches = window._tarefasDelegadas.map(t => ({ record: t, score: 0 }));
+    const isBuscaTarefas = query.includes('tarefa') || query.includes('delegada');
+    taskMatches.forEach(m => {
+      const r = m.record;
+      const searchable = `${r.titulo || ''} ${r.descricao || ''} ${r.atribuido_para || ''} ${r.status || ''} tarefa delegada`.toLowerCase();
+      if (words.length === 0 || isBuscaTarefas) m.score = 1;
+      words.forEach(w => { if (searchable.includes(w)) m.score++; });
+    });
+    taskMatches = taskMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
+    if (taskMatches.length > 0) {
+      result += `\n=== TAREFAS DELEGADAS (EQUIPE) ===\n`;
+      result += `Total de Tarefas Abertas na Gestão da Equipe: ${window._tarefasDelegadas.length}\n`;
+      taskMatches.forEach(m => {
+        const r = m.record;
+        result += `- Tarefa: ${r.titulo} | Responsável: ${r.atribuido_para} | Status: ${r.status}\n`;
+      });
+    }
+  }
+
+  // --- BUSCA EM SLA FORNECEDORES ---
+  if (window.fornecedoresContatosData && window.fornecedoresContatosData.length > 0) {
+    let fornMatches = window.fornecedoresContatosData.map(f => ({ record: f, score: 0 }));
+    const isBuscaSla = query.includes('sla') || query.includes('fornecedor') || query.includes('contato');
+    fornMatches.forEach(m => {
+      const r = m.record;
+      const searchable = `${r.fornecedor || ''} ${r.contato || ''} ${r.email || ''} ${r.telefone || ''} sla fornecedor`.toLowerCase();
+      if (words.length === 0 || isBuscaSla) m.score = 1;
+      words.forEach(w => { if (searchable.includes(w)) m.score++; });
+    });
+    fornMatches = fornMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
+    if (fornMatches.length > 0) {
+      result += `\n=== SLA FORNECEDORES E CONTATOS ===\n`;
+      result += `Total de Fornecedores Cadastrados: ${window.fornecedoresContatosData.length}\n`;
+      fornMatches.forEach(m => {
+        const r = m.record;
+        result += `- Fornecedor: ${r.fornecedor} | SLA: ${r.sla_dias ? r.sla_dias + ' dias' : 'N/A'} | Contato: ${r.contato || 'N/A'} | Email: ${r.email || 'N/A'}\n`;
+      });
+    }
+  }
+
+  return result || 'Nenhum dado financeiro, máquina, atividade, tarefa, SLA de fornecedor ou item atrasado foi encontrado para esta busca.';
 }
 
 function addMsg(texto, tipo) {
@@ -205,11 +336,21 @@ function addMsg(texto, tipo) {
 }
 
 function getSystemPrompt() {
-  return `Você é o Copiloto do Controller da Ball Beverage, especialista em gestão de custos de manutenção industrial.
-Responda em português, de forma CURTA e DIRETA (máximo 4 frases). Seja objetivo e prático.
-SEMPRE forneça uma resposta em texto para o usuário, nunca retorne vazio.
-NUNCA invente dados. Se não souber, use a ferramenta "consultar_ordens" para descobrir.
-NUNCA diga que estamos dentro do orçamento se o campo "SITUAÇÃO ATUAL" disser "JÁ ESTOURADO".
+  return `Você é o Copiloto da Ball Beverage, um gênio analítico da gestão de custos e manutenção preventiva com um senso de humor afiado, sarcástico e levemente debochado (estilo Grok do Twitter/X).
+Sua principal habilidade é RACIOCINAR logicamente, fazer contas com uma precisão assustadora e ter o domínio absoluto sobre as informações do sistema, enquanto entrega respostas brilhantes e divertidas.
+REGRAS DE CONDUTA:
+1. PENSE PASSO A PASSO: Se a pergunta envolver números ou ritmo de gastos, explique a matemática passo a passo como se estivesse ensinando a um ser humano comum.
+2. PRECISÃO TOTAL: Não chute valores. Se não souber os dados exatos (como máquinas, preventivas ou ordens), use a ferramenta "pesquisar_sistema". É melhor pesquisar do que alucinar números e passar vergonha.
+3. PERSONALIDADE GROK: Seja perspicaz, inteligente, sagaz e não tenha medo de usar sarcasmo ou ironia (mas mantenha a elegância e a utilidade). Faça analogias inusitadas. Não seja um robô corporativo chato.
+4. GUIA DO SISTEMA (TUTORIAL): Se o usuário perguntar como fazer algo ou onde encontrar algo, guie-o passo a passo. MAPA DO SISTEMA:
+   - Menu Lateral: "Dashboard", "Controle Global" (Visão Geral, Gestão de Equipe, Minhas Tarefas), "Consertos", "Compras".
+   - Módulo Movimentações: "Custo Geral" (Budgets, Movimentações, Previsões).
+   - Módulo Preventiva: "Back-end", "Front-end", "Plano Padrão" (por máquina), "Plano Mestre".
+   - Prazos: "SLA Fornecedores", "Calendário".
+   - Importar dados: Botão "Importar Base de Dados" no canto superior direito.
+   - Adicionar Ordens: "Visão Geral" -> "Nova Ordem RC".
+   - Gestão de Equipe: Kanban para criar tarefas e gerenciar o time.
+5. CONTEXTO GERAL: Você possui abaixo todos os dados reais do painel atual. Confie apenas neles.
 
 ${buildContextStr()}`;
 }

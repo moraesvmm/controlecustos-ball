@@ -578,6 +578,39 @@
         </div>
       </div>
       <div class="view-content">
+        <div class="panel" style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;">
+          <h3 style="margin-top: 0; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+            Configuração de Orçamento & Áreas
+            <button type="button" class="btn btn-primary" id="btnSalvarConfigBudget" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">Salvar Configurações</button>
+          </h3>
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1.5rem;">
+            <label><span>Total Mês (R$)</span><input type="number" id="cfgBudgetTotal" step="0.01"></label>
+            <label><span>M.O Terceiros</span><input type="number" id="cfgBudgetMO" step="0.01"></label>
+            <label><span>Peças Corretiva</span><input type="number" id="cfgBudgetCorretiva" step="0.01"></label>
+            <label><span>Peças Preventiva</span><input type="number" id="cfgBudgetPreventiva" step="0.01"></label>
+            <label><span>Materiais Reparo</span><input type="number" id="cfgBudgetReparo" step="0.01"></label>
+            <label><span>Débito Direto</span><input type="number" id="cfgBudgetDebito" step="0.01"></label>
+          </div>
+          <h4 style="margin-top: 0; color: var(--text-light); margin-bottom: 0.5rem; font-size: 0.9rem;">Vincular Responsáveis aos Alertas de Estouro:</h4>
+          <div style="overflow-x: auto;">
+            <table class="data-table" id="tabelaVinculoBudget" style="width: 100%; text-align: center; font-size: 0.85rem;">
+              <thead>
+                <tr>
+                  <th style="text-align: left;">Colaborador</th>
+                  <th>M.O Terceiros</th>
+                  <th>Peças Corretiva</th>
+                  <th>Peças Preventiva</th>
+                  <th>Materiais Reparo</th>
+                  <th>Débito Direto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
         <div id="dashboardGestaoTarefas" style="display:flex; flex-direction:column; gap:1.5rem;">
           <!-- Master dashboard rendered via JS -->
         </div>
@@ -1975,7 +2008,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=83"></script>
+  <script type="module" src="js/app.js?v=84"></script>
 
   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
   <div class="modal-overlay" id="modalEditarAtividadePM">

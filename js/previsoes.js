@@ -50,19 +50,36 @@ export async function renderPrevisoes() {
 
   try {
     const supabase = getClient();
-    const { data, error } = await supabase
+    const { data: allData, error } = await supabase
       .from('custo_geral')
-      .select('descricao_codigo')
-      .eq('it_codigo', 'FORECAST_METADATA')
-      .maybeSingle();
+      .select('it_codigo, descricao_codigo')
+      .ilike('it_codigo', 'FORECAST_METADATA%');
 
     if (error) throw error;
-    if (!data) {
+    if (!allData || allData.length === 0) {
       container.innerHTML = '<p style="color:#facc15; padding: 1rem;">O modelo preditivo não foi encontrado. Clique em "Recalcular Modelo" ou aguarde a rotina noturna.</p>';
       return;
     }
 
-    const p          = JSON.parse(data.descricao_codigo);
+    // Ordenar histórico do mais recente pro mais antigo, mantendo o atual no topo se não houver histórico específico
+    let mainData = allData.find(x => x.it_codigo === 'FORECAST_METADATA');
+    if (!mainData) mainData = allData[0];
+    
+    window._allForecastMetadata = allData;
+    renderPrevisoesUI(mainData.descricao_codigo, mainData.it_codigo, allData);
+
+  } catch (err) {
+    console.error('Erro ao carregar projeções', err);
+    container.innerHTML = `<p style="color:#ff3c3c; padding: 1rem;">Erro ao carregar modelo preditivo.</p>`;
+  }
+}
+
+export function renderPrevisoesUI(jsonString, selectedCode, allData) {
+  const container = document.getElementById('previsoes-container');
+  if (!container) return;
+
+  try {
+    const p = JSON.parse(jsonString);
     const isOverrun  = p.overrun > 0;
     const frescor    = badgeFrescor(p.atualizado_em);
     const horasAgo   = horasDesde(p.atualizado_em);
@@ -94,9 +111,28 @@ export async function renderPrevisoes() {
       : '';
 
     const temRange = pMin !== pMax;
+    
+    let dropdownHtml = '';
+    if (allData && allData.length > 0) {
+      let options = allData.map(d => {
+        const isCurrent = d.it_codigo === 'FORECAST_METADATA';
+        const label = isCurrent ? 'Mês Atual (Em andamento)' : d.it_codigo.replace('FORECAST_METADATA_', '');
+        const sel = (d.it_codigo === selectedCode) ? 'selected' : '';
+        return `<option value="${d.it_codigo}" ${sel}>${label}</option>`;
+      }).join('');
+      
+      dropdownHtml = `
+        <div style="display:flex; justify-content:flex-end; align-items:center; margin-bottom: -0.5rem; width:100%;">
+          <select id="forecast-history-select" style="padding:0.4rem 0.8rem; border-radius:4px; background:var(--surface); color:var(--text); border:1px solid rgba(255,255,255,0.1); cursor:pointer; font-size:0.9rem;">
+            ${options}
+          </select>
+        </div>
+      `;
+    }
+
     const html = `
       <div style="display:flex;flex-direction:column;gap:1.5rem;width:100%;">
-
+        ${dropdownHtml}
         <!-- ① Alerta principal -->
         <div style="padding:1.5rem;border-radius:10px;
                     background:${isOverrun ? 'rgba(255,60,60,0.08)' : 'rgba(60,255,120,0.08)'};
@@ -173,9 +209,18 @@ export async function renderPrevisoes() {
         <!-- ⑤ Gráfico -->
         <div class="panel" style="padding:1.5rem;border-radius:8px;background:var(--surface);">
           <h4 style="margin:0 0 1rem;color:var(--text);font-size:1.05rem;">Curva de Sazonalidade &amp; Burn Rate</h4>
+          ${(p.historico_dias && p.historico_dias.length > 0) ? `
           <div style="position:relative;height:300px;width:100%;">
             <canvas id="predictiveChart"></canvas>
           </div>
+          ` : `
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;width:100%;border-radius:8px;background:rgba(255,255,255,0.02);border:1px dashed rgba(255,255,255,0.1);">
+            <span style="font-size:2rem;margin-bottom:0.5rem;opacity:0.5;">📈</span>
+            <p style="color:var(--muted);font-size:0.9rem;text-align:center;line-height:1.5;max-width:80%;">
+              Gráfico em construção.<br>Como acabamos de virar o mês, o modelo de Inteligência Artificial precisa de <strong>pelo menos 2 dias</strong> de consumo registrados no mês corrente para conseguir desenhar a curva matemática de sazonalidade.
+            </p>
+          </div>
+          `}
         </div>
 
         <!-- ⑥ Mês Gêmeo -->
@@ -216,6 +261,17 @@ export async function renderPrevisoes() {
 
     container.innerHTML = html;
 
+    const selectEl = document.getElementById('forecast-history-select');
+    if (selectEl) {
+      selectEl.addEventListener('change', (e) => {
+        const novoCodigo = e.target.value;
+        const meta = allData.find(x => x.it_codigo === novoCodigo);
+        if (meta) {
+          renderPrevisoesUI(meta.descricao_codigo, meta.it_codigo, allData);
+        }
+      });
+    }
+
     // ── Tooltip do card Mês Gêmeo ────────────────────────────────────────
     window._tooltipGemeoClick = (evt) => {
       const btn = document.getElementById('btnTooltipGemeo');
@@ -235,6 +291,7 @@ export async function renderPrevisoes() {
         const labels        = [];
         const dataReal      = [];
         const dataProjected = [];
+        const dataEvolucao  = [];
         const dataBandMin   = [];
         const dataBandMax   = [];
 
@@ -261,6 +318,19 @@ export async function renderPrevisoes() {
             dataBandMin.push(pMin * frac);
             dataBandMax.push(pMax * frac);
           }
+          
+          if (p.evolucao_projecao) {
+            const e = p.evolucao_projecao.find(x => x.dia === i);
+            if (e) {
+              dataEvolucao.push(e.projecao);
+            } else if (dataEvolucao.length > 0 && i <= ultimoDia) {
+              dataEvolucao.push(dataEvolucao[dataEvolucao.length - 1]);
+            } else {
+              dataEvolucao.push(null);
+            }
+          } else {
+            dataEvolucao.push(null);
+          }
         }
 
         // conectar no último ponto real
@@ -286,7 +356,18 @@ export async function renderPrevisoes() {
                 order: 1
               },
               {
-                label: 'Projeção IA (Ponderada)',
+                label: 'Evolução da Previsão (Alvo)',
+                data: dataEvolucao,
+                borderColor: '#00d2ff',
+                backgroundColor: 'transparent',
+                borderWidth: 2,
+                borderDash: [2, 2],
+                pointRadius: 0,
+                tension: 0.1,
+                order: 2
+              },
+              {
+                label: 'Projeção IA (Futuro)',
                 data: dataProjected,
                 borderColor: 'rgba(255,215,0,0.9)',
                 backgroundColor: 'rgba(255,215,0,0.07)',
@@ -295,7 +376,7 @@ export async function renderPrevisoes() {
                 pointRadius: 0,
                 fill: false,
                 tension: 0.3,
-                order: 2
+                order: 3
               },
               {
                 label: 'Banda Máxima',
@@ -307,7 +388,7 @@ export async function renderPrevisoes() {
                 pointRadius: 0,
                 fill: '+1',
                 tension: 0.3,
-                order: 3
+                order: 4
               },
               {
                 label: 'Banda Mínima',

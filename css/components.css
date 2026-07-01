@@ -4,8 +4,38 @@
 body.light-mode .skeleton { background: linear-gradient(90deg, var(--bg2) 25%, rgba(0,0,0,0.08) 50%, var(--bg2) 75%); background-size: 200% 100%; } 
 @keyframes skeleton-loading { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
-body.privacy-mode .kpi-card .value { filter: blur(6px) grayscale(50%); opacity: 0.6; pointer-events: none; user-select: none; }
-.kpi-card .value { transition: filter 0.3s ease, opacity 0.3s ease; }
+body.privacy-mode .kpi-card .value,
+body.privacy-mode #kpiCustoMes,
+body.privacy-mode #kpiBudgetTotalResumo,
+body.privacy-mode #lblSaldoBudget,
+body.privacy-mode #kpiBudgetTotal,
+body.privacy-mode #kpiBudgetManutencao,
+body.privacy-mode #kpiBudgetFerramentas,
+body.privacy-mode #kpiBudgetFacilities,
+body.privacy-mode #kpiManutencao,
+body.privacy-mode #kpiFerramentaria,
+body.privacy-mode #kpiFacilities,
+body.privacy-mode #tabelaDetalhamentoBudgets td:nth-child(n+4) {
+  filter: blur(6px) grayscale(50%);
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+}
+
+.kpi-card .value,
+#kpiCustoMes,
+#kpiBudgetTotalResumo,
+#lblSaldoBudget,
+#kpiBudgetTotal,
+#kpiBudgetManutencao,
+#kpiBudgetFerramentas,
+#kpiBudgetFacilities,
+#kpiManutencao,
+#kpiFerramentaria,
+#kpiFacilities,
+#tabelaDetalhamentoBudgets td:nth-child(n+4) {
+  transition: filter 0.3s ease, opacity 0.3s ease;
+}
 
 /* SweetAlert2 Theme Premium Overrides */
 .swal2-container.swal2-backdrop-show { background: rgba(0, 0, 0, 0.5) !important; backdrop-filter: blur(8px) !important; }

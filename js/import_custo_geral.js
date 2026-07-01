@@ -197,7 +197,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             sc_codigo: String(row['sc-codigo'] || ''),
             descricao_db: String(row['descricao-db'] || ''),
           };
-        }).filter(r => r.it_codigo || r.numero_ordem); // ignorar linhas vazias
+        }); // manter todas as linhas, inclusive as sem it_codigo e numero_ordem (estornos e reclassificações)
 
         // ADICIONA REGISTRO ESPECIAL DE BUDGET SE ENCONTRADO
         if (budgetData) {
@@ -222,6 +222,13 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         const { data: fc } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'FORECAST_METADATA').maybeSingle();
         if (fc) forecastData = fc;
 
+        // Salva o BUDGET_METADATA antigo caso o novo arquivo não possua a aba AOP
+        let oldBudgetData = null;
+        if (!budgetData) {
+          const { data: bd } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'BUDGET_METADATA').maybeSingle();
+          if (bd) oldBudgetData = bd;
+        }
+
         let delCount = 0;
         while (true) {
           const { data: delData, error: delErr } = await supabase.from('custo_geral').delete().not('id', 'is', null).select('id');
@@ -235,6 +242,12 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         if (forecastData) {
           delete forecastData.id; // deleta id antigo para inserir novo
           records.push(forecastData);
+        }
+        
+        // Restaura o BUDGET_METADATA antigo se necessário
+        if (oldBudgetData) {
+          delete oldBudgetData.id;
+          records.push(oldBudgetData);
         }
 
         for (let i = 0; i < records.length; i += 100) {

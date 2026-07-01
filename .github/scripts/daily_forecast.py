@@ -413,6 +413,23 @@ if not daily.empty:
                     "is_projecao": True
                 })
 
+
+# --- EMA E EVOLUCAO DA PROJECAO ---
+if 'velha_projecao' in locals() and velha_projecao is not None and ultimo_dia_registrado > 1:
+    # 30% hoje, 70% inercia
+    projecao_final = (0.3 * projecao_final) + (0.7 * velha_projecao)
+    
+evolucao_projecao = velha_evolucao if 'velha_evolucao' in locals() else []
+# Remove se já tiver uma entrada pro dia de hoje
+evolucao_projecao = [e for e in evolucao_projecao if e.get('dia') != ultimo_dia_registrado]
+evolucao_projecao.append({
+    'dia': int(ultimo_dia_registrado),
+    'projecao': float(projecao_final),
+    'realizado': float(total_gasto)
+})
+# Ordenar por dia
+evolucao_projecao = sorted(evolucao_projecao, key=lambda x: x['dia'])
+
 resultado = {
     "mes": mes_atual,
     "ano": ano_atual,
@@ -425,6 +442,7 @@ resultado = {
     "budget": float(budget_alvo),
     "overrun": float(projecao_final - budget_alvo),
     "historico_dias": historico_dias,
+    "evolucao_projecao": evolucao_projecao,
     "alerts": alerts,
     "twin_month": twin_month_name,
     "twin_month_dist": float(twin_month_dist),
@@ -440,17 +458,29 @@ print(f"Projecao calculada: R$ {projecao_final:.2f} (Overrun: R$ {resultado['ove
 del_url = f"{SUPABASE_URL}/rest/v1/custo_geral?it_codigo=eq.FORECAST_METADATA"
 requests.delete(del_url, headers=headers)
 
+# Deletar também a chave específica do mês para atualizar o snapshot
+hist_key = f"FORECAST_METADATA_{ano_atual}-{mes_atual:02d}"
+del_hist_url = f"{SUPABASE_URL}/rest/v1/custo_geral?it_codigo=eq.{hist_key}"
+requests.delete(del_hist_url, headers=headers)
+
 # E inserir o novo
 insert_url = f"{SUPABASE_URL}/rest/v1/custo_geral"
-payload = {
+payload_main = {
     "it_codigo": "FORECAST_METADATA",
     "descricao_codigo": json.dumps(resultado),
     "numero_ordem": "0",
     "quantidade": 0,
     "custo_do_mes": 0
 }
+payload_hist = {
+    "it_codigo": hist_key,
+    "descricao_codigo": json.dumps(resultado),
+    "numero_ordem": "0",
+    "quantidade": 0,
+    "custo_do_mes": 0
+}
 
-res = requests.post(insert_url, headers=headers, json=payload)
+res = requests.post(insert_url, headers=headers, json=[payload_main, payload_hist])
 if res.status_code in [200, 201]:
     print("Previsao salva com sucesso no Supabase!")
 else:

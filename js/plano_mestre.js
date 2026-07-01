@@ -64,6 +64,8 @@ async function carregarDados() {
 
     dataMaquinas = maquinas || [];
     dataAtividades = atividades || [];
+    window._dataMaquinas = dataMaquinas;
+    window._dataAtividades = dataAtividades;
   } catch (error) {
     console.error('Erro ao carregar dados do plano mestre:', error);
     toast('Erro ao carregar plano mestre.', 'error');
