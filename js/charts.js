@@ -407,3 +407,136 @@ export function renderDashboardCharts(registros) {
   renderPrazoChart('chartConsertoDias', 'CONSERTO', 'CONSERTO');
   renderPrazoChart('chartComprasDias', 'COMPRAS', 'COMPRA');
 }
+
+// =====================================================
+// GRÁFICO: FLUXO DE CONSERTOS (Enviado vs Recebido)
+// =====================================================
+let fluxoChartInstance = null;
+
+export function destroyFluxoChart() {
+  if (fluxoChartInstance) { fluxoChartInstance.destroy(); fluxoChartInstance = null; }
+}
+
+/**
+ * Agrega registros de CONSERTO por mês.
+ * - Enviado: soma de `valoracao` dos itens cuja `data_saida` caiu no mês/ano alvo.
+ * - Recebido: soma de `valor` (custo de reparo) dos itens cuja `data_recebimento` caiu no mês/ano alvo.
+ * @param {Array} registros - todos os registros já filtrados por natureza CONSERTO
+ * @param {number} anoAlvo - ex: 2026
+ * @param {number|null} mesAlvo - 0-11; null = todos os meses do ano
+ */
+export function agregarFluxoConsertos(registros, anoAlvo, mesAlvo = null) {
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+  const map = {};
+
+  const bucket = (key) => {
+    if (!map[key]) map[key] = { mes: key, enviado: 0, recebido: 0, itensEnviados: [], itensRecebidos: [] };
+    return map[key];
+  };
+
+  // Pré-preenche o intervalo
+  if (mesAlvo !== null) {
+    bucket(MESES[mesAlvo]);
+  } else {
+    MESES.forEach(m => bucket(m));
+  }
+
+  const parseDate = (v) => {
+    if (!v) return null;
+    const d = new Date(String(v).slice(0, 10));
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  for (const r of registros) {
+    const ds = parseDate(r.data_saida);
+    if (ds && ds.getFullYear() === anoAlvo) {
+      const m = ds.getMonth();
+      if (mesAlvo === null || m === mesAlvo) {
+        const key = MESES[m];
+        bucket(key).enviado += Number(r.valoracao) || 0;
+        bucket(key).itensEnviados.push(r);
+      }
+    }
+    const dr = parseDate(r.data_recebimento);
+    if (dr && dr.getFullYear() === anoAlvo) {
+      const m = dr.getMonth();
+      if (mesAlvo === null || m === mesAlvo) {
+        const key = MESES[m];
+        bucket(key).recebido += Number(r.valor) || 0;
+        bucket(key).itensRecebidos.push(r);
+      }
+    }
+  }
+
+  return MESES.filter(m => map[m]).map(m => map[m]);
+}
+
+export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo = null) {
+  destroyFluxoChart();
+  registrosRef = registros;
+
+  const ctx = document.getElementById(canvasId);
+  if (!ctx) return;
+
+  const dados = agregarFluxoConsertos(registros, anoAlvo, mesAlvo);
+  const tc = themeColors();
+  const premiumDefaults = buildDefaults();
+
+  fluxoChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: dados.map(d => d.mes),
+      datasets: [
+        {
+          label: 'Patrimonial Exposto (Enviado)',
+          data: dados.map(d => d.enviado),
+          backgroundColor: (c) => gradient(c, 'rgba(251,191,36,0.9)', 'rgba(245,158,11,0.35)'),
+          borderRadius: 6,
+        },
+        {
+          label: 'Custo Reparo (Recebido)',
+          data: dados.map(d => d.recebido),
+          backgroundColor: (c) => gradient(c, 'rgba(52,211,153,0.9)', 'rgba(16,185,129,0.35)'),
+          borderRadius: 6,
+        },
+      ],
+    },
+    options: {
+      ...premiumDefaults,
+      onClick: (_event, elements, chart) => {
+        if (!elements?.length) return;
+        const el = elements[0];
+        const mesLabel = chart.data.labels[el.index];
+        const dsLabel = chart.data.datasets[el.datasetIndex]?.label || '';
+        const dadoMes = dados.find(d => d.mes === mesLabel);
+        if (!dadoMes) return;
+        const regs = dsLabel.includes('Enviado') ? dadoMes.itensEnviados : dadoMes.itensRecebidos;
+        const total = regs.reduce((s, r) => s + (Number(r.valor) || 0), 0);
+        abrirDrilldown({
+          titulo: `${dsLabel} — ${mesLabel}`,
+          subtitulo: `${regs.length} item(ns) · Total reparo ${fmtMoeda(total)}`,
+          registros: regs,
+          meta: { insight: dsLabel.includes('Enviado')
+            ? 'Valor patrimonial total dos itens que saíram para conserto neste período.'
+            : 'Custo total de reparo dos itens que retornaram neste período.' }
+        });
+      },
+      plugins: {
+        ...premiumDefaults.plugins,
+        title: {
+          display: true,
+          text: 'FLUXO DE CONSERTOS — Patrimonial Exposto vs. Custo de Reparo',
+          color: tc.titleColor,
+          font: { ...CHART_FONT, size: 14, weight: '600' },
+        },
+      },
+      scales: {
+        x: { ticks: { color: tc.tickColor, font: CHART_FONT }, grid: { display: false } },
+        y: {
+          ticks: { color: tc.tickColor, font: CHART_FONT, callback: (v) => fmtMoeda(v) },
+          grid: { color: tc.gridColor },
+        },
+      },
+    },
+  });
+}

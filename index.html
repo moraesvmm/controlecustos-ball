@@ -1614,7 +1614,10 @@
               <h2 style="color: #fff; margin: 0 0 0.25rem 0;">Análise Mensal</h2>
               <p class="section-hint" style="margin-bottom: 0;">Visão financeira (Previsto vs Recebido) filtrada para o contexto atual.</p>
             </div>
-            <button type="button" class="btn btn-outline" id="btnToggleChart" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">Mostrar Gráfico</button>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <button type="button" class="btn btn-outline" id="btnFluxoConsertos" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; display:none;" title="Abrir gráfico de Fluxo de Consertos">📊 Fluxo do Mês</button>
+              <button type="button" class="btn btn-outline" id="btnToggleChart" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">Mostrar Gráfico</button>
+            </div>
           </header>
           <div id="chartContainer" class="hidden" style="margin-top: 1.5rem;">
             <div class="chart-box crud-chart-box">
@@ -1741,7 +1744,8 @@
             <label><span>Orçamento</span><input name="orcamento" /></label>
             <label><span>RC</span><input name="rc" /></label>
             <label><span>PO</span><input name="po" /></label>
-            <label><span>Valor (R$)</span><input name="valor" type="number" step="0.01" /></label>
+            <label><span>Valor Reparo (R$)</span><input name="valor" type="number" step="0.01" /></label>
+            <label title="Valor patrimonial do item físico, independente do custo de reparo"><span>Valoração do Item (R$) 🏷️</span><input name="valoracao" type="number" step="0.01" min="0" placeholder="Valor patrimonial" /></label>
             <label><span>Previsão entrega</span><input name="previsao_entrega" type="date" /></label>
             <label><span>Data recebimento</span><input name="data_recebimento" type="date" /></label>
             <label><span>Nota Retorno</span><input name="nota_retorno" type="text" placeholder="Número da NF de retorno (opcional)" /></label>

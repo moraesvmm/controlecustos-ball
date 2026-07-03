@@ -20,7 +20,7 @@ carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, si
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
 getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=46';
-import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart } from './charts.js?v=5';
+import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js?v=6';
 import {
   COLUNAS_TABELA,
   valorCelula,
@@ -981,6 +981,10 @@ function showView(name) {
   $('#secaoTabela')?.classList.toggle('hidden', !['rc', 'consertos', 'compras', 'fabricacao'].includes(name));
   $('#secaoCrudGraficos')?.classList.toggle('hidden', !['consertos', 'compras', 'fabricacao'].includes(name));
 
+  // Botão Fluxo de Consertos só aparece na aba Consertos
+  const btnFluxo = $('#btnFluxoConsertos');
+  if (btnFluxo) btnFluxo.style.display = name === 'consertos' ? '' : 'none';
+
   // KPIs e filtros — ocultos nas views especiais (ambos estão dentro do painel-fixo)
   $('#painel-fixo')?.classList.toggle('hidden', isSpecial);
   
@@ -1037,6 +1041,69 @@ function showView(name) {
   refresh();
 }
 
+// =====================================================
+// MODAL: FLUXO DE CONSERTOS
+// =====================================================
+function abrirModalFluxoConsertos() {
+  const anoAtual = new Date().getFullYear();
+  const mesAtual = new Date().getMonth(); // 0-11
+  const MESES_NOMES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+  // Remove modal anterior se existir
+  const old = document.getElementById('modalFluxoConsertos');
+  if (old) old.remove();
+
+  const opcoesRetroativas = MESES_NOMES.slice(0, mesAtual + 1).map((m, i) =>
+    `<option value="${i}" ${i === mesAtual ? 'selected' : ''}>${m} ${anoAtual}</option>`
+  ).join('');
+
+  const modal = document.createElement('div');
+  modal.id = 'modalFluxoConsertos';
+  modal.style.cssText = `
+    position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);
+  `;
+  modal.innerHTML = `
+    <div style="background:var(--bg-card,#1e293b); border:1px solid var(--border,#334155); border-radius:16px;
+                padding:1.5rem; width:min(90vw,820px); max-height:85vh; overflow-y:auto; position:relative;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+        <h2 style="margin:0; font-size:1.1rem; color:var(--text,#f1f5f9);">📊 Fluxo de Consertos</h2>
+        <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+          <select id="fluxoMesSel" style="background:var(--bg-alt,#0f172a); color:var(--text,#f1f5f9);
+            border:1px solid var(--border,#334155); border-radius:8px; padding:6px 10px; font-size:0.85rem; cursor:pointer;">
+            <option value="all">Ano completo (${anoAtual})</option>
+            ${opcoesRetroativas}
+          </select>
+          <button id="fluxoFechar" style="background:transparent; border:1px solid var(--border,#334155); color:var(--muted,#94a3b8);
+            border-radius:8px; padding:6px 12px; cursor:pointer; font-size:0.85rem;">✕ Fechar</button>
+        </div>
+      </div>
+      <div style="position:relative; height:340px;">
+        <canvas id="chartFluxoConsertos"></canvas>
+      </div>
+      <p id="fluxoHint" style="margin-top:0.75rem; font-size:0.75rem; color:var(--muted,#94a3b8); text-align:center;">
+        💡 Clique nas barras para ver os registros detalhados · Barras amarelas = patrimônio exposto · Barras verdes = custo de reparo realizado
+      </p>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const consertos = registros.filter(r => (r.natureza || '').toUpperCase().includes('CONSERTO'));
+
+  const renderFluxo = () => {
+    const sel = document.getElementById('fluxoMesSel');
+    const val = sel?.value;
+    const mesAlvo = val === 'all' ? null : parseInt(val, 10);
+    renderConsertoFluxoChart('chartFluxoConsertos', consertos, anoAtual, mesAlvo);
+  };
+
+  document.getElementById('fluxoMesSel')?.addEventListener('change', renderFluxo);
+  document.getElementById('fluxoFechar')?.addEventListener('click', () => modal.remove());
+  modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+  renderFluxo();
+}
+
 function abrirModal(id) {
   const naturezaPadrao = {
     consertos: 'CONSERTO',
@@ -1057,7 +1124,7 @@ function abrirModal(id) {
   const fields = [
     'sinal', 'item_id', 'natureza', 'item', 'descricao_falha', 'solicitante', 'criticidade',
     'linha', 'maquina', 'fornecedor', 'nf_saida', 'data_saida', 'orcamento', 'rc', 'po',
-    'valor', 'previsao_entrega', 'data_recebimento', 'comentario',
+    'valor', 'valoracao', 'previsao_entrega', 'data_recebimento', 'comentario',
   ];
   fields.forEach((name) => {
     const input = f.querySelector(`[name="${name}"]`);
@@ -1113,6 +1180,7 @@ async function salvarForm(e) {
     rc: f.rc.value ? f.rc.value.replace(/\./g, '') : '',
     po: f.po.value,
     valor: parseFloat(f.valor.value) || 0,
+    valoracao: f.querySelector('[name="valoracao"]') ? (parseFloat(f.querySelector('[name="valoracao"]').value) || null) : null,
     previsao_entrega: f.previsao_entrega.value || null,
     data_recebimento: f.data_recebimento.value || null,
     comentario: f.comentario.value,
@@ -1561,6 +1629,8 @@ async function init() {
     gerarRelatorioSLAPDF(registros);
   });
 
+  // ===== Botão Fluxo Consertos =====
+  $('#btnFluxoConsertos')?.addEventListener('click', abrirModalFluxoConsertos);
 
   setupPlanoPreventivaUI();
   setupPlanoPreventivaUIFrontend();

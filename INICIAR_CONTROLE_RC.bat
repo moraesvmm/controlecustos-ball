@@ -23,6 +23,10 @@ start /B ollama serve >nul 2>&1
 :: Usa o caminho atual (letra de disco ex: Z:\) - sem passar parametro -Pasta para evitar corrupcao de caracteres
 start /B powershell -NoProfile -ExecutionPolicy Bypass -Command "& ([ScriptBlock]::Create((Get-Content 'servidor.ps1' -Raw))) -Porta %PORT%"
 
+:: Inicia o Proxy local da IA em segundo plano na porta 8001 (Resolve CORS)
+:: Somente se Python estiver instalado - nao interrompe o sistema se nao estiver
+where python >nul 2>&1 && start /B python groq_proxy.py
+
 :: Espera o servidor subir e abre o navegador
 timeout /t 2 /nobreak >nul
 start http://localhost:%PORT%/?login=force

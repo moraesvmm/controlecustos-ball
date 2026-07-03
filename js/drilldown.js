@@ -237,6 +237,10 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
           ${r.previsao_entrega ? ` · Prev. ${fmtData(r.previsao_entrega)}` : ''}
           ${r.dias_fora != null ? ` · ${r.dias_fora}d fora` : (typeof calcularDiasFora !== 'undefined' && calcularDiasFora(r) != null ? ` · ${calcularDiasFora(r)}d fora` : '')}
         </div>
+        ${r.comentario ? `
+        <div class="drill-item-detail" style="margin-top: 0.5rem; font-size: 0.8rem; font-style: italic; color: var(--text-light); white-space: pre-wrap; background: rgba(255,255,255,0.05); padding: 6px 10px; border-radius: 4px; border-left: 3px solid var(--primary);">
+          💬 ${r.comentario}
+        </div>` : ''}
         <div class="drill-item-actions">
           ${r.rc ? `<button type="button" class="btn-ghost btn-drill-edit" data-id="${r.id}">✏️ Editar RC</button>
           <button type="button" class="btn-ghost btn-drill-rc" data-id="${r.id}">👁 Ver RC</button>` : ''}
@@ -286,7 +290,33 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
         const reader = new FileReader();
         reader.onload = () => {
           if (onSavePhotoCallback) {
-            onSavePhotoCallback(id, reader.result);
+            // COMPRESSÃO NO FRONT-END
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              let width = img.width;
+              let height = img.height;
+              const max_size = 800;
+
+              if (width > height) {
+                if (width > max_size) {
+                  height *= max_size / width;
+                  width = max_size;
+                }
+              } else {
+                if (height > max_size) {
+                  width *= max_size / height;
+                  height = max_size;
+                }
+              }
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              const compressedDataUrl = canvas.toDataURL('image/webp', 0.6); // 60% quality WEBP
+              onSavePhotoCallback(id, compressedDataUrl);
+            };
+            img.src = reader.result;
           }
           const container = lista.querySelector(`.drill-item-foto[data-id="${id}"]`);
           if (container) {

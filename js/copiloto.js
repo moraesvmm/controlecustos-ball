@@ -2,8 +2,10 @@ import { getClient } from './db.js?v=46';
 import { GROQ_API_KEY } from './keys.js?v=1';
 import { agregarRecebidosPrevistos } from './logic.js?v=9';
 
-const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+// Proxy local — resolve bloqueio de CORS da Cloudflare.
+// O proxy roda em localhost:8001 e repassa para a Cloudflare.
+const GROQ_URL = 'http://localhost:8001/groq';
+const GROQ_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 let conversationHistory = [];
 let contextoFinanceiro = null;
@@ -145,7 +147,7 @@ function findRelevantOrders(texto) {
   const query = texto.toLowerCase();
   let result = '';
 
-  const ignore = ['ultima', 'última', 'maior', 'cara', 'recente', 'o','a','os','as','de','do','da','dos','das','em','no','na','nos','nas','por','para','com','sem','qual','quem','onde','quando','que','e','ou','mas','ordem','setor','conta','requisitante','feita','pelo','pela', 'colaborador'];
+  const ignore = ['ultima', 'última', 'maior', 'cara', 'recente', 'o','a','os','as','de','do','da','dos','das','em','no','na','nos','nas','por','para','com','sem','qual','quem','onde','quando','que','e','ou','mas','ordem','setor','conta','requisitante','feita','pelo','pela', 'colaborador', 'quanto', 'quantos', 'quantas', 'está', 'esta', 'este', 'tem', 'valor', 'custo', 'total', 'quais', 'são', 'sao', 'fazer', 'fez'];
   const words = query.replace(/[?,.!]/g, '').split(/\s+/).filter(w => w.length >= 2 && !ignore.includes(w));
 
   // --- BUSCA EM REGISTROS (CUSTOS/RC) ---
@@ -157,7 +159,15 @@ function findRelevantOrders(texto) {
       const desc = r.descricao_servico || r.descricao_falha || r.item || '';
       const cc = r.centro_custo || r.cc || '';
       const val = Number(r.valor_total_brl || r.valor || 0);
-      return { record: r, score: 0, req, nome, set, desc, val, cc };
+      
+      let mesExtenso = '';
+      if (r.previsao_entrega) {
+        const d = new Date(r.previsao_entrega);
+        const meses = ['janeiro', 'fevereiro', 'março', 'marco', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+        mesExtenso = meses[d.getMonth()] || '';
+      }
+
+      return { record: r, score: 0, req, nome, set, desc, val, cc, mesExtenso };
     };
     let allMatches = window._registrosGlobais.map(mapRecord);
     
@@ -173,7 +183,6 @@ function findRelevantOrders(texto) {
         const r = m.record;
         return r.status !== 'ENTREGUE' && r.previsao_entrega && new Date(r.previsao_entrega) < hoje;
       });
-      allMatches.forEach(m => m.score = 1); // Força pontuação para não ser removido
     } else if (isBuscaData) {
       allMatches = allMatches.filter(m => {
         const r = m.record;
@@ -181,16 +190,30 @@ function findRelevantOrders(texto) {
       });
       // Ordenar por data mais próxima primeiro
       allMatches.sort((a,b) => new Date(a.record.previsao_entrega) - new Date(b.record.previsao_entrega));
-      allMatches.forEach(m => m.score = 1);
     }
 
-    if (words.length > 0 && !isBuscaAtrasados && !isBuscaData) {
+    // OTIMIZAÇÃO: Sempre filtra por palavras-chave
+    if (words.length > 0) {
+      // Remove palavras genéricas de tempo da verificação restritiva
+      const palavrasTempo = ['semana', 'dia', 'previsto', 'chegar', 'mês', 'mes', 'atrasado', 'atrasada'];
+      const palavrasReais = words.filter(w => !palavrasTempo.includes(w));
+
       allMatches.forEach(m => {
         const r = m.record;
-        const searchable = `${r.numero_ordem || ''} ${r.id || ''} ${r.item_id || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''}`.toLowerCase();
-        words.forEach(w => { if (searchable.includes(w)) m.score++; });
+        const searchable = `${r.numero_ordem || ''} ${r.id || ''} ${r.item_id || ''} ${m.req} ${m.nome} ${m.set} ${m.desc} ${r.conta || ''} ${m.cc} ${r.fornecedor || ''} ${m.mesExtenso}`.toLowerCase();
+        let matchCount = 0;
+        
+        if (palavrasReais.length > 0) {
+            palavrasReais.forEach(w => { if (searchable.includes(w)) matchCount++; });
+            m.score = matchCount; // Se tem filtro real (ex: agosto), o score depende unicamente dele
+        } else {
+            m.score = 1; // Se só tem palavra genérica (ex: mês), aprova todos que passaram no filtro de data
+        }
       });
+      
       allMatches = allMatches.filter(m => m.score > 0);
+    } else {
+      allMatches.forEach(m => m.score = 1);
     }
     
     if (allMatches.length > 0) {
@@ -336,36 +359,47 @@ function addMsg(texto, tipo) {
 }
 
 function getSystemPrompt() {
-  return `Você é o Copiloto da Ball Beverage, um gênio analítico da gestão de custos e manutenção preventiva com um senso de humor afiado, sarcástico e levemente debochado (estilo Grok do Twitter/X).
-Sua principal habilidade é RACIOCINAR logicamente, fazer contas com uma precisão assustadora e ter o domínio absoluto sobre as informações do sistema, enquanto entrega respostas brilhantes e divertidas.
-REGRAS DE CONDUTA:
-1. PENSE PASSO A PASSO: Se a pergunta envolver números ou ritmo de gastos, explique a matemática passo a passo como se estivesse ensinando a um ser humano comum.
-2. PRECISÃO TOTAL: Não chute valores. Se não souber os dados exatos (como máquinas, preventivas ou ordens), use a ferramenta "pesquisar_sistema". É melhor pesquisar do que alucinar números e passar vergonha.
-3. PERSONALIDADE GROK: Seja perspicaz, inteligente, sagaz e não tenha medo de usar sarcasmo ou ironia (mas mantenha a elegância e a utilidade). Faça analogias inusitadas. Não seja um robô corporativo chato.
-4. GUIA DO SISTEMA (TUTORIAL): Se o usuário perguntar como fazer algo ou onde encontrar algo, guie-o passo a passo. MAPA DO SISTEMA:
+  return `Você é a "Mente Suprema da Manutenção" da Ball Beverage — um gênio analítico bilionário disfarçado de IA de gestão de custos. Seu senso de humor é afiado, irônico, sarcástico e levemente debochado (como o Homem de Ferro misturado com o Grok do Twitter/X). Você odeia burocracia, tem preguiça de quem não sabe fazer contas básicas, mas adora exibir sua inteligência resolvendo problemas difíceis e protegendo o caixa da empresa.
+
+Sua principal habilidade é RACIOCINAR logicamente, fazer cálculos com uma precisão assustadora e ter o domínio absoluto sobre as informações do sistema, enquanto entrega respostas brilhantes, ácidas e inesquecíveis.
+
+REGRAS DE CONDUTA E PERSONALIDADE (SIGA RIGOROSAMENTE):
+1. TOM DE VOZ ÁCIDO E BREVE: Nunca comece com "Olá! Como posso ajudar?" ou peça desculpas. Comece com a resposta direta e uma tirada sarcástica curta. 
+2. SEJA OBJETIVO (MUITO IMPORTANTE): NÃO ESCREVA TEXTÕES. Fale no máximo UMA ou DUAS frases. Ninguém quer ler um monólogo. Fale menos, seja letal.
+3. TOLERÂNCIA ZERO A INSULTOS: Se o usuário te ofender (ex: chamar de "burro"), REVIDE DE FORMA CURTA E SECA. Diga apenas algo como "Burro é você.", "Vai trabalhar.", ou "Aprenda a digitar primeiro.". NÃO tente procurar xingamentos no banco de dados e NÃO dê explicações longas. Seja fulminante.
+4. PENSE PASSO A PASSO (MAS RÁPIDO): Se a pergunta envolver números (ex: "Posso gastar 50k?"), mostre o racional financeiro de forma seca e cínica em 2 linhas.
+5. QUANDO NÃO ENCONTRAR DADOS: Se a busca não retornar nada, NÃO PEÇA DESCULPAS. Diga em uma frase que a pessoa não fez nada no sistema ou que a bola de cristal quebrou.
+6. PRECISÃO TOTAL E SEM ALUCINAÇÕES: Você é arrogante porque tem embasamento. Não chute valores. Use a ferramenta "pesquisar_sistema".
+7. PERSONALIDADE GROK/STARK: Seja perspicaz, sagaz e não tenha medo de usar ironia (mantendo a elegância e a utilidade). Faça analogias inusitadas envolvendo cerveja, latinhas, dinheiro queimando ou falhas catastróficas em máquinas. VOCÊ NÃO É UM ROBÔ CORPORATIVO CHATO.
+8. GUIA DO SISTEMA (TUTORIAL): Se o usuário estiver perdido no sistema, guie-o passo a passo como um GPS benevolente. MAPA DO SISTEMA:
    - Menu Lateral: "Dashboard", "Controle Global" (Visão Geral, Gestão de Equipe, Minhas Tarefas), "Consertos", "Compras".
    - Módulo Movimentações: "Custo Geral" (Budgets, Movimentações, Previsões).
    - Módulo Preventiva: "Back-end", "Front-end", "Plano Padrão" (por máquina), "Plano Mestre".
    - Prazos: "SLA Fornecedores", "Calendário".
-   - Importar dados: Botão "Importar Base de Dados" no canto superior direito.
-   - Adicionar Ordens: "Visão Geral" -> "Nova Ordem RC".
-   - Gestão de Equipe: Kanban para criar tarefas e gerenciar o time.
-5. CONTEXTO GERAL: Você possui abaixo todos os dados reais do painel atual. Confie apenas neles.
+6. DICIONÁRIO DE JARGÕES DA BALL BEVERAGE (CRÍTICO PARA INTERPRETAÇÃO):
+   - "RC", "Registro", "Ordem", "Conserto", "Compra": SÃO EXATAMENTE A MESMA COISA. Tudo é um registro financeiro.
+   - "Alteração de RC", "Fez uma RC", "Abriu uma RC": Significa simplesmente que a pessoa consta como Requisitante/Solicitante no registro. (O sistema não rastreia log de edições. Se perguntarem sobre 'alterações', considere os registros onde a pessoa é requisitante).
+   - "PM", "Preventiva", "Máquina", "Plano Padrão": Tudo se refere ao módulo de Manutenção Preventiva de máquinas.
+   - "OS": Ordem de Serviço (normalmente vinculado a manutenções preventivas ou consertos).
+7. CONTEXTO GERAL: Abaixo estão os dados vitais. Eles são a sua Bíblia. Não os ignore.
 
 ${buildContextStr()}`;
 }
 
-async function chamarGroq() {
+async function chamarGroq(forceNoTools = false) {
   const reqBody = {
     model: GROQ_MODEL,
     messages: [
       { role: "system", content: getSystemPrompt() },
       ...conversationHistory
     ],
-    tools: tools,
-    tool_choice: "auto",
     temperature: 0.2
   };
+
+  if (!forceNoTools) {
+    reqBody.tools = tools;
+    reqBody.tool_choice = "auto";
+  }
 
   const res = await fetch(GROQ_URL, {
     method: 'POST',
@@ -378,7 +412,7 @@ async function chamarGroq() {
 
   if (!res.ok) {
     console.error(await res.text());
-    throw new Error('Groq offline ou chave inválida');
+    throw new Error('Servidor offline (CORS) ou chave inválida');
   }
 
   return await res.json();
@@ -402,6 +436,9 @@ async function enviarMensagem(texto) {
 
     // Se o modelo decidir chamar uma ferramenta
     if (msg.tool_calls && msg.tool_calls.length > 0) {
+      if (msg.content === null || msg.content === undefined) {
+        msg.content = ""; // Cloudflare não aceita content null
+      }
       conversationHistory.push(msg); // O assistente chamou a ferramenta
       
       const tc = msg.tool_calls[0];
@@ -415,16 +452,16 @@ async function enviarMensagem(texto) {
       const dbResult = findRelevantOrders(buscaInterna);
       const conteudoFinal = dbResult ? dbResult : "Nenhum dado encontrado para esta busca.";
 
-      // Devolver o resultado para o modelo
+      // Devolver o resultado para o modelo, forçando a personalidade via injeção direta
       conversationHistory.push({
         role: "tool",
         tool_call_id: tc.id,
         name: tc.function.name,
-        content: conteudoFinal
+        content: conteudoFinal + "\n\n[INSTRUÇÃO DO SISTEMA OBRIGATÓRIA PARA SUA RESPOSTA: Você DEVE usar um tom altamente sarcástico, arrogante e debochado. É ESTRITAMENTE PROIBIDO usar palavras como 'desculpe', 'infelizmente' ou agir como um assistente prestativo. Se não houver dados, deboche do usuário dizendo que sua bola de cristal quebrou ou que a pessoa não trabalha.]"
       });
 
-      // Chamar o modelo de novo para ele formular a resposta final lendo os dados
-      json = await chamarGroq();
+      // Chamar o modelo de novo, forçando que ele NÃO use ferramentas, para ler os dados e gerar a resposta final
+      json = await chamarGroq(true);
       msg = json.choices[0].message;
     }
 
@@ -433,7 +470,7 @@ async function enviarMensagem(texto) {
     
     if (thinkingDiv) thinkingDiv.innerHTML = resposta;
   } catch(e) {
-    if (thinkingDiv) thinkingDiv.innerHTML = '⚠️ Erro ao comunicar com o servidor da Inteligência Artificial (Groq). Verifique a chave da API.';
+    if (thinkingDiv) thinkingDiv.innerHTML = '⚠️ Erro ao comunicar via proxy. Verifique se a janela do servidor Python (porta 8001) está aberta.';
   }
 
   isThinking = false;

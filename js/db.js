@@ -48,6 +48,72 @@ function mapFromExcel(row) {
 
 let cacheLocal = null;
 
+// ==========================================
+// FUNÇÕES GLOBAIS DE CACHE OFFLINE-FIRST
+// ==========================================
+export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id', ascending = true, hasUpdatedAt = false) {
+  const client = getClient();
+  if (!client) throw new Error('Supabase não carregado');
+
+  const cache = localStorage.getItem(cacheKey);
+  const lastSyncStr = localStorage.getItem(`${cacheKey}_last_sync`);
+  let localData = cache ? JSON.parse(cache) : [];
+
+  // Se tem updated_at e já temos cache, faz sync diferencial (Egress quase zero)
+  if (hasUpdatedAt && localData.length > 0 && lastSyncStr) {
+    try {
+      console.log(`%c[Cache Inteligente - ${tableName}] Sincronização diferencial ativada! Buscando apenas os IDs atuais e os registros alterados desde a última sessão.`, 'color: #00ff00; font-weight: bold; font-size: 14px;');
+      // 1. Busca IDs atuais para remover deletados
+      const { data: currentIds, error: errorIds } = await client.from(tableName).select('id');
+      if (errorIds) throw errorIds;
+      const validIds = new Set(currentIds.map(x => String(x.id)));
+      localData = localData.filter(x => validIds.has(String(x.id)));
+
+      // 2. Busca apenas o que foi alterado/criado desde a última sincronização
+      const { data: updated, error: errorUpd } = await client.from(tableName)
+        .select('*')
+        .gt('updated_at', lastSyncStr)
+        .order(orderBy, { ascending });
+      if (errorUpd) throw errorUpd;
+
+      if (updated && updated.length > 0) {
+        const mapUpd = new Map(updated.map(x => [String(x.id), x]));
+        localData = localData.map(x => mapUpd.has(String(x.id)) ? mapUpd.get(String(x.id)) : x);
+        const existingIds = new Set(localData.map(x => String(x.id)));
+        for (const u of updated) {
+          if (!existingIds.has(String(u.id))) localData.push(u);
+        }
+      }
+      
+      localStorage.setItem(cacheKey, JSON.stringify(localData));
+      localStorage.setItem(`${cacheKey}_last_sync`, new Date().toISOString());
+      
+      localData.sort((a, b) => {
+        let valA = a[orderBy], valB = b[orderBy];
+        if(typeof valA === 'string') return ascending ? valA.localeCompare(valB) : valB.localeCompare(valA);
+        return ascending ? valA - valB : valB - valA;
+      });
+
+      return localData.map(mapFn);
+    } catch (err) {
+      console.error('Erro no sync parcial, recarregando tabela inteira...', err);
+    }
+  }
+
+  // Fallback: Busca total na nuvem (primeira vez ou tabelas sem updated_at)
+  const { data, error } = await client.from(tableName).select('*').order(orderBy, { ascending });
+  if (error) throw error;
+  
+  localStorage.setItem(cacheKey, JSON.stringify(data || []));
+  localStorage.setItem(`${cacheKey}_last_sync`, new Date().toISOString());
+  return (data || []).map(mapFn);
+}
+
+export function invalidateCache(cacheKey) {
+  localStorage.removeItem(cacheKey);
+  localStorage.removeItem(`${cacheKey}_last_sync`);
+}
+
 export async function carregarRegistros() {
   if (USE_LOCAL_DATA) {
     if (!cacheLocal) {
@@ -58,12 +124,8 @@ export async function carregarRegistros() {
     return [...cacheLocal];
   }
 
-  const client = getClient();
-  if (!client) throw new Error('Supabase não carregado');
-
-  const { data, error } = await client.from('rc_registros').select('*').order('item_id');
-  if (error) throw error;
-  return (data || []).map(enriquecerRegistro);
+  // Usa o sistema inteligente de cache com Egress mínimo
+  return fetchWithCache('rc_registros', 'cache_rc_registros', enriquecerRegistro, 'item_id', true, true);
 }
 
 export async function salvarRegistro(registro) {
@@ -193,11 +255,7 @@ export async function onAuthStateChange(callback) {
 // ==========================================
 
 export async function carregarPreventiva() {
-  const client = getClient();
-  if (!client) throw new Error('Supabase não carregado');
-
-  const { data, error } = await client.from('preventiva_registros').select('*').order('created_at');
-  if (error) throw error;
+  const data = await fetchWithCache('preventiva_registros', 'cache_preventiva', x => x, 'created_at', true, false);
 
   if (data) {
     data.forEach(r => {
@@ -262,10 +320,7 @@ export async function excluirPreventiva(id) {
 
 /** Get list of machines */
 export async function getMachines() {
-  const client = getClient();
-  const { data, error } = await client.from('machines').select('*').order('nome');
-  if (error) throw error;
-  return data;
+  return fetchWithCache('machines', 'cache_machines', x => x, 'nome', true, false);
 }
 
 /** Create a new machine */
@@ -318,10 +373,7 @@ export async function createMachineActivity(machineId, activity) {
 // =============================
 
 export async function getFornecedoresContatos() {
-  const client = getClient();
-  const { data, error } = await client.from('fornecedores_contatos').select('*');
-  if (error) throw error;
-  return data || [];
+  return fetchWithCache('fornecedores_contatos', 'cache_fornecedores', x => x, 'fornecedor_nome', true, false);
 }
 
 export async function upsertFornecedorContato(payload) {
@@ -343,10 +395,7 @@ export async function upsertFornecedorContato(payload) {
 // =============================
 
 export async function getTarefasDelegadas() {
-  const client = getClient();
-  const { data, error } = await client.from('tarefas_delegadas').select('*').order('criado_em', { ascending: false });
-  if (error) throw error;
-  return data || [];
+  return fetchWithCache('tarefas_delegadas', 'cache_tarefas', x => x, 'criado_em', false, false);
 }
 
 export async function criarTarefaDelegada(tarefa) {
