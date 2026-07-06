@@ -406,9 +406,8 @@ export function registrosPorClique(chartId, label, datasetLabel, registros) {
       const isMesAtual = mesIdx === now.getMonth();
 
       return registros.filter((r) => {
-        if (r.data_recebimento) return false;
+        if (calcularValorPrevisto(r) == null) return false;
         const pe = r.previsao_entrega;
-        if (!pe) return false;
         const d = new Date(String(pe).slice(0, 10));
         const peMonth = d.getFullYear() * 12 + d.getMonth();
 
