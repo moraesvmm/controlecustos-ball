@@ -4408,7 +4408,6 @@ function renderTabelaCustoGeral() {
     if (budgetMetadata) {
       tabContainer.style.display = 'block';
       
-      const diasMes = 30; // Aproximação padrão, ou calcular a partir da data atual
       const diaAtual = new Date().getDate();
       
       const renderRow = (area, tipo, percStr, metaMes, metaSemana, real, planejDia) => {
@@ -4426,27 +4425,48 @@ function renderTabelaCustoGeral() {
       };
 
       let html = '';
-      // Assumindo split 50/50 entre Serviço e Consumo para as metas
-      let metaMesManut = bManutencao / 2;
-      let metaMesFerram = bFerramentaria / 2;
-      let metaMesFacil = bFacilities / 2;
 
-      html += renderRow('MANUTENÇÃO', 'SERV', '64,4%', metaMesManut, metaMesManut/5, rManutServ, metaMesManut/diasMes);
-      html += renderRow('', 'CONS', '64,4%', metaMesManut, metaMesManut/5, rManutCons, metaMesManut/diasMes);
-      
-      html += renderRow('FERRAMENTARIA', 'SERV', '29,9%', metaMesFerram, metaMesFerram/5, rFerramServ, metaMesFerram/diasMes);
-      html += renderRow('', 'CONS', '29,9%', metaMesFerram, metaMesFerram/5, rFerramCons, metaMesFerram/diasMes);
+      // Percentuais reais de cada área sobre o total (dinâmicos)
+      const pctManut  = bTotal > 0 ? (bManutencao   / bTotal * 100) : 0;
+      const pctFerram = bTotal > 0 ? (bFerramentaria / bTotal * 100) : 0;
+      const pctFacil  = bTotal > 0 ? (bFacilities    / bTotal * 100) : 0;
+      const fmtPct = v => v.toFixed(1).replace('.', ',') + '%';
 
-      html += renderRow('FACILITIES', 'SERV', '5,7%', metaMesFacil, metaMesFacil/5, rFacilServ, metaMesFacil/diasMes);
-      html += renderRow('', 'CONS', '5,7%', metaMesFacil, metaMesFacil/5, rFacilCons, metaMesFacil/diasMes);
+      // META MÊS por tipo: se houver split configurado nas categorias, usa; senão 50/50
+      const cats = budgetMetadata?.categorias || {};
+      const splitManutServ = cats.manut_serv_pct != null ? (cats.manut_serv_pct / 100) : 0.5;
+      const splitFerramServ = cats.ferram_serv_pct != null ? (cats.ferram_serv_pct / 100) : 0.5;
+      const splitFacilServ  = cats.facil_serv_pct  != null ? (cats.facil_serv_pct  / 100) : 0.5;
+
+      const metaManutServ  = bManutencao   * splitManutServ;
+      const metaManutCons  = bManutencao   * (1 - splitManutServ);
+      const metaFerramServ = bFerramentaria * splitFerramServ;
+      const metaFerramCons = bFerramentaria * (1 - splitFerramServ);
+      const metaFacilServ  = bFacilities   * splitFacilServ;
+      const metaFacilCons  = bFacilities   * (1 - splitFacilServ);
+
+      // Dias úteis do mês atual (aproximação: dias corridos - domingos)
+      const hoje = new Date();
+      const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth() + 1, 0).getDate();
+      const diasUteis = Math.round(diasNoMes * 5 / 7); // ~aprox
+      const semanasNoMes = diasNoMes / 7;
+
+      html += renderRow('MANUTENÇÃO',   'SERV', fmtPct(pctManut),  metaManutServ,  metaManutServ  / semanasNoMes, rManutServ,  metaManutServ  / diasNoMes);
+      html += renderRow('',             'CONS', fmtPct(pctManut),  metaManutCons,  metaManutCons  / semanasNoMes, rManutCons,  metaManutCons  / diasNoMes);
+
+      html += renderRow('FERRAMENTARIA','SERV', fmtPct(pctFerram), metaFerramServ, metaFerramServ / semanasNoMes, rFerramServ, metaFerramServ / diasNoMes);
+      html += renderRow('',             'CONS', fmtPct(pctFerram), metaFerramCons, metaFerramCons / semanasNoMes, rFerramCons, metaFerramCons / diasNoMes);
+
+      html += renderRow('FACILITIES',   'SERV', fmtPct(pctFacil),  metaFacilServ,  metaFacilServ  / semanasNoMes, rFacilServ,  metaFacilServ  / diasNoMes);
+      html += renderRow('',             'CONS', fmtPct(pctFacil),  metaFacilCons,  metaFacilCons  / semanasNoMes, rFacilCons,  metaFacilCons  / diasNoMes);
 
       html += `<tr style="background: rgba(255,255,255,0.05); font-weight: bold;">
         <td colspan="3" style="text-align: left; color: #fff;">TOTAL</td>
         <td style="color: #fff;">${fmtMoeda(bTotal)}</td>
-        <td style="color: #fff;">${fmtMoeda(bTotal/5)}</td>
+        <td style="color: #fff;">${fmtMoeda(bTotal / semanasNoMes)}</td>
         <td style="color: #fff;">${fmtMoeda(realTotal)}</td>
-        <td style="color: #fff;">${fmtMoeda((bTotal/diasMes)*diaAtual)}</td>
-        <td style="color: #fff;">${fmtMoeda(bTotal/diasMes)}</td>
+        <td style="color: #fff;">${fmtMoeda((bTotal / diasNoMes) * diaAtual)}</td>
+        <td style="color: #fff;">${fmtMoeda(bTotal / diasNoMes)}</td>
       </tr>`;
 
       tabBody.innerHTML = html;
