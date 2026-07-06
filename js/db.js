@@ -59,8 +59,10 @@ export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id',
   const lastSyncStr = localStorage.getItem(`${cacheKey}_last_sync`);
   let localData = cache ? JSON.parse(cache) : [];
 
-  // Se tem updated_at e já temos cache, faz sync diferencial (Egress quase zero)
-  if (hasUpdatedAt && localData.length > 0 && lastSyncStr) {
+  const syncColumn = typeof hasUpdatedAt === 'string' ? hasUpdatedAt : (hasUpdatedAt ? 'updated_at' : null);
+
+  // Se tem syncColumn e já temos cache, faz sync diferencial (Egress quase zero)
+  if (syncColumn && localData.length > 0 && lastSyncStr) {
     try {
       console.log(`%c[Cache Inteligente - ${tableName}] Sincronização diferencial ativada! Buscando apenas os IDs atuais e os registros alterados desde a última sessão.`, 'color: #00ff00; font-weight: bold; font-size: 14px;');
       // 1. Busca IDs atuais para remover deletados
@@ -72,7 +74,7 @@ export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id',
       // 2. Busca apenas o que foi alterado/criado desde a última sincronização
       const { data: updated, error: errorUpd } = await client.from(tableName)
         .select('*')
-        .gt('updated_at', lastSyncStr)
+        .gt(syncColumn, lastSyncStr)
         .order(orderBy, { ascending });
       if (errorUpd) throw errorUpd;
 
@@ -125,7 +127,7 @@ export async function carregarRegistros() {
   }
 
   // Usa o sistema inteligente de cache com Egress mínimo
-  return fetchWithCache('rc_registros', 'cache_rc_registros', enriquecerRegistro, 'item_id', true, true);
+  return fetchWithCache('rc_registros', 'cache_rc_registros', enriquecerRegistro, 'item_id', true, 'last_modified_at');
 }
 
 export async function salvarRegistro(registro) {
