@@ -87,12 +87,21 @@ export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id',
         }
       }
       
-      localStorage.setItem(cacheKey, JSON.stringify(localData));
-      
-      // Margem de segurança de 10 min para clock-drift (relógios desregulados entre PCs)
-      const safeSync = new Date();
-      safeSync.setMinutes(safeSync.getMinutes() - 10);
-      localStorage.setItem(`${cacheKey}_last_sync`, safeSync.toISOString());
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify(localData));
+        const safeSync = new Date();
+        safeSync.setMinutes(safeSync.getMinutes() - 10);
+        localStorage.setItem(`${cacheKey}_last_sync`, safeSync.toISOString());
+      } catch (quotaErr) {
+        console.warn('Cota do LocalStorage excedida. Limpando chaves antigas...');
+        for (let key in localStorage) {
+          if (key.startsWith('cache_')) localStorage.removeItem(key);
+        }
+        localStorage.setItem(cacheKey, JSON.stringify(localData));
+        const safeSync = new Date();
+        safeSync.setMinutes(safeSync.getMinutes() - 10);
+        localStorage.setItem(`${cacheKey}_last_sync`, safeSync.toISOString());
+      }
       
       localData.sort((a, b) => {
         let valA = a[orderBy], valB = b[orderBy];
@@ -110,10 +119,21 @@ export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id',
   const { data, error } = await client.from(tableName).select('*').order(orderBy, { ascending });
   if (error) throw error;
   
-  localStorage.setItem(cacheKey, JSON.stringify(data || []));
-  const safeSyncFallback = new Date();
-  safeSyncFallback.setMinutes(safeSyncFallback.getMinutes() - 10);
-  localStorage.setItem(`${cacheKey}_last_sync`, safeSyncFallback.toISOString());
+  try {
+    localStorage.setItem(cacheKey, JSON.stringify(data || []));
+    const safeSyncFallback = new Date();
+    safeSyncFallback.setMinutes(safeSyncFallback.getMinutes() - 10);
+    localStorage.setItem(`${cacheKey}_last_sync`, safeSyncFallback.toISOString());
+  } catch (quotaErr) {
+    console.warn('Cota do LocalStorage excedida (Fallback). Limpando chaves antigas...');
+    for (let key in localStorage) {
+      if (key.startsWith('cache_')) localStorage.removeItem(key);
+    }
+    localStorage.setItem(cacheKey, JSON.stringify(data || []));
+    const safeSyncFallback = new Date();
+    safeSyncFallback.setMinutes(safeSyncFallback.getMinutes() - 10);
+    localStorage.setItem(`${cacheKey}_last_sync`, safeSyncFallback.toISOString());
+  }
   return (data || []).map(mapFn);
 }
 
@@ -131,6 +151,10 @@ export async function carregarRegistros() {
     }
     return [...cacheLocal];
   }
+
+  // Limpeza de chaves antigas para liberar cota do localStorage (Evita QuotaExceededError)
+  localStorage.removeItem('cache_rc_registros');
+  localStorage.removeItem('cache_rc_registros_last_sync');
 
   // Usa o sistema inteligente de cache com Egress mínimo
   return fetchWithCache('rc_registros', 'cache_rc_v2', enriquecerRegistro, 'item_id', true, 'last_modified_at');
