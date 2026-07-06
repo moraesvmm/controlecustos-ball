@@ -418,20 +418,10 @@ export function registrosPorClique(chartId, label, datasetLabel, registros) {
       });
     }
     if (datasetLabel === 'Valor Recebido') {
-      const now = new Date();
-      const mesAtualKey = mesesLower[now.getMonth()];
-      
-      const mesDeData = (val) => {
-        if (!val) return null;
-        const d = new Date(String(val).slice(0, 10));
-        if (isNaN(d.getTime())) return null;
-        return mesesLower[d.getMonth()];
-      };
-
       return registros.filter((r) => {
         if (calcularValorRecebido(r) == null) return false;
-        const key = mesDeData(r.data_recebimento) || mesDeData(r.previsao_entrega) || mesAtualKey;
-        return key === mes;
+        const d = new Date(String(r.data_recebimento).slice(0, 10));
+        return mesesLower[d.getMonth()] === mes;
       });
     }
   }
