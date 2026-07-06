@@ -288,29 +288,47 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           };
         });
 
-        if (budgetData) {
-          records.push({
-            it_codigo: 'BUDGET_METADATA',
-            descricao_codigo: JSON.stringify(budgetData),
-            numero_ordem: '0', quantidade: 0, custo_do_mes: 0
-          });
-        }
-
         if (records.length === 0) {
           throw new Error(`Nenhum registro válido encontrado. Verifique o formato da planilha.`);
         }
 
         // =============================
-        // SALVAR FORECAST e BUDGET antigos
+        // SALVAR FORECAST e BUDGET antigos (MERGE: preserva config manual)
         // =============================
         let forecastData = null;
         const { data: fc } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'FORECAST_METADATA').maybeSingle();
         if (fc) forecastData = fc;
 
-        let oldBudgetData = null;
-        if (!budgetData) {
-          const { data: bd } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'BUDGET_METADATA').maybeSingle();
-          if (bd) oldBudgetData = bd;
+        // Sempre lê o BUDGET_METADATA existente para fazer merge
+        let existingBudgetRaw = null;
+        const { data: bd } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'BUDGET_METADATA').maybeSingle();
+        if (bd) {
+          try { existingBudgetRaw = JSON.parse(bd.descricao_codigo); } catch(e) {}
+        }
+
+        if (budgetData) {
+          // Merge: AOP atualiza os campos financeiros, mas preserva a configuração manual
+          const merged = {
+            ...existingBudgetRaw,         // base: preserva total_manual, categorias, responsaveis
+            ...budgetData,                // sobrescreve manutencao, ferramentaria, facilities com AOP
+          };
+          // Se havia um override manual, restaura como manutencao (fonte do KPI)
+          if (existingBudgetRaw?.total_manual != null) {
+            merged.manutencao = existingBudgetRaw.total_manual;
+            merged.total = existingBudgetRaw.total_manual;
+          }
+          records.push({
+            it_codigo: 'BUDGET_METADATA',
+            descricao_codigo: JSON.stringify(merged),
+            numero_ordem: '0', quantidade: 0, custo_do_mes: 0
+          });
+          // Atualiza global para re-render imediato
+          if (window.budgetMetadata !== undefined) window.budgetMetadata = merged;
+        } else if (existingBudgetRaw) {
+          // Sem aba AOP: restaura o BUDGET_METADATA existente intacto
+          const oldClean = { ...bd };
+          delete oldClean.id;
+          records.push(oldClean);
         }
 
         // =============================================
@@ -328,9 +346,8 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           }
           console.log(`[Import] Limpeza total: ${delCount} registros deletados.`);
 
-          // Restaura metadados
+          // Restaura metadados (forecastData e budgetMerged já estão em records)
           if (forecastData) { delete forecastData.id; records.push(forecastData); }
-          if (oldBudgetData) { delete oldBudgetData.id; records.push(oldBudgetData); }
 
           // Apaga o DIFF do mês anterior
           await supabase.from('custo_geral').delete().eq('it_codigo', 'DIFF_METADATA');

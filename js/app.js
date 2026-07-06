@@ -5371,13 +5371,17 @@ function renderBudgetConfigUI() {
   tbody.innerHTML = html;
 
   if (window.budgetMetadata) {
-    const c = window.budgetMetadata.categorias || {};
-    if (document.getElementById('cfgBudgetTotal')) document.getElementById('cfgBudgetTotal').value = window.budgetMetadata.total || 786000;
-    if (document.getElementById('cfgBudgetMO')) document.getElementById('cfgBudgetMO').value = c.mo_terceiros || 160000;
-    if (document.getElementById('cfgBudgetCorretiva')) document.getElementById('cfgBudgetCorretiva').value = c.pecas_corretiva || 180000;
-    if (document.getElementById('cfgBudgetPreventiva')) document.getElementById('cfgBudgetPreventiva').value = c.pecas_preventiva || 150000;
-    if (document.getElementById('cfgBudgetReparo')) document.getElementById('cfgBudgetReparo').value = c.materiais_reparo || 200000;
-    if (document.getElementById('cfgBudgetDebito')) document.getElementById('cfgBudgetDebito').value = c.debito_direto || 96000;
+    const bm = window.budgetMetadata;
+    const c = bm.categorias || {};
+    // "Total Mês" = o campo manutencao (vindo da AOP ou configurado manualmente).
+    // Se houver um override manual salvo (bm.total_manual), ele tem prioridade.
+    const totalParaExibir = bm.total_manual ?? bm.manutencao ?? bm.total ?? 0;
+    if (document.getElementById('cfgBudgetTotal'))    document.getElementById('cfgBudgetTotal').value    = totalParaExibir;
+    if (document.getElementById('cfgBudgetMO'))       document.getElementById('cfgBudgetMO').value       = c.mo_terceiros    || 0;
+    if (document.getElementById('cfgBudgetCorretiva'))document.getElementById('cfgBudgetCorretiva').value= c.pecas_corretiva  || 0;
+    if (document.getElementById('cfgBudgetPreventiva'))document.getElementById('cfgBudgetPreventiva').value= c.pecas_preventiva || 0;
+    if (document.getElementById('cfgBudgetReparo'))   document.getElementById('cfgBudgetReparo').value   = c.materiais_reparo || 0;
+    if (document.getElementById('cfgBudgetDebito'))   document.getElementById('cfgBudgetDebito').value   = c.debito_direto    || 0;
   }
 }
 
@@ -5407,18 +5411,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (chk.checked) userAreas[u].push(a);
       });
 
-      // Atualiza localmente
+      // Sincroniza localmente
       Object.keys(userAreas).forEach(u => {
         if (usersHierarchy[u]) usersHierarchy[u].budget_areas = userAreas[u];
       });
 
       if (!window.budgetMetadata) window.budgetMetadata = {};
-      window.budgetMetadata.categorias = cats;
-      window.budgetMetadata.total = total;
+
+      // total_manual = o que o usuário digitou no campo. Ele passa a ser a fonte de
+      // verdade do KPI "Desempenho Budget" no Custo Geral, sobrepondo a aba AOP.
+      window.budgetMetadata.total_manual = total;
+      window.budgetMetadata.manutencao   = total;  // atualiza o campo usado pelos KPIs
+      window.budgetMetadata.total        = total;  // retrocompatibilidade
+      window.budgetMetadata.categorias   = cats;
       window.budgetMetadata.responsaveis = userAreas;
 
-      // Salvar no Supabase
-      import('./db.js?v=45').then(async (m) => {
+      // Salvar no Supabase (merge: preserva ferramentaria, facilities, data_importacao da AOP)
+      import('./db.js?v=46').then(async (m) => {
         const supabase = m.getClient();
         await supabase.from('custo_geral').delete().eq('it_codigo', 'BUDGET_METADATA');
         await supabase.from('custo_geral').insert([{
@@ -5426,10 +5435,12 @@ document.addEventListener('DOMContentLoaded', () => {
           descricao_codigo: JSON.stringify(window.budgetMetadata),
           numero_ordem: '0', quantidade: 0, custo_do_mes: 0
         }]);
+        // Força re-render dos KPIs do Custo Geral sem precisar recarregar a página
+        if (typeof renderCustoGeral === 'function') renderCustoGeral();
         Swal.fire({
           icon: 'success',
           title: 'Configurações Salvas!',
-          text: 'Os limites de orçamento e as áreas dos colaboradores foram atualizados.',
+          text: 'Budget atualizado e sincronizado com o Custo Geral.',
           background: '#161f33', color: '#f1f5f9', confirmButtonColor: '#d4af37'
         });
       });
