@@ -88,7 +88,11 @@ export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id',
       }
       
       localStorage.setItem(cacheKey, JSON.stringify(localData));
-      localStorage.setItem(`${cacheKey}_last_sync`, new Date().toISOString());
+      
+      // Margem de segurança de 10 min para clock-drift (relógios desregulados entre PCs)
+      const safeSync = new Date();
+      safeSync.setMinutes(safeSync.getMinutes() - 10);
+      localStorage.setItem(`${cacheKey}_last_sync`, safeSync.toISOString());
       
       localData.sort((a, b) => {
         let valA = a[orderBy], valB = b[orderBy];
@@ -107,7 +111,9 @@ export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id',
   if (error) throw error;
   
   localStorage.setItem(cacheKey, JSON.stringify(data || []));
-  localStorage.setItem(`${cacheKey}_last_sync`, new Date().toISOString());
+  const safeSyncFallback = new Date();
+  safeSyncFallback.setMinutes(safeSyncFallback.getMinutes() - 10);
+  localStorage.setItem(`${cacheKey}_last_sync`, safeSyncFallback.toISOString());
   return (data || []).map(mapFn);
 }
 
@@ -127,7 +133,7 @@ export async function carregarRegistros() {
   }
 
   // Usa o sistema inteligente de cache com Egress mínimo
-  return fetchWithCache('rc_registros', 'cache_rc_registros', enriquecerRegistro, 'item_id', true, 'last_modified_at');
+  return fetchWithCache('rc_registros', 'cache_rc_v2', enriquecerRegistro, 'item_id', true, 'last_modified_at');
 }
 
 export async function salvarRegistro(registro) {
