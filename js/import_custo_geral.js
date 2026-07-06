@@ -3,6 +3,109 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
   const fileFinanceiro = document.getElementById('fileImportFinanceiro');
   const btnDatasul = document.getElementById('btnImportarDatasul');
   const fileDatasul = document.getElementById('fileImportDatasul');
+  const btnFluxoDia = document.getElementById('btnFluxoDia');
+
+  // =============================================
+  // FLUXO DO DIA: Botão + Modal
+  // =============================================
+  _initFluxoDiaModal();
+  await _carregarFluxoDia(supabase);
+
+  // =============================================
+  // UTILITÁRIO: Gera uma "assinatura" para uma linha
+  // =============================================
+  function _hashRow(r) {
+    return [
+      r.numero_ordem || '',
+      r.it_codigo || '',
+      r.dt_trans || '',
+      r.esp_docto || '',
+      r.nro_docto || '',
+      String(r.custo_do_mes ?? ''),
+      String(r.material ?? ''),
+      String(r.ggf ?? ''),
+      r.descricao_codigo || '',
+      r.ct_codigo || ''
+    ].join('|');
+  }
+
+  // =============================================
+  // FLUXO DO DIA: Init do Modal
+  // =============================================
+  function _initFluxoDiaModal() {
+    const modal = document.getElementById('modalFluxoDia');
+    const btnFechar = document.getElementById('btnFecharFluxoDia');
+    if (btnFluxoDia) {
+      btnFluxoDia.addEventListener('click', () => {
+        modal.style.display = 'flex';
+      });
+    }
+    if (btnFechar) {
+      btnFechar.addEventListener('click', () => { modal.style.display = 'none'; });
+    }
+    if (modal) {
+      modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+    }
+  }
+
+  // =============================================
+  // FLUXO DO DIA: Lê o DIFF_METADATA e popula o modal
+  // =============================================
+  async function _carregarFluxoDia(sb) {
+    try {
+      const { data } = await sb.from('custo_geral').select('descricao_codigo').eq('it_codigo', 'DIFF_METADATA').maybeSingle();
+      if (!data) return;
+      const diff = JSON.parse(data.descricao_codigo);
+      _renderizarFluxoDia(diff);
+    } catch (e) {
+      console.warn('[FluxoDia] Erro ao carregar diff:', e);
+    }
+  }
+
+  function _renderizarFluxoDia(diff) {
+    if (!diff || (!diff.novos?.length && !diff.removidos?.length)) return;
+
+    const btnFluxo = document.getElementById('btnFluxoDia');
+    if (btnFluxo) btnFluxo.style.display = '';
+
+    const fmt = (v) => (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    const dataImport = diff.data_importacao ? new Date(diff.data_importacao).toLocaleString('pt-BR') : '';
+
+    const subtitle = document.getElementById('lblFluxoDiaSubtitle');
+    if (subtitle) subtitle.textContent = `Importação de ${dataImport} — diferenças vs. dia anterior`;
+
+    document.getElementById('kpiFluxoNovos').textContent = diff.novos?.length ?? 0;
+    document.getElementById('kpiFluxoRemovidos').textContent = diff.removidos?.length ?? 0;
+
+    const impacto = (diff.novos || []).reduce((s, r) => s + (r.custo_do_mes || 0), 0)
+                  - (diff.removidos || []).reduce((s, r) => s + (r.custo_do_mes || 0), 0);
+    const kpiImpacto = document.getElementById('kpiFluxoImpacto');
+    kpiImpacto.textContent = fmt(impacto);
+    kpiImpacto.style.color = impacto >= 0 ? '#ef4444' : '#10b981';
+
+    const tbody = document.getElementById('tbodyFluxoDia');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    const addRows = (lista, tipo, cor, bg) => {
+      lista.forEach(r => {
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
+        tr.style.background = bg;
+        tr.innerHTML = `
+          <td style="padding:0.5rem 0.75rem; color:${cor}; font-weight:600; white-space:nowrap;">${tipo}</td>
+          <td style="padding:0.5rem 0.75rem; font-family:monospace;">${r.numero_ordem || '—'}</td>
+          <td style="padding:0.5rem 0.75rem; color:var(--muted); font-size:0.8rem; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${r.descricao_codigo || r.descricao_emitente || '—'}</td>
+          <td style="padding:0.5rem 0.75rem; color:var(--muted); font-size:0.8rem;">${r.ct_codigo || '—'}</td>
+          <td style="padding:0.5rem 0.75rem; text-align:right; color:${cor}; font-weight:600;">${fmt(r.custo_do_mes)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    };
+
+    addRows(diff.novos || [], '▲ NOVO', '#f59e0b', 'rgba(245,158,11,0.05)');
+    addRows(diff.removidos || [], '▼ REMOVIDO', '#ef4444', 'rgba(239,68,68,0.05)');
+  }
 
 
   // =============================
@@ -12,8 +115,14 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
     btnFinanceiro.addEventListener('click', () => {
       Swal.fire({
         title: 'Importar Planilha do Financeiro',
-        text: 'Isso irá apagar os dados atuais do Custo Geral e substituir pelos novos. Confirma?',
-        icon: 'warning',
+        html: `
+          <p style="color:#94a3b8; margin-bottom:1rem;">Isso irá sincronizar o Custo Geral com a nova planilha, calculando as diferenças (Fluxo do Dia).</p>
+          <label style="display:flex; align-items:center; gap:0.5rem; color:#f1f5f9; font-size:0.9rem; cursor:pointer;">
+            <input type="checkbox" id="swalCheckPrimeiraDoMes" style="width:16px;height:16px;accent-color:#d4af37;" />
+            Primeira importação do mês (limpeza total)
+          </label>
+        `,
+        icon: 'info',
         showCancelButton: true,
         background: '#161f33',
         color: '#f1f5f9',
@@ -21,13 +130,18 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         cancelButtonText: 'Cancelar',
         confirmButtonText: 'Sim, importar'
       }).then((res) => {
-        if (res.isConfirmed) fileFinanceiro.click();
+        if (res.isConfirmed) {
+          const primeiraDoMes = document.getElementById('swalCheckPrimeiraDoMes')?.checked ?? false;
+          fileFinanceiro.dataset.primeiraDoMes = primeiraDoMes ? '1' : '0';
+          fileFinanceiro.click();
+        }
       });
     });
 
     fileFinanceiro.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      const primeiraDoMes = fileFinanceiro.dataset.primeiraDoMes === '1';
       toast('Lendo arquivo do Financeiro...', 'info');
 
       try {
@@ -48,7 +162,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         }
 
         if (headerIndex === -1) {
-          throw new Error("Não foi possível encontrar o cabeçalho correto nas primeiras 20 linhas da planilha. Verifique se as colunas 'it-codigo' ou 'numero-ordem' existem.");
+          throw new Error("Não foi possível encontrar o cabeçalho correto nas primeiras 20 linhas da planilha.");
         }
 
         const headers = rawJson[headerIndex];
@@ -68,7 +182,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         if (json.length === 0) throw new Error("A planilha está vazia ou não contém dados válidos abaixo do cabeçalho.");
 
         // =============================
-        // Lógica: EXTRAIR BUDGETS (AOP)
+        // EXTRAIR BUDGETS (AOP)
         // =============================
         let budgetData = null;
         try {
@@ -76,17 +190,11 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           if (aopSheetName) {
             const aopSheet = workbook.Sheets[aopSheetName];
             const aopJson = window.XLSX.utils.sheet_to_json(aopSheet, { header: 1, defval: null });
-            
-            let bManutencao = 0;
-            let bFerramentaria = 0;
-            let bFacilities = 0;
-            
+            let bManutencao = 0, bFerramentaria = 0, bFacilities = 0;
             for (let i = 0; i < Math.min(100, aopJson.length); i++) {
               const row = aopJson[i];
               if (!row) continue;
-              
               const strContent = row.map(c => String(c || '').toLowerCase().trim()).join(' ');
-              
               if (strContent.includes('m&r') && !strContent.includes('budget m&r')) {
                 const num = row.find(c => typeof c === 'number' && c > 10000);
                 if (num) bManutencao = num;
@@ -100,68 +208,49 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
                 if (num) bFacilities = num;
               }
             }
-            
             if (bManutencao || bFerramentaria || bFacilities) {
-               budgetData = {
-                  manutencao: bManutencao,
-                  ferramentaria: bFerramentaria,
-                  facilities: bFacilities,
-                  total: bManutencao + bFerramentaria + bFacilities,
-                  data_importacao: new Date().toISOString()
-               };
+              budgetData = {
+                manutencao: bManutencao, ferramentaria: bFerramentaria, facilities: bFacilities,
+                total: bManutencao + bFerramentaria + bFacilities,
+                data_importacao: new Date().toISOString()
+              };
             }
           }
         } catch (e) { console.warn("Erro ao ler aba AOP:", e); }
 
-
         toast('Processando dados...', 'info');
         
+        const parseMoney = (v, invert = false) => {
+          if (v == null) return 0;
+          let val = 0;
+          if (typeof v === 'number') { val = v; }
+          else {
+            let str = String(v).split(';')[0].trim();
+            if (str.includes(',')) { str = str.replace(/\./g, '').replace(',', '.'); }
+            val = Number(str) || 0;
+          }
+          return invert ? -val : val;
+        };
+
+        const parseDate = (val) => {
+          if (!val) return null;
+          if (typeof val === 'number') {
+            const d = new Date(Math.round((val - 25569) * 86400 * 1000));
+            d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+            return d.toISOString().split('T')[0];
+          }
+          try {
+            const d = new Date(val);
+            if (isNaN(d.getTime())) return null;
+            return d.toISOString().split('T')[0];
+          } catch (e) { return null; }
+        };
+
         const records = json.map(rawRow => {
-          // Normalize keys to lowercase for case-insensitive matching
           const row = {};
           for (let k in rawRow) {
-            if (rawRow.hasOwnProperty(k)) {
-              row[k.toLowerCase().trim()] = rawRow[k];
-            }
+            if (rawRow.hasOwnProperty(k)) row[k.toLowerCase().trim()] = rawRow[k];
           }
-
-          const parseMoney = (v, invert = false) => {
-            if (v == null) return 0;
-            let val = 0;
-            if (typeof v === 'number') {
-              val = v;
-            } else {
-              let str = String(v).split(';')[0].trim();
-              if (str.includes(',')) {
-                str = str.replace(/\./g, '').replace(',', '.');
-              }
-              val = Number(str) || 0;
-            }
-            // Inverte o sinal se for uma coluna de custo do ERP (que vêm negativo).
-            // Estornos vêm positivos no ERP, então ao inverter, viram negativos (abatimento).
-            return invert ? -val : val;
-          };
-
-          const parseDate = (val) => {
-            if (!val) return null;
-            // Se for número (serial date do Excel, ex: 45293)
-            if (typeof val === 'number') {
-              // 25569 é a diferença de dias entre 1900-01-01 e 1970-01-01
-              const d = new Date(Math.round((val - 25569) * 86400 * 1000));
-              // Corrige o timezone para evitar que caia no dia anterior
-              d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-              return d.toISOString().split('T')[0];
-            }
-            // Se for string no formato ISO ou outro suportado pelo JS
-            try {
-              const d = new Date(val);
-              if (isNaN(d.getTime())) return null;
-              return d.toISOString().split('T')[0];
-            } catch (e) {
-              return null;
-            }
-          };
-
           return {
             cod_estabel: String(row['cod-estabel'] || ''),
             cod_depos: String(row['cod-depos'] || ''),
@@ -197,66 +286,146 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             sc_codigo: String(row['sc-codigo'] || ''),
             descricao_db: String(row['descricao-db'] || ''),
           };
-        }); // manter todas as linhas, inclusive as sem it_codigo e numero_ordem (estornos e reclassificações)
+        });
 
-        // ADICIONA REGISTRO ESPECIAL DE BUDGET SE ENCONTRADO
         if (budgetData) {
           records.push({
             it_codigo: 'BUDGET_METADATA',
             descricao_codigo: JSON.stringify(budgetData),
-            numero_ordem: '0',
-            quantidade: 0,
-            custo_do_mes: 0
+            numero_ordem: '0', quantidade: 0, custo_do_mes: 0
           });
         }
 
         if (records.length === 0) {
-          const colunasLidas = json.length > 0 ? Object.keys(json[0]).join(', ') : 'nenhuma coluna lida';
-          throw new Error(`Nenhum registro válido. Colunas lidas do arquivo: [${colunasLidas}]. Nenhuma bateu com 'it-codigo', 'item', 'numero-ordem' ou 'ordem'. O cabeçalho deve estar na primeira linha.`);
+          throw new Error(`Nenhum registro válido encontrado. Verifique o formato da planilha.`);
         }
 
-        toast(`Salvando ${records.length} registros no banco...`, 'info');
-
-        // Salva o FORECAST_METADATA atual para não perdê-lo na exclusão
+        // =============================
+        // SALVAR FORECAST e BUDGET antigos
+        // =============================
         let forecastData = null;
         const { data: fc } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'FORECAST_METADATA').maybeSingle();
         if (fc) forecastData = fc;
 
-        // Salva o BUDGET_METADATA antigo caso o novo arquivo não possua a aba AOP
         let oldBudgetData = null;
         if (!budgetData) {
           const { data: bd } = await supabase.from('custo_geral').select('*').eq('it_codigo', 'BUDGET_METADATA').maybeSingle();
           if (bd) oldBudgetData = bd;
         }
 
-        let delCount = 0;
-        while (true) {
-          const { data: delData, error: delErr } = await supabase.from('custo_geral').delete().not('id', 'is', null).select('id');
-          if (delErr) throw delErr;
-          if (!delData || delData.length === 0) break;
-          delCount += delData.length;
-        }
-        console.log(`Deletados ${delCount} registros antigos.`);
+        // =============================================
+        // LÓGICA DE DIFF (Sincronização Diferencial)
+        // =============================================
+        if (primeiraDoMes) {
+          // VIRADA DE MÊS: limpa tudo e insere do zero
+          toast('Primeira importação do mês — limpeza total...', 'info');
+          let delCount = 0;
+          while (true) {
+            const { data: delData, error: delErr } = await supabase.from('custo_geral').delete().not('id', 'is', null).select('id');
+            if (delErr) throw delErr;
+            if (!delData || delData.length === 0) break;
+            delCount += delData.length;
+          }
+          console.log(`[Import] Limpeza total: ${delCount} registros deletados.`);
 
-        // Restaura o FORECAST_METADATA se ele existia
-        if (forecastData) {
-          delete forecastData.id; // deleta id antigo para inserir novo
-          records.push(forecastData);
-        }
-        
-        // Restaura o BUDGET_METADATA antigo se necessário
-        if (oldBudgetData) {
-          delete oldBudgetData.id;
-          records.push(oldBudgetData);
+          // Restaura metadados
+          if (forecastData) { delete forecastData.id; records.push(forecastData); }
+          if (oldBudgetData) { delete oldBudgetData.id; records.push(oldBudgetData); }
+
+          // Apaga o DIFF do mês anterior
+          await supabase.from('custo_geral').delete().eq('it_codigo', 'DIFF_METADATA');
+
+          for (let i = 0; i < records.length; i += 100) {
+            const { error: insErr } = await supabase.from('custo_geral').insert(records.slice(i, i + 100));
+            if (insErr) throw insErr;
+          }
+
+          toast(`Planilha importada com sucesso! ${records.length} registros inseridos (virada de mês).`, 'success');
+
+        } else {
+          // IMPORTAÇÃO NORMAL: calcula diff
+          toast('Calculando diferenças...', 'info');
+
+          const SKIP_KEYS = ['BUDGET_METADATA', 'FORECAST_METADATA', 'DIFF_METADATA'];
+
+          // Busca todos os registros atuais do banco (exceto metadados)
+          let existentes = [];
+          const PAGE = 1000;
+          let from = 0;
+          while (true) {
+            const { data: page, error } = await supabase.from('custo_geral')
+              .select('id, numero_ordem, it_codigo, dt_trans, esp_docto, nro_docto, custo_do_mes, material, ggf, descricao_codigo, ct_codigo')
+              .not('it_codigo', 'in', `(${SKIP_KEYS.map(k => `"${k}"`).join(',')})`)
+              .range(from, from + PAGE - 1);
+            if (error) throw error;
+            if (!page || page.length === 0) break;
+            existentes = existentes.concat(page);
+            if (page.length < PAGE) break;
+            from += PAGE;
+          }
+          console.log(`[Diff] ${existentes.length} registros existentes carregados do banco.`);
+
+          // Gera mapas de hash
+          const novasLinhas = records.filter(r => !SKIP_KEYS.includes(r.it_codigo));
+          const mapaExistente = new Map(existentes.map(r => [_hashRow(r), r.id]));
+          const mapaNovas    = new Set(novasLinhas.map(r => _hashRow(r)));
+
+          // Linhas que estão no Excel mas não no banco = NOVOS
+          const paraInserir = novasLinhas.filter(r => !mapaExistente.has(_hashRow(r)));
+
+          // IDs que estão no banco mas não no Excel = REMOVIDOS
+          const idsParaDeletar = existentes
+            .filter(r => !mapaNovas.has(_hashRow(r)))
+            .map(r => r.id);
+
+          console.log(`[Diff] Novos: ${paraInserir.length} | Removidos: ${idsParaDeletar.length}`);
+
+          // Registros removidos (para salvar no diff para exibição)
+          const removidos = existentes.filter(r => !mapaNovas.has(_hashRow(r)));
+
+          // DELETE em batch dos removidos
+          for (let i = 0; i < idsParaDeletar.length; i += 100) {
+            const batch = idsParaDeletar.slice(i, i + 100);
+            const { error: delErr } = await supabase.from('custo_geral').delete().in('id', batch);
+            if (delErr) throw delErr;
+          }
+
+          // INSERT dos novos + metadados
+          const toInsert = [...paraInserir];
+          if (forecastData) { delete forecastData.id; toInsert.push(forecastData); }
+          if (oldBudgetData) { delete oldBudgetData.id; toInsert.push(oldBudgetData); }
+          if (budgetData) toInsert.push({ it_codigo: 'BUDGET_METADATA', descricao_codigo: JSON.stringify(budgetData), numero_ordem: '0', quantidade: 0, custo_do_mes: 0 });
+
+          for (let i = 0; i < toInsert.length; i += 100) {
+            const { error: insErr } = await supabase.from('custo_geral').insert(toInsert.slice(i, i + 100));
+            if (insErr) throw insErr;
+          }
+
+          // Salvar DIFF_METADATA no banco
+          const diffPayload = {
+            novos: paraInserir.slice(0, 500),   // limita a 500 para não estourar o JSON
+            removidos: removidos.slice(0, 500),
+            data_importacao: new Date().toISOString(),
+            totais: {
+              novos: paraInserir.length,
+              removidos: idsParaDeletar.length,
+              impacto: paraInserir.reduce((s,r) => s + (r.custo_do_mes||0), 0) - removidos.reduce((s,r) => s + (r.custo_do_mes||0), 0)
+            }
+          };
+
+          await supabase.from('custo_geral').delete().eq('it_codigo', 'DIFF_METADATA');
+          await supabase.from('custo_geral').insert({
+            it_codigo: 'DIFF_METADATA',
+            descricao_codigo: JSON.stringify(diffPayload),
+            numero_ordem: '0', quantidade: 0, custo_do_mes: 0
+          });
+
+          // Renderiza o botão imediatamente
+          _renderizarFluxoDia(diffPayload);
+
+          toast(`Sincronização concluída! +${paraInserir.length} novos / -${idsParaDeletar.length} removidos.`, 'success');
         }
 
-        for (let i = 0; i < records.length; i += 100) {
-          const batch = records.slice(i, i + 100);
-          const { error: insErr } = await supabase.from('custo_geral').insert(batch);
-          if (insErr) throw insErr;
-        }
-
-        toast('Planilha do Financeiro importada com sucesso!', 'success');
         fileFinanceiro.value = '';
         if (atualizarDadosGlobais) atualizarDadosGlobais();
 
@@ -269,13 +438,19 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
   }
 
   // =============================
-  // IMPORTADOR DATASUL
+  // IMPORTADOR DATASUL (com Diff)
   // =============================
   if (btnDatasul && fileDatasul) {
     btnDatasul.addEventListener('click', () => {
       Swal.fire({
         title: 'Importar Planilha do Datasul',
-        text: 'Isso irá atualizar a tabela de ordens do Datasul (Ordem → Requisitante). Confirma?',
+        html: `
+          <p style="color:#94a3b8; margin-bottom:1rem;">Atualiza a tabela de ordens do Datasul (Ordem → Requisitante), inserindo apenas as novas ordens e removendo as descontinuadas.</p>
+          <label style="display:flex; align-items:center; gap:0.5rem; color:#f1f5f9; font-size:0.9rem; cursor:pointer;">
+            <input type="checkbox" id="swalCheckDatasulPrimeiroMes" style="width:16px;height:16px;accent-color:#d4af37;" />
+            Primeira importação do mês (limpeza total)
+          </label>
+        `,
         icon: 'info',
         showCancelButton: true,
         background: '#161f33',
@@ -284,13 +459,18 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
         cancelButtonText: 'Cancelar',
         confirmButtonText: 'Sim, importar'
       }).then((res) => {
-        if (res.isConfirmed) fileDatasul.click();
+        if (res.isConfirmed) {
+          const primeiro = document.getElementById('swalCheckDatasulPrimeiroMes')?.checked ?? false;
+          fileDatasul.dataset.primeiraDoMes = primeiro ? '1' : '0';
+          fileDatasul.click();
+        }
       });
     });
 
     fileDatasul.addEventListener('change', async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      const primeiraDoMes = fileDatasul.dataset.primeiraDoMes === '1';
       toast('Lendo arquivo do Datasul...', 'info');
 
       try {
@@ -301,7 +481,6 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
 
         if (!rawJson || rawJson.length < 2) throw new Error("A planilha do Datasul está vazia.");
 
-        // Buscar a linha do header dinamicamente
         let headerIndex = -1;
         for (let i = 0; i < Math.min(15, rawJson.length); i++) {
           const rowStr = rawJson[i].map(c => String(c || '').toLowerCase().trim()).join('|');
@@ -310,55 +489,60 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             break;
           }
         }
-
-        if (headerIndex === -1) {
-          // Fallback: tentar a row 2 (index 2) como no formato padrão do gotoexcel
-          console.warn('[Datasul Import] Header não encontrado automaticamente, tentando row 2...');
-          headerIndex = 2;
-        }
+        if (headerIndex === -1) headerIndex = 2;
 
         const headers = rawJson[headerIndex].map(h => String(h || '').trim().toLowerCase());
-        console.log('[Datasul Import] Headers detectados:', headers);
-
-        // Encontrar índices das colunas relevantes
         const idxOrdem = headers.findIndex(h => h === 'ordem');
         const idxRequisitante = headers.findIndex(h => h === 'requisitante');
 
         if (idxOrdem === -1 || idxRequisitante === -1) {
-          throw new Error(`Colunas obrigatórias não encontradas. Headers lidos: [${headers.join(', ')}]. Esperado: 'Ordem' e 'Requisitante'.`);
+          throw new Error(`Colunas obrigatórias não encontradas. Headers: [${headers.join(', ')}]`);
         }
 
-        const records = [];
+        const novasOrdens = [];
         for (let i = headerIndex + 1; i < rawJson.length; i++) {
           const row = rawJson[i];
           if (!row || !row[idxOrdem]) continue;
-          
-          // Normalizar numero_ordem: remover pontos e espaços (5914.44 → 591444)
-          let ordemRaw = String(row[idxOrdem]).trim();
-          let ordemNorm = ordemRaw.replace(/\./g, '').replace(/\s/g, '');
+          let ordemNorm = String(row[idxOrdem]).trim().replace(/\./g, '').replace(/\s/g, '');
           const requisitante = row[idxRequisitante] ? String(row[idxRequisitante]).trim().toLowerCase() : null;
-          
-          if (ordemNorm && requisitante) {
-            records.push({ numero_ordem: ordemNorm, solicitante: requisitante });
+          if (ordemNorm && requisitante) novasOrdens.push({ numero_ordem: ordemNorm, solicitante: requisitante });
+        }
+
+        if (novasOrdens.length === 0) throw new Error('Nenhum registro válido encontrado na planilha do Datasul.');
+
+        toast(`${novasOrdens.length} ordens encontradas. Sincronizando...`, 'info');
+
+        if (primeiraDoMes) {
+          // Limpa tudo e reinsere
+          const { error: delErr } = await supabase.from('datasul_ordens').delete().not('id', 'is', null);
+          if (delErr) throw delErr;
+          for (let i = 0; i < novasOrdens.length; i += 100) {
+            const { error: insErr } = await supabase.from('datasul_ordens').upsert(novasOrdens.slice(i, i + 100), { onConflict: 'numero_ordem' });
+            if (insErr) throw insErr;
           }
+          toast(`Datasul sincronizado! ${novasOrdens.length} ordens importadas (virada de mês).`, 'success');
+
+        } else {
+          // DIFF: busca existentes e calcula diferenças
+          const { data: existentes } = await supabase.from('datasul_ordens').select('numero_ordem, solicitante');
+          const mapaExistente = new Map((existentes || []).map(r => [r.numero_ordem, r.solicitante]));
+          const mapaNovas = new Map(novasOrdens.map(r => [r.numero_ordem, r.solicitante]));
+
+          const paraUpsert = novasOrdens.filter(r => !mapaExistente.has(r.numero_ordem) || mapaExistente.get(r.numero_ordem) !== r.solicitante);
+          const ordensRemovidas = (existentes || []).filter(r => !mapaNovas.has(r.numero_ordem)).map(r => r.numero_ordem);
+
+          for (let i = 0; i < ordensRemovidas.length; i += 100) {
+            const { error } = await supabase.from('datasul_ordens').delete().in('numero_ordem', ordensRemovidas.slice(i, i + 100));
+            if (error) throw error;
+          }
+          for (let i = 0; i < paraUpsert.length; i += 100) {
+            const { error } = await supabase.from('datasul_ordens').upsert(paraUpsert.slice(i, i + 100), { onConflict: 'numero_ordem' });
+            if (error) throw error;
+          }
+
+          toast(`Datasul sincronizado! +${paraUpsert.length} atualizadas / -${ordensRemovidas.length} removidas.`, 'success');
         }
 
-        if (records.length === 0) throw new Error('Nenhum registro válido encontrado na planilha do Datasul.');
-
-        toast(`Encontrados ${records.length} registros. Atualizando base...`, 'info');
-
-        // Limpar tabela antes de inserir
-        const { error: delErr } = await supabase.from('datasul_ordens').delete().not('id', 'is', null);
-        if (delErr) throw delErr;
-
-        // Inserir em batches (upsert para segurança)
-        for (let i = 0; i < records.length; i += 100) {
-          const batch = records.slice(i, i + 100);
-          const { error: insErr } = await supabase.from('datasul_ordens').upsert(batch, { onConflict: 'numero_ordem' });
-          if (insErr) throw insErr;
-        }
-
-        toast(`Datasul sincronizado com sucesso! ${records.length} ordens importadas.`, 'success');
         fileDatasul.value = '';
         if (atualizarDadosGlobais) atualizarDadosGlobais();
 

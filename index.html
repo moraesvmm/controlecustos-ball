@@ -313,11 +313,55 @@
           <input type="file" id="fileImportDatasul" accept=".xlsx, .xls" style="display: none" />
           <button type="button" class="btn btn-outline" id="btnImportarFinanceiro">Importar Financeiro</button>
           <button type="button" class="btn btn-outline" id="btnImportarDatasul">Importar Datasul</button>
+          <button type="button" class="btn btn-outline" id="btnFluxoDia" title="Ver o que entrou hoje vs ontem" style="display:none; border-color: #f59e0b; color: #f59e0b;">🔥 Fluxo do Dia</button>
           <button type="button" class="btn btn-primary" id="btnNovoCustoGeral">✨ Novo Registro</button>
           <button type="button" class="btn btn-primary" id="btnExportCustoGeral">Exportar Excel</button>
         </div>
       </header>
-      
+
+      <!-- Modal: Fluxo do Dia (Diferenças da Importação) -->
+      <div id="modalFluxoDia" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#161f33; border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:2rem; width:90%; max-width:900px; max-height:85vh; display:flex; flex-direction:column; gap:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <h2 style="color:#f59e0b; margin:0; font-size:1.4rem;">🔥 Fluxo do Dia</h2>
+              <p id="lblFluxoDiaSubtitle" style="color:var(--muted); margin:0.25rem 0 0; font-size:0.85rem;">Diferenças detectadas na última importação</p>
+            </div>
+            <button id="btnFecharFluxoDia" style="background:transparent; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer;">✕</button>
+          </div>
+          <!-- KPIs do Fluxo -->
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem;">
+            <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:1rem; text-align:center;">
+              <div style="color:var(--muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">Itens Novos</div>
+              <div id="kpiFluxoNovos" style="color:#f59e0b; font-size:1.8rem; font-weight:700; margin-top:0.25rem;">0</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:1rem; text-align:center;">
+              <div style="color:var(--muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">Itens Removidos</div>
+              <div id="kpiFluxoRemovidos" style="color:#ef4444; font-size:1.8rem; font-weight:700; margin-top:0.25rem;">0</div>
+            </div>
+            <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:1rem; text-align:center;">
+              <div style="color:var(--muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">Impacto Financeiro</div>
+              <div id="kpiFluxoImpacto" style="color:#10b981; font-size:1.4rem; font-weight:700; margin-top:0.25rem;">R$ 0,00</div>
+            </div>
+          </div>
+          <!-- Tabela de Novidades -->
+          <div style="overflow-y:auto; flex:1;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:var(--muted); text-align:left;">
+                  <th style="padding:0.5rem 0.75rem;">Tipo</th>
+                  <th style="padding:0.5rem 0.75rem;">Ordem</th>
+                  <th style="padding:0.5rem 0.75rem;">Descrição</th>
+                  <th style="padding:0.5rem 0.75rem;">Conta</th>
+                  <th style="padding:0.5rem 0.75rem; text-align:right;">Custo do Mês</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyFluxoDia" style="color:#fff;"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Dashboard Widgets -->
       <section id="kpisCustoGeral" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0;">
         
