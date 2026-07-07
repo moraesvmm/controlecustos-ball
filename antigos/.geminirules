@@ -1,0 +1,13 @@
+# Regras Globais da IA (Global AI Rules)
+
+Estas regras DEVEM ser seguidas rigorosamente por qualquer agente de IA operando neste repositório.
+
+## 1. Edição de Arquivos (File Editing)
+CRITICAL RULE: Never use terminal scripts (like Python or PowerShell) to edit files. 
+You must ONLY use native tools (`replace_file_content` or `multi_replace_file_content`) to edit files directly.
+Do not collect code blocks to edit via external scripts or terminal commands like get-content. 
+Always read files directly and edit them directly.
+
+## 2. Layout e CSS
+- Quando alterar layouts CSS, preserve as posições dos KPIs no Dashboard.
+- Alterações de tabelas (`view-crud`) devem usar `flex` para preenchimento de tela.

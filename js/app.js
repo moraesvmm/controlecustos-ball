@@ -13,14 +13,15 @@ import {
   registrosDoMesmoItem,
   normalizarNatureza,
   agregarFornecedores,
-} from './logic.js?v=3';
-import { initCalendario, updateCalendario } from './calendario.js?v=2';
+  calcularDiasFora
+} from './logic.js?v=999';
+import { initCalendario, updateCalendario } from './calendario.js?v=999';
 import { 
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=46';
-import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js?v=6';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=999';
+import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js?v=999';
 import {
   COLUNAS_TABELA,
   valorCelula,
@@ -28,20 +29,20 @@ import {
   toast,
   confirmar,
   fmtMoeda,
-} from './ui.js?v=7';
-import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=9';
-import { initExcelImport } from './import_excel.js?v=8';
+} from './ui.js?v=999';
+import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=999';
+import { initExcelImport } from './import_excel.js?v=999';
 
-import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=3';
+import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=999';
 
-import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=12';
-import { initExcelImportCustoGeral } from './import_custo_geral.js?v=5';
-import { COLUNAS_CUSTO_GERAL } from './ui.js?v=7';
-import { initPlanoMestre } from './plano_mestre.js?v=1';
-import { initImportPlanoMestre } from './import_plano_mestre.js?v=1';
+import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=999';
+import { initExcelImportCustoGeral } from './import_custo_geral.js?v=999';
+import { COLUNAS_CUSTO_GERAL } from './ui.js?v=999';
+import { initPlanoMestre } from './plano_mestre.js?v=999';
+import { initImportPlanoMestre } from './import_plano_mestre.js?v=999';
 import { renderPrevisoes } from './previsoes.js';
-import { initAlertas, toggleAlertasPanel } from './alertas.js?v=2';
-import { initCopiloto } from './copiloto.js?v=2';
+import { initAlertas, toggleAlertasPanel } from './alertas.js?v=999';
+import { initCopiloto } from './copiloto.js?v=999';
 
 let registros = [];
 let registrosCustoGeral = [];
@@ -3082,6 +3083,9 @@ onAuthStateChange((user) => {
         initCopiloto();
         // Sininho de alertas
         document.getElementById('btnAlertaBell')?.addEventListener('click', toggleAlertasPanel);
+        
+        // --- Notificações de Prazos por Usuário ---
+        checkPrazosAlerts();
       });
     }
   } else {
@@ -5447,7 +5451,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.budgetMetadata.responsaveis = userAreas;
 
       // Salvar no Supabase (merge: preserva ferramentaria, facilities, data_importacao da AOP)
-      import('./db.js?v=46').then(async (m) => {
+      import('./db.js?v=999').then(async (m) => {
         const supabase = m.getClient();
         await supabase.from('custo_geral').delete().eq('it_codigo', 'BUDGET_METADATA');
         await supabase.from('custo_geral').insert([{
@@ -5466,4 +5470,117 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   }
-});
+});// ===================================================
+// SISTEMA DE NOTIFICAÇÕES DE PRAZOS POR USUÁRIO
+// ===================================================
+async function checkPrazosAlerts() {
+  if (!window.currentUser || !window.currentUser.email) return;
+
+  try {
+    // 1. Fetch user's acknowledged notifications
+    const resp = await fetch(`/api/prazo_ciente?email=${encodeURIComponent(window.currentUser.email)}`);
+    const cientes = await resp.json();
+
+    // 2. Filter unread status changes
+    const deployDate = new Date('2026-07-07T00:00:00Z');
+    const unread = [];
+
+    registros.forEach(r => {
+      // Only process records for CONSERTO and COMPRA
+      if (r.natureza !== 'CONSERTO' && r.natureza !== 'COMPRA') return;
+      if (r.data_recebimento) return; // Ignore finished items
+
+      // Check modification date so we don't spam for all 232 old records
+      const recordDate = new Date(r.last_modified_at || r.created_at || '1970-01-01');
+      if (recordDate < deployDate) return;
+
+      const diasFora = r.dias_fora ?? calcularDiasFora(r);
+      if (diasFora == null || diasFora < 0) return;
+
+      let faixa = null;
+      if (diasFora <= 35) faixa = 'Em dias';
+      else if (diasFora <= 75) faixa = 'Pendente de retorno';
+      else faixa = 'Atrasado para retorno';
+
+      if (!faixa) return;
+
+      // Check if user already acknowledged this exact status
+      const jaViu = cientes.some(c => String(c.registro_id) === String(r.id) && c.faixa_prazo === faixa);
+      if (!jaViu) {
+        unread.push({
+          registro_id: r.id,
+          faixa_prazo: faixa,
+          item: r.item,
+          rc: r.rc,
+          fornecedor: r.fornecedor,
+          diasFora: diasFora
+        });
+      }
+    });
+
+    if (unread.length === 0) return;
+
+    // 3. Show modal
+    const listaEl = document.getElementById('listaAlertasDia');
+    if (!listaEl) return;
+
+    listaEl.innerHTML = unread.map(u => {
+      const badgeColor = u.faixa_prazo === 'Em dias' ? '#10b981' : (u.faixa_prazo === 'Pendente de retorno' ? '#f59e0b' : '#ef4444');
+      return `
+        <li style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.25rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <strong style="color: var(--primary);">${u.rc || 'Sem RC'}</strong>
+            <span style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: ${badgeColor}; color: #fff;">
+              ${u.faixa_prazo} (${u.diasFora}d)
+            </span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-light);">${u.item || 'Sem descrição'}</div>
+          <div style="font-size: 0.75rem; color: #94a3b8;">${u.fornecedor || '-'}</div>
+        </li>
+      `;
+    }).join('');
+
+    const modal = document.getElementById('modalAlertasDia');
+    if (modal) modal.classList.add('open');
+
+    // 4. Handle "Ciente" e "Fechar"
+    const btnCiente = document.getElementById('btnOkAlertasDia');
+    const btnFechar = document.getElementById('btnFecharAlertasDia');
+    
+    if (btnFechar) {
+      btnFechar.onclick = () => modal.classList.remove('open');
+    }
+
+    if (btnCiente) {
+      // Remove any old listeners by cloning
+      const newBtn = btnCiente.cloneNode(true);
+      btnCiente.parentNode.replaceChild(newBtn, btnCiente);
+      
+      newBtn.addEventListener('click', async () => {
+        newBtn.textContent = 'Salvando...';
+        newBtn.disabled = true;
+        
+        try {
+          await fetch('/api/prazo_ciente', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              email: window.currentUser.email,
+              notificacoes: unread
+            })
+          });
+          modal.classList.remove('open');
+        } catch (err) {
+          console.error(err);
+          alert('Erro ao confirmar leitura.');
+        } finally {
+          newBtn.textContent = 'Ciente';
+          newBtn.disabled = false;
+        }
+      });
+    }
+
+  } catch (err) {
+    console.error("Erro ao buscar alertas de prazo:", err);
+  }
+}

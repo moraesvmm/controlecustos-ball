@@ -243,42 +243,55 @@ export async function duplicarRegistro(id) {
 
 /* AUTENTICAÇÃO */
 export async function signUp(email, password, username) {
-  const client = getClient();
-  if (!client) throw new Error('Supabase no carregado');
-  const { data, error } = await client.auth.signUp({ email, password, options: { data: { username } } });
-  if (error) throw error;
-  return data;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ email, password, data: { username } })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || "Erro ao criar conta");
+  }
+  return await res.json();
 }
 
 export async function signIn(email, password) {
-  const client = getClient();
-  if (!client) throw new Error('Supabase no carregado');
-  const { data, error } = await client.auth.signInWithPassword({ email, password });
-  if (error) throw error;
+  const res = await fetch(`${SUPABASE_URL}/auth/v1/token`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ email, password })
+  });
+  if (!res.ok) throw new Error("Credenciais inválidas");
+  const data = await res.json();
+  localStorage.setItem("local_user", JSON.stringify(data.user));
+  // Dispara evento para onAuthStateChange reagir na mesma aba
+  window.dispatchEvent(new CustomEvent('localAuthChange', { detail: data.user }));
   return data;
 }
 
 export async function signOut() {
-  const client = getClient();
-  if (!client) throw new Error('Supabase no carregado');
-  const { error } = await client.auth.signOut();
-  if (error) throw error;
+  localStorage.removeItem("local_user");
+  await fetch(`${SUPABASE_URL}/auth/v1/logout`, { method: "POST" }).catch(() => {});
+  // Dispara evento para onAuthStateChange reagir na mesma aba
+  window.dispatchEvent(new CustomEvent('localAuthChange', { detail: null }));
 }
 
 export async function getCurrentUser() {
-  const client = getClient();
-  if (!client) return null;
-  const { data: { user } } = await client.auth.getUser();
-  return user;
+  const u = localStorage.getItem("local_user");
+  return u ? JSON.parse(u) : null;
 }
 
 export async function onAuthStateChange(callback) {
-  const client = getClient();
-  if (!client) return null;
-  const { data: { session } } = await client.auth.getSession();
-  callback(session ? session.user : null);
-  client.auth.onAuthStateChange((event, session) => {
-    callback(session ? session.user : null);
+  const u = localStorage.getItem("local_user");
+  callback(u ? JSON.parse(u) : null);
+  // Ouve logins/logouts na mesma aba
+  window.addEventListener('localAuthChange', (e) => {
+    callback(e.detail || null);
+  });
+  // Ouve mudanças de outras abas
+  window.addEventListener("storage", (e) => {
+    if (e.key === "local_user") {
+      const curr = e.newValue ? JSON.parse(e.newValue) : null;
+      callback(curr);
+    }
   });
 }
 

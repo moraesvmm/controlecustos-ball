@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Controle de Custos Ball</title>
+  <link rel="icon" href="img/BALL.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <link rel="stylesheet" href="css/styles.css?v=58">
+  <link rel="stylesheet" href="css/components.css?v=58">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="js/env.runtime.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-dark@5/dark.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+</head>
+<body>
+  <div class="app-bg"></div>
+
+  <!-- TELA DE LOGIN -->
+  <div id="login-container" style="display: none; height: 100vh; align-items: center; justify-content: center; position: relative; z-index: 10;">
+    <div class="login-wrapper">
+      <img src="img/BALL.png" alt="Logo Ball" class="login-logo" style="height: 64px; border-radius: 0;" />
+      <h1 class="login-brand-text" style="font-family: 'Outfit', sans-serif; font-weight: 300; font-size: 2.2rem; letter-spacing: 0.1em; text-transform: uppercase; color: #f8fafc; opacity: 0.9; margin-bottom: 0.5rem;">Controle de Custos</h1>
+      <h2 class="login-title">Acesso ao Sistema</h2>
+      <p class="login-subtitle">Insira suas credenciais corporativas para continuar.</p>
+      
+      <form id="formLogin" style="flex-direction: column;">
+        <div class="login-form-group">
+          <label>E-mail</label>
+           <input type="email" id="loginEmail" required autocomplete="email" placeholder="seu.nome@ball.com" />
+        </div>
+        <div class="login-form-group">
+          <label>Senha</label>
+           <input type="password" id="loginSenha" required autocomplete="current-password" placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn btn-primary login-btn">Entrar na Conta</button>
+      </form>
+      
+      <div class="login-footer">
+        <p>Ainda não possui acesso?</p>
+        <form id="formCadastro" style="display: none; margin-bottom: 1.5rem; flex-direction: column;">
+          <div class="login-form-group">
+            <label>Nome de Usuário</label>
+            <input type="text" id="cadNome" required placeholder="Ex: Joao Silva" />
+          </div>
+          <div class="login-form-group">
+            <label>E-mail Corporativo</label>
+            <input type="email" id="cadEmail" required placeholder="nome@ball.com" />
+          </div>
+          <div class="login-form-group">
+            <label>Criar Senha</label>
+            <input type="password" id="cadSenha" required minlength="6" placeholder="Mínimo 6 caracteres" />
+          </div>
+          <button type="submit" class="btn btn-outline login-btn">Registrar Acesso</button>
+        </form>
+        <button type="button" class="btn btn-ghost" id="btnToggleCadastro" style="width: 100%; font-size: 0.85rem;">Criar nova conta agora</button>
+      </div>
+      <p style="text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 2rem; font-style: italic;">Desenvolvido pelo Time de Manutenção da Ball Itupeva/SP</p>
+    </div>
+  </div>
+
+  <!-- TELA PRINCIPAL -->
+  <div id="app-container" style="display: none; height: 100vh; width: 100vw; display: flex; overflow: hidden; position: relative; z-index: 10;">
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar" style="width: 260px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column;">
+      <div class="sidebar-header" style="padding: 1.5rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border);">
+        <img src="img/BALL.png" alt="Logo Ball" style="height: 36px;" />
+        <div>
+          <h1 style="font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 300; margin: 0; letter-spacing: 0.1em; line-height: 1.2; color: #cbd5e1; text-transform: uppercase;">CONTROLE DE<br/>CUSTOS</h1>
+          <span style="font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 300;">Sistema Central</span>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav" style="flex: 1; overflow-y: auto; padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 1.5rem;">
+        <div>
+          <button type="button" data-tab="dashboard" class="nav-item active" style="width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--muted); font-size: 0.95rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.2s;">
+            ⊞ Dashboard
+          </button>
+        </div>
+        
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo RC</div>
+          <button type="button" data-tab="rc" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Controle Global</button>
+          <button type="button" data-tab="consertos" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Consertos</button>
+          <button type="button" data-tab="compras" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Compras</button>
+          <button type="button" data-tab="fabricacao" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Fabricação</button>
+        </div>
+
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Fornecedores & Prazos</div>
+          <button type="button" data-tab="fornecedores" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">SLA Fornecedores</button>
+          <button type="button" data-tab="calendario" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Calendário</button>
+        </div>
+      </nav>
+      
+      <div style="padding: 1.5rem; border-top: 1px solid var(--border);">
+        <div id="appStatus" class="app-status" style="font-size: 0.8rem; margin-bottom: 1rem;">Carregando…</div>
+        <button type="button" class="btn btn-ghost" id="btnSair" style="width: 100%; font-size: 0.85rem; padding: 0.6rem; border-color: rgba(255,255,255,0.1);">Sair do Sistema</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg);">
+      
+      <header class="topbar" style="padding: 1.25rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface);">
+        <div>
+          <h2 id="topbarTitle" style="font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1.25rem; color: var(--text); margin: 0;">Visão Geral</h2>
+        </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <input type="file" id="fileImportExcel" accept=".xlsx, .xls" style="display: none;" />
+          <button type="button" class="btn btn-outline" id="btnImportarExcel" style="font-size: 0.85rem;">Importar Base de Dados</button>
+        </div>
+      </header>
+
+      <main class="main-layout" style="flex: 1; overflow-y: auto;">
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <div class="label">Registros</div>
+            <div class="value" id="kpiTotal">—</div>
+          </div>
+          <div class="kpi-card kpi-gold tooltip-container" id="cardValorTotal" style="cursor: pointer;">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>VALOR TOTAL</span>
+              <span style="font-size: 0.8rem; opacity: 0.6; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 50%;">?</span>
+            </div>
+            <div class="value" id="kpiValor">-</div>
+            <div class="tooltip-card" style="width: 250px;">
+              <h4 style="margin-bottom:0.5rem;color:var(--text-primary);font-size:0.95rem;">Valor Total</h4>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Soma do valor financeiro de todas as RCs filtradas no momento (exceto Canceladas).</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">Previsto (mês+)</div>
+            <div class="value" id="kpiPrevisto">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">Recebido</div>
+            <div class="value" id="kpiRecebido">—</div>
+          </div>
+          <div class="kpi-card kpi-alert kpi-clickable" id="kpiCardAtrasados" role="button" tabindex="0" title="Clique para ver itens atrasados">
+            <div class="label">Atrasados</div>
+            <div class="value" id="kpiAtrasados">—</div>
+          </div>
+          <div class="kpi-card kpi-wide">
+            <div class="label">Por status (clique para filtrar)</div>
+            <div class="kpi-chips" id="kpiStatusChips"></div>
+          </div>
+        </section>
+
+        <section class="filters panel">
+          <label class="search-field">
+            <span>Busca</span>
+            <input type="search" id="filtroBusca" placeholder="Item, RC, PO, solicitante…" />
+          </label>
+          <label><span>Natureza</span><select id="filtroNatureza"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Status</span><select id="filtroStatus"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Criticidade</span><select id="filtroCriticidade"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Linha</span><select id="filtroLinha"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Máquina</span><select id="filtroMaquina"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Fornecedor</span><select id="filtroFornecedor"><option value="TODOS">TODOS</option></select></label>
+          <button type="button" class="btn btn-ghost" id="btnLimparFiltros">Limpar filtros</button>
+        </section>
+
+    <div id="view-dashboard" class="view active">
+      <div id="secaoDashboard">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <div>
+            <p class="section-hint">Clique em qualquer barra do gráfico para abrir o detalhamento dos gastos.</p>
+          </div>
+          <div class="tooltip-container">
+            <button type="button" class="btn btn-primary" id="btnExportDashboardPdf">Gerar Relatório Executivo (PDF)</button>
+            <div class="tooltip-card">
+              <strong style="color: var(--text); font-size: 0.95rem; display: block; margin-bottom: 0.5rem; text-align: left;">Conteúdo do Relatório:</strong>
+              <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--muted); text-align: left; line-height: 1.5;">
+                <li>Cabeçalho formatado com Data e Hora de geração.</li>
+                <li>Resumo Financeiro Global e Métricas Executivas.</li>
+                <li>Layout fotográfico estruturado dos Gráficos.</li>
+                <li>Tabela dinâmica listando os piores gargalos críticos atuais.</li>
+                <li><strong>Análise de Impacto:</strong> Exibe a natureza, o custo unitário e calcula o capital total retido nos atrasos.</li>
+              </ul>
+            </div>
+          </div>
+        </header>
+        <div class="charts-grid">
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div></div>
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartMes"></canvas></div></div>
+          <div class="chart-box chart-wide"><div class="chart-canvas-wrap chart-tall"><canvas id="chartMaquina"></canvas></div></div>
+        </div>
+        <h3 style="margin: 1.5rem 0 1rem; color: #fff;">Status de Retorno por Natureza (dias em aberto)</h3>
+        <p class="section-hint">Clique nas fatias para detalhar itens em aberto por tempo de saída.</p>
+        <div class="charts-grid charts-grid-prazos">
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartConsertoDias"></canvas></div></div>
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartComprasDias"></canvas></div></div>
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartFabricacaoDias"></canvas></div></div>
+        </div>
+      </div>
+      <aside id="secaoAlertas" class="alertas-panel panel">
+        <h3>⚠ Itens atrasados</h3>
+        <div id="alertasLista"></div>
+      </aside>
+    </div>
+
+    <div id="view-rc" class="view"></div>
+    <div id="view-consertos" class="view"></div>
+    <div id="view-compras" class="view"></div>
+    <div id="view-fabricacao" class="view"></div>
+    <div id="view-fornecedores" class="view">
+      <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem;">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2>Relatório de Fornecedores (SLA)</h2>
+          <div class="tooltip-container">
+            <button type="button" class="btn btn-primary" id="btnExportSlaPdf">Gerar Relatório SLA (PDF)</button>
+            <div class="tooltip-card">
+              <strong style="color: var(--text); font-size: 0.95rem; display: block; margin-bottom: 0.5rem; text-align: left;">Conteúdo do Relatório SLA:</strong>
+              <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--muted); text-align: left; line-height: 1.5;">
+                <li>Layout fotográfico executivo formatado para impressão (fundo branco).</li>
+                <li>Painel com as Notas Globais (Pontualidade Média, Melhor Fornecedor).</li>
+                <li>Tabela Analítica desdobrada com barra de progresso individual de pontualidade.</li>
+                <li><strong>Ranking de Ofensores:</strong> Seção automática isolando a tabela dos 3 piores fornecedores da cadeia para ações de cobrança.</li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <!-- KPI Grid -->
+        <div class="sla-grid" style="margin-bottom: 2rem;">
+          <div class="kpi-card tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Total Fornecedores Ativos
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiTotal">0</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: auto; left: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Contagem de Fornecedores</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">Exibe o número total de fornecedores distintos que possuem itens no sistema (independente se o item foi entregue ou está pendente).</p>
+            </div>
+          </div>
+          <div class="kpi-card tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Pontualidade Global
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiPontualidade">0%</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: auto; left: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Cálculo de Pontualidade</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">Considera apenas itens <strong>ENTREGUES</strong>. É o percentual de itens entregues <em>antes ou no dia exato</em> da Previsão de Entrega acordada.</p>
+            </div>
+          </div>
+          <div class="kpi-card tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Atraso Médio Global
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiAtraso">0 dias</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Cálculo de Atraso Médio</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">Considera apenas itens <strong>ENTREGUES com atraso</strong>. É a média aritmética de quantos dias de atraso houveram após a Previsão de Entrega (Dias fora não contam aqui).</p>
+            </div>
+          </div>
+          <div class="kpi-card kpi-gold tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Fornecedor Destaque
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiDestaque" style="font-size: 1.25rem;">-</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Critério do Top 1</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">O fornecedor classificado como Destaque é aquele que possui a <strong>maior pontualidade</strong>, com desempate baseado no <strong>maior volume</strong> de itens entregues.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+          <div class="table-scroll-main" style="flex: 1;">
+            <div class="table-scroll-inner">
+              <table class="data-table" id="tabelaFornecedoresEl">
+                <thead>
+                  <tr>
+                    <th>Fornecedor</th>
+                    <th>Itens Entregues</th>
+                    <th>Pontualidade (%)</th>
+                    <th>Média de Atraso (Dias)</th>
+                    <th>Status Geral</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaFornecedores"></tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Floating Info Card -->
+          <div class="sla-floating-card">
+            <h4><span style="font-size: 1.1rem;">💡</span> Como funciona o SLA?</h4>
+            <div class="sla-info-content">
+              <p>Esta aba mede o desempenho de todos os fornecedores (<strong>Service Level Agreement</strong>).</p>
+              <ul>
+                <li><strong>Pontualidade:</strong> Mede % de itens que o fornecedor entregou <em>dentro ou antes</em> da Data de Previsão estipulada no PO.</li>
+                <li><strong>Média de Atraso:</strong> A quantidade média de dias que o fornecedor costuma atrasar quando perde o prazo. Prazos cumpridos não somam atraso.</li>
+                <li>A lista conta <strong>apenas</strong> itens marcados como Entregues (que possuem Data de Recebimento).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-calendario" class="view">
+      <div class="panel" style="padding: 1.5rem;">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <button type="button" class="btn btn-ghost" id="btnCalPrev">← Anterior</button>
+          
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <h2 id="calendarioMesAno" style="margin: 0;">Mês Ano</h2>
+            <div class="tooltip-container">
+              <button type="button" class="btn-icon" aria-label="Ajuda do Calendário" style="border-radius: 50%; background: var(--surface); border: 1px solid var(--border); width: 24px; height: 24px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; cursor: help; color: var(--text-light);">?</button>
+              <div class="tooltip-card" style="width: 320px; text-align: left; z-index: 50;">
+                <strong style="color: var(--text); font-size: 0.95rem; display: block; margin-bottom: 0.5rem;">Como funciona o Calendário:</strong>
+                <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--muted); line-height: 1.5;">
+                  <li><strong>Exibição:</strong> Os itens aparecem no dia correspondente à sua <em>Data de Previsão de Entrega</em>.</li>
+                  <li style="margin-top: 0.3rem;"><strong>Legenda de Cores:</strong>
+                    <ul style="padding-left: 1rem; margin-top: 0.2rem; margin-bottom: 0.2rem;">
+                      <li><span style="color: #10b981; font-weight: bold;">Verde:</span> Entregue.</li>
+                      <li><span style="color: #f59e0b; font-weight: bold;">Amarelo:</span> Em aberto (No prazo).</li>
+                      <li><span style="color: #ef4444; font-weight: bold;">Vermelho:</span> Atrasado (Prazo vencido).</li>
+                    </ul>
+                  </li>
+                  <li style="margin-top: 0.3rem;"><strong>Nomenclatura:</strong> Exibe a descrição do Item (ou Fornecedor/RC caso esteja sem nome).</li>
+                  <li style="margin-top: 0.3rem;"><strong>Ação:</strong> Clique em um cartão para abrir a <em>Visão de Raio-X</em> do item.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-ghost" id="btnCalNext">Próximo →</button>
+        </header>
+        <p class="section-hint">Visão mensal baseada na Data de Previsão de Entrega dos itens em aberto e recebidos.</p>
+        <div class="calendario-grid" id="calendarioGrid"></div>
+      </div>
+    </div>
+
+    <section id="secaoTabela" class="crud-section hidden">
+      <div class="toolbar panel">
+        <div>
+          <h2 class="crud-title" id="crudTitle">Controle RC</h2>
+          <span class="table-count" id="tableCount">0 registros</span>
+        </div>
+        <div class="toolbar-actions">
+          <button type="button" class="btn btn-outline" id="btnInlineEdit" title="Ativar Edição por Linha" style="border-color: rgba(255,255,255,0.2); color: var(--text); padding: 0.5rem 0.75rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span style="pointer-events: none; font-weight: 500;">Modo Edição</span>
+          </button>
+          <button type="button" class="btn btn-ghost" id="btnExport">Exportar Excel</button>
+          <button type="button" class="btn" id="btnNovo">+ Novo registro</button>
+        </div>
+      </div>
+
+      <div class="row-action-bar hidden" id="rowActionBar" aria-live="polite">
+        <div class="row-action-info">
+          <span class="row-action-label" id="rowActionLabel">Linha selecionada</span>
+          <span class="row-action-hint">Duplo clique na linha para ver detalhes</span>
+        </div>
+        <div class="row-action-buttons">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDetalhe">Ver detalhes</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowEditar">Editar</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDuplicar">Duplicar</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnRowExcluir">Excluir</button>
+        </div>
+      </div>
+
+      <div class="table-scroll-main" id="tableScrollMain">
+        <div class="table-scroll-inner" id="tableScrollInner">
+          <table class="data-table">
+            <thead id="tabelaHead"></thead>
+            <tbody id="tabelaBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Alertas do Dia -->
+  <div class="modal-overlay" id="modalAlertasDia">
+    <div class="modal">
+      <header class="modal-header" style="border-bottom-color: var(--danger);">
+        <h2>🔔 Atualizações de Prazos</h2>
+        <button type="button" class="btn-icon" id="btnFecharAlertasDia" aria-label="Fechar">✕</button>
+      </header>
+      <div class="form-section">
+        <p style="margin-bottom: 1rem; color: var(--text-light);">Os seguintes itens mudaram de status de prazo desde a sua última visita:</p>
+        <ul id="listaAlertasDia" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+        </ul>
+      </div>
+      <footer class="modal-header" style="justify-content: flex-end; border-top: 1px solid var(--border); border-bottom: none;">
+        <button type="button" class="btn btn-primary" id="btnOkAlertasDia">Ciente</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal CRUD completo -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal modal-lg">
+      <header class="modal-header">
+        <h2 id="modalTitulo">Registro RC</h2>
+        <button type="button" class="btn-icon" id="btnFecharModal" aria-label="Fechar">✕</button>
+      </header>
+      <form id="formRegistro">
+        <div class="form-section">
+          <h3>Identificação</h3>
+          <p id="formIdHint" class="form-hint"></p>
+          <div class="form-grid">
+            <label style="display: none;"><span>Sinal</span><input name="sinal" type="hidden" /></label>
+            <label>
+              <span>ID (agrupa o mesmo item — pode repetir)</span>
+              <div class="input-with-btn">
+                <input name="item_id" type="number" min="1" step="1" />
+                <button type="button" class="btn btn-ghost btn-sm" id="btnProximoId" title="Sugerir próximo ID">Próximo ID</button>
+              </div>
+            </label>
+            <label><span>Natureza</span>
+              <select name="natureza">
+                <option value="CONSERTO">Conserto</option>
+                <option value="FABRICACAO">Fabricação</option>
+                <option value="COMPRA">Compra</option>
+              </select>
+            </label>
+            <label class="full"><span>Item *</span><input name="item" required /></label>
+            <label class="full"><span>Descrição da falha</span><textarea name="descricao_falha" rows="2"></textarea></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Local &amp; responsável</h3>
+          <div class="form-grid">
+            <label><span>Solicitante</span><input name="solicitante" /></label>
+            <label><span>Criticidade</span>
+              <select name="criticidade">
+                <option value="">—</option>
+                <option value="CRITICA">CRITICA</option>
+                <option value="ALTA">ALTA</option>
+                <option value="MEDIA">MEDIA</option>
+                <option value="BAIXA">BAIXA</option>
+              </select>
+            </label>
+            <label><span>Linha</span><input name="linha" /></label>
+            <label><span>Máquina</span><input name="maquina" /></label>
+            <label><span>Fornecedor</span><input name="fornecedor" /></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Documentos &amp; valores</h3>
+          <div class="form-grid">
+            <label><span>NF saída</span><input name="nf_saida" /></label>
+            <label><span>Data saída</span><input name="data_saida" type="date" /></label>
+            <label><span>Orçamento</span><input name="orcamento" /></label>
+            <label><span>RC</span><input name="rc" /></label>
+            <label><span>PO</span><input name="po" /></label>
+            <label><span>Valor (R$)</span><input name="valor" type="number" step="0.01" /></label>
+            <label><span>Previsão entrega</span><input name="previsao_entrega" type="date" /></label>
+            <label><span>Data recebimento</span><input name="data_recebimento" type="date" /></label>
+            <label class="full"><span>Comentário</span><textarea name="comentario" rows="2"></textarea></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Foto / Mídia da RC</h3>
+          <div class="foto-upload-area">
+            <div id="fotoPreviewWrap" class="foto-preview-wrap">
+              <em class="drill-no-media" id="fotoPlaceholder">Nenhum registro de mídia</em>
+              <img id="fotoPreview" class="foto-preview-img" style="display:none" alt="Preview" />
+            </div>
+            <div class="foto-upload-actions">
+              <label class="btn btn-ghost btn-sm foto-upload-label">
+                📷 Anexar foto
+                <input type="file" accept="image/*" id="inputFoto" class="foto-input-hidden" />
+              </label>
+              <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnRemoverFoto" style="display:none">Remover foto</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-section calc-section">
+          <h3>Campos calculados (somente leitura)</h3>
+          <div class="calc-preview" id="calcPreview"></div>
+        </div>
+        <footer class="form-actions">
+          <button type="button" class="btn btn-danger" id="btnExcluirModal" style="display:none">Excluir</button>
+          <button type="button" class="btn btn-ghost" id="btnMarcarEntregue">Marcar entregue hoje</button>
+          <button type="submit" class="btn">Salvar alterações</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Painel drill-down (clique nos gráficos) -->
+  <div class="drill-overlay" id="drillOverlay"></div>
+  <aside class="drill-panel" id="drillPanel">
+    <header class="drill-header">
+      <div>
+        <h2 id="drillTitulo">Detalhes</h2>
+        <p id="drillSubtitulo"></p>
+      </div>
+      <button type="button" class="btn-icon" id="drillFechar">✕</button>
+    </header>
+    <div class="drill-stats" id="drillStats"></div>
+    <div class="drill-insight panel" id="drillInsight"></div>
+    <div class="drill-lista" id="drillLista"></div>
+  </aside>
+
+  <div id="toast" class="toast"></div>
+
+  </div>
+  </div>
+  <script type="module" src="js/app.js?v=57"></script>
+</body>
+</html>

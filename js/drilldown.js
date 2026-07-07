@@ -1,5 +1,5 @@
-import { fmtMoeda, fmtData, badgeStatus, badgeCriticidade } from './ui.js?v=2';
-import { calcularStatus, calcularDiasFora, calcularValorPrevisto, calcularValorRecebido, calcularMesOriginalAtraso, MESES_CURTOS } from './logic.js?v=9';
+import { fmtMoeda, fmtData, badgeStatus, badgeCriticidade } from './ui.js?v=999';
+import { calcularStatus, calcularDiasFora, calcularValorPrevisto, calcularValorRecebido, calcularMesOriginalAtraso, MESES_CURTOS } from './logic.js?v=999';
 
 let onEditCallback = null;
 let onViewCallback = null;

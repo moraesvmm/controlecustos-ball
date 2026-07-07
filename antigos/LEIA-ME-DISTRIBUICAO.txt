@@ -1,0 +1,15 @@
+Distribuicao recomendada do Controle RC
+
+Opcao mais robusta para outros PCs:
+1. Neste PC, rode "Inicializadores\0_Gerar_Pacote_Distribuicao.bat".
+2. Envie o arquivo "dist\Controle-RC-Portatil.zip" para os outros usuarios.
+3. No outro PC, basta extrair o ZIP em uma pasta com permissao de escrita.
+4. O usuario deve executar apenas:
+   - "INICIAR_CONTROLE_RC.bat"
+
+Observacoes:
+- O pacote ja inclui a pasta ".python_local".
+- Isso evita depender de download do Python na maioria dos casos.
+- O arquivo "INICIAR_CONTROLE_RC.bat" instala o necessario se faltar e depois inicia o sistema.
+- Se o Python portatil for bloqueado por politica do PC, o iniciador tenta usar "servidor.ps1".
+- Se o PowerShell tambem for bloqueado, a maquina esta sob politica corporativa mais rigida e precisara de excecao do TI ou uso a partir de outro PC servidor.

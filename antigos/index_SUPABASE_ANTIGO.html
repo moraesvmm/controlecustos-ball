@@ -1,0 +1,2128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manutenção Ball</title>
+  <link rel="icon" href="img/BALL.png" type="image/png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css?v=64">
+  <link rel="stylesheet" href="css/components.css?v=64">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+  <script src="js/env.runtime.js?v=99"></script>
+  <link rel="stylesheet" href="css/sweetalert2-dark.css" />
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+      /* Remove as setinhas dos inputs de dia */
+      input[type="number"].preventiva-dia-input::-webkit-inner-spin-button,
+      input[type="number"].preventiva-dia-input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type="number"].preventiva-dia-input {
+        -moz-appearance: textfield;
+      }
+    </style>
+</head>
+
+<body>
+  <div class="app-bg"></div>
+
+  <!-- PAINEL DE ALERTAS -->
+  <div id="alertas-painel-overlay" onclick="import('./js/alertas.js').then(m=>m.fecharAlertasPanel())"></div>
+  <aside id="alertas-painel">
+    <div class="alertas-header">
+      <h3>🔔 Alertas de Tendência</h3>
+      <button style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:1.2rem;" onclick="import('./js/alertas.js').then(m=>m.fecharAlertasPanel())">×</button>
+    </div>
+    <div class="alertas-body" id="alertas-body"></div>
+  </aside>
+
+  <!-- TOOLTIP IA -->
+  <div id="ai-tooltip-bubble"></div>
+
+  <!-- TELA DE LOGIN -->
+  <div id="login-container" style="display: none; height: 100vh; align-items: center; justify-content: center; position: relative; z-index: 10;">
+    <div class="login-wrapper">
+      <img src="img/BALL.png" alt="Logo Ball" class="login-logo" style="height: 64px; border-radius: 0;" />
+      <h1 class="login-brand-text" style="font-family: 'Outfit', sans-serif; font-weight: 300; font-size: 2.2rem; letter-spacing: 0.1em; text-transform: uppercase; color: #f8fafc; opacity: 0.9; margin-bottom: 0.5rem;">Manutenção</h1>
+      <h2 class="login-title">Acesso ao Sistema</h2>
+      <p class="login-subtitle">Insira suas credenciais corporativas para continuar.</p>
+      
+      <form id="formLogin" style="flex-direction: column;">
+        <div class="login-form-group">
+          <label>E-mail</label>
+           <input type="email" id="loginEmail" required autocomplete="email" placeholder="seu.nome@ball.com" />
+        </div>
+        <div class="login-form-group">
+          <label>Senha</label>
+           <input type="password" id="loginSenha" required autocomplete="current-password" placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn btn-primary login-btn">Entrar na Conta</button>
+      </form>
+      
+      <div class="login-footer">
+        <p>Ainda não possui acesso?</p>
+        <form id="formCadastro" style="display: none; margin-bottom: 1.5rem; flex-direction: column;">
+          <div class="login-form-group">
+            <label>Nome de Usuário</label>
+            <input type="text" id="cadNome" required placeholder="Ex: Joao Silva" />
+          </div>
+          <div class="login-form-group">
+            <label>E-mail Corporativo</label>
+            <input type="email" id="cadEmail" required placeholder="nome@ball.com" />
+          </div>
+          <div class="login-form-group">
+            <label>Criar Senha</label>
+            <input type="password" id="cadSenha" required minlength="6" placeholder="Mínimo 6 caracteres" autocomplete="current-password" />
+          </div>
+          <button type="submit" class="btn btn-outline login-btn">Registrar Acesso</button>
+        </form>
+        <button type="button" class="btn btn-ghost" id="btnToggleCadastro" style="width: 100%; font-size: 0.85rem;">Criar nova conta agora</button>
+      </div>
+      <p style="text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: 2rem; font-style: italic;">Desenvolvido pelo Time de Manutenção da Ball Itupeva/SP</p>
+    </div>
+  </div>
+
+  <!-- TELA PRINCIPAL -->
+  <div id="app-container" style="display: none; height: 100vh; width: 100vw; display: flex; overflow: hidden; position: relative; z-index: 10;">
+    
+    <!-- SIDEBAR -->
+    <aside class="sidebar" style="width: 260px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column;">
+      <div class="sidebar-header" style="padding: 1.5rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);">
+        <img src="img/BALL.png" alt="Logo Ball" style="height: 28px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+        <div style="display: flex; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 0.75rem;">
+          <h1 style="font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 600; margin: 0; letter-spacing: 0.08em; line-height: 1; color: #ffffff; text-transform: uppercase;">MANUTENÇÃO</h1>
+          <span style="font-size: 0.6rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 400; margin-top: 0.25rem;">Sistema Central</span>
+        </div>
+      </div>
+      
+      <nav class="sidebar-nav" style="flex: 1; overflow-y: auto; padding: 1.5rem 1rem; display: flex; flex-direction: column; gap: 1.5rem;">
+        <div>
+          <button type="button" data-tab="dashboard" class="nav-item active" style="width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--muted); font-size: 0.95rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.2s;">
+            ⊞ Dashboard
+          </button>
+        </div>
+        
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo RC</div>
+          <!-- Accordion: Controle Global -->
+          <div class="nav-accordion">
+            <button type="button" class="nav-accordion-trigger" data-accordion="nav-rc">
+              Controle Global <span class="nav-accordion-arrow">▾</span>
+            </button>
+            <div class="nav-sub-menu" id="nav-rc-sub">
+              <button type="button" data-tab="rc" class="nav-item nav-sub-item">↳ Visão Geral</button>
+              <button type="button" data-tab="gestao-tarefas" class="nav-item nav-sub-item">↳ Gestão de Equipe</button>
+              <button type="button" data-tab="minhas-tarefas" class="nav-item nav-sub-item">↳ Minhas Tarefas</button>
+            </div>
+          </div>
+          <button type="button" data-tab="consertos" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Consertos</button>
+          <button type="button" data-tab="compras" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Compras</button>
+        </div>
+
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo Movimentações</div>
+          
+          <!-- Accordion: Custo Geral -->
+          <div class="nav-accordion">
+            <button type="button" class="nav-accordion-trigger" data-accordion="nav-movimentacoes">
+              Custo Geral <span class="nav-accordion-arrow">▾</span>
+            </button>
+            <div class="nav-sub-menu" id="nav-movimentacoes-sub">
+              <button type="button" data-tab="custo-geral" class="nav-item nav-sub-item">📊 Budgets</button>
+              <button type="button" data-tab="custo-movimentacoes" class="nav-item nav-sub-item">📋 Movimentações</button>
+              <button type="button" data-tab="custo-previsoes" class="nav-item nav-sub-item">📈 Previsões</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Módulo Preventiva</div>
+
+          <!-- Accordion: Navegador Geral -->
+          <div class="nav-accordion">
+            <button type="button" class="nav-accordion-trigger" data-accordion="nav-geral">
+              Navegador Geral <span class="nav-accordion-arrow">▾</span>
+            </button>
+            <div class="nav-sub-menu" id="nav-geral-sub">
+              <button type="button" data-tab="planos-manutencao" class="nav-item nav-sub-item">↳ Back-end</button>
+              <button type="button" data-tab="planos-manutencao-frontend" class="nav-item nav-sub-item">↳ Front-end</button>
+            </div>
+          </div>
+
+          <button type="button" data-tab="por-maquina" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Plano Padrão</button>
+
+          <!-- Plano Mestre -->
+          <button type="button" data-tab="plano-mestre" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">
+            Plano Mestre
+          </button>
+        </div>
+
+        <div>
+          <div style="font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.5rem; padding-left: 1rem; opacity: 0.7;">Fornecedores & Prazos</div>
+          <button type="button" data-tab="fornecedores" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">SLA Fornecedores</button>
+          <button type="button" data-tab="calendario" class="nav-item" style="width: 100%; text-align: left; padding: 0.6rem 1rem 0.6rem 2rem; background: transparent; border: none; color: var(--muted); font-size: 0.9rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; transition: all 0.2s;">Calendário</button>
+        </div>
+      </nav>
+      
+      <div style="padding: 1.5rem; border-top: 1px solid var(--border);">
+        <div id="appStatus" class="app-status" style="font-size: 0.8rem; margin-bottom: 1rem;">Carregando…</div>
+        <button type="button" class="btn btn-ghost" id="btnSair" style="width: 100%; font-size: 0.85rem; padding: 0.6rem; border-color: var(--border);">Sair do Sistema</button>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg);">
+      
+      <!-- Topbar (fixo) -->
+      <header class="topbar" style="padding: 1.25rem 4rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); background: var(--surface); flex-shrink: 0;">
+          <div>
+            <h2 id="topbarTitle" style="font-family: 'DM Sans', sans-serif; font-weight: 500; font-size: 1.25rem; color: var(--text); margin: 0;">Visão Geral</h2>
+            <div id="userGreeting" style="font-size: 0.85rem; color: var(--gold); margin-top: 0.2rem; font-weight: 500;"></div>
+          </div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+          <input type="file" id="fileImportExcel" accept=".xlsx, .xls" style="display: none;" />
+          <button type="button" class="btn btn-outline" id="btnImportarExcel" style="font-size: 0.85rem;">Importar Base de Dados</button>
+          <!-- Sininho de Alertas -->
+          <button type="button" class="alert-bell-btn" id="btnAlertaBell" title="Alertas de Tendência">
+            🔔
+            <span class="alert-badge" id="alertaBadgeCount" style="display:none;">0</span>
+          </button>
+          <button type="button" id="btnTogglePrivacy" title="Ocultar valores financeiros" style="background: transparent; border: none; color: var(--text); cursor: pointer; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; opacity: 0.6; transition: opacity 0.2s;">
+            <svg id="iconPrivacyOpen" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            <svg id="iconPrivacyClosed" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+          </button>
+          <button type="button" id="btnToggleTheme" title="Alternar modo claro/escuro">
+            <span class="theme-icon">🌙</span>
+            <span class="theme-label">Modo Claro</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Área scrollável principal -->
+      <main class="main-layout" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column;">
+      
+        <!-- KPIs + Filtros agora rolam com a página -->
+        <div id="painel-fixo" style="flex-shrink: 0; margin-bottom: 1rem; width: 100%; box-sizing: border-box;">
+        <section class="kpi-grid">
+          <div class="kpi-card">
+            <div class="label">Registros</div>
+            <div class="value skeleton" id="kpiTotal">000</div>
+          </div>
+          <div class="kpi-card kpi-gold tooltip-container" id="cardValorTotal" style="cursor: pointer;">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+              <span>VALOR TOTAL</span>
+              <span style="font-size: 0.8rem; opacity: 0.6; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 50%;">?</span>
+            </div>
+            <div class="value skeleton" id="kpiValor">R$ 000.000,00</div>
+            <div class="tooltip-card" style="width: 250px;">
+              <h4 style="margin-bottom:0.5rem;color:var(--text-primary);font-size:0.95rem;">Valor Total</h4>
+              <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Soma do valor financeiro de todas as RCs filtradas no momento (exceto Canceladas).</p>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">Previsto (mês+)</div>
+            <div class="value skeleton" id="kpiPrevisto">R$ 000.000,00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">Recebido</div>
+            <div class="value skeleton" id="kpiRecebido">R$ 000.000,00</div>
+          </div>
+          <div class="kpi-card kpi-alert kpi-clickable" id="kpiCardAtrasados" role="button" tabindex="0" title="Clique para ver itens atrasados">
+            <div class="label">Atrasados</div>
+            <div class="value skeleton" id="kpiAtrasados">000</div>
+          </div>
+          <div class="kpi-card kpi-wide">
+            <div class="label">Por status (clique para filtrar)</div>
+            <div class="kpi-chips" id="kpiStatusChips"></div>
+          </div>
+        </section>
+
+        <section id="global-filters" class="filters panel" style="position: static; margin-bottom: 0;">
+          <label class="search-field">
+            <span>Busca</span>
+            <input type="search" id="filtroBusca" placeholder="Item, RC, PO, solicitante…" />
+          </label>
+          <label><span>Natureza</span><select id="filtroNatureza"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Status</span><select id="filtroStatus"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Criticidade</span><select id="filtroCriticidade"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Linha</span><select id="filtroLinha"><option value="TODOS">TODOS</option></select></label>
+          <label><span>Máquina</span><input id="filtroMaquina" list="listaMaquinasFiltro" value="TODOS" autocomplete="off" onfocus="if(this.value==='TODOS')this.value=''" onblur="if(this.value==='')this.value='TODOS'"><datalist id="listaMaquinasFiltro"></datalist></label>
+          <label><span>Fornecedor</span><input id="filtroFornecedor" list="listaFornecedoresFiltro" value="TODOS" autocomplete="off" onfocus="if(this.value==='TODOS')this.value=''" onblur="if(this.value==='')this.value='TODOS'"><datalist id="listaFornecedoresFiltro"></datalist></label>
+          <button type="button" class="btn btn-ghost" id="btnLimparFiltros">Limpar filtros</button>
+        </section>
+      </div>
+
+    <div id="view-dashboard" class="view active">
+      <div id="secaoDashboard">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+          <div></div>
+          <div class="tooltip-container">
+            <button type="button" class="btn btn-primary" id="btnExportDashboardPdf">Gerar Relatório Executivo (PDF)</button>
+            <div class="tooltip-card">
+              <strong style="color: var(--text); font-size: 0.95rem; display: block; margin-bottom: 0.5rem; text-align: left;">Conteúdo do Relatório:</strong>
+              <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--muted); text-align: left; line-height: 1.5;">
+                <li>Cabeçalho formatado com Data e Hora de geração.</li>
+                <li>Resumo Financeiro Global e Métricas Executivas.</li>
+                <li>Layout fotográfico estruturado dos Gráficos.</li>
+                <li>Tabela dinâmica listando os piores gargalos críticos atuais.</li>
+                <li><strong>Análise de Impacto:</strong> Exibe a natureza, o custo unitário e calcula o capital total retido nos atrasos.</li>
+              </ul>
+            </div>
+          </div>
+        </header>
+        <p class="section-hint" style="margin-bottom: 0.75rem;">Clique em qualquer barra do gráfico para abrir o detalhamento dos gastos.</p>
+        <div class="charts-grid">
+          <div class="chart-box skeleton"><div class="chart-canvas-wrap"><canvas id="chartStatus"></canvas></div></div>
+          <div class="chart-box skeleton"><div class="chart-canvas-wrap"><canvas id="chartMes"></canvas></div></div>
+          <div class="chart-box chart-wide skeleton"><div class="chart-canvas-wrap chart-tall"><canvas id="chartMaquina"></canvas></div></div>
+        </div>
+        <h3 style="margin: 1.5rem 0 0.25rem; color: var(--text);">Status de Retorno por Natureza (dias em aberto)</h3>
+        <p class="section-hint" style="margin-bottom: 0.75rem;">Clique nas fatias para detalhar itens em aberto por tempo de saída.</p>
+        <div class="charts-grid charts-grid-prazos">
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartConsertoDias"></canvas></div></div>
+          <div class="chart-box"><div class="chart-canvas-wrap"><canvas id="chartComprasDias"></canvas></div></div>
+        </div>
+      </div>
+      <aside id="secaoAlertas" class="alertas-panel panel">
+        <h3>⚠ Itens atrasados</h3>
+        <div id="alertasLista"></div>
+      </aside>
+    </div>
+
+    <div id="view-rc" class="view"></div>
+    <div id="view-custo-geral" class="view" style="padding: 1.5rem;">
+      <div style="display: flex; flex-direction: column;">
+      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+        <div class="header-left">
+          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Custo Geral</h1>
+          <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Integração Financeiro & Datasul</p>
+        </div>
+        <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+          <input type="file" id="fileImportFinanceiro" accept=".xlsx, .xls" style="display: none" />
+          <input type="file" id="fileImportDatasul" accept=".xlsx, .xls" style="display: none" />
+          <button type="button" class="btn btn-outline" id="btnImportarFinanceiro">Importar Financeiro</button>
+          <button type="button" class="btn btn-outline" id="btnImportarDatasul">Importar Datasul</button>
+          <button type="button" class="btn btn-outline" id="btnFluxoDia" title="Ver o que entrou hoje vs ontem" style="display:none; border-color: #f59e0b; color: #f59e0b;">🔥 Fluxo do Dia</button>
+          <button type="button" class="btn btn-primary" id="btnNovoCustoGeral">✨ Novo Registro</button>
+          <button type="button" class="btn btn-primary" id="btnExportCustoGeral">Exportar Excel</button>
+        </div>
+      </header>
+
+      <!-- Modal: Fluxo do Dia (Diferenças da Importação) -->
+      <div id="modalFluxoDia" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:#161f33; border:1px solid rgba(255,255,255,0.1); border-radius:16px; padding:2rem; width:90%; max-width:900px; max-height:85vh; display:flex; flex-direction:column; gap:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <h2 style="color:#f59e0b; margin:0; font-size:1.4rem;">🔥 Fluxo do Dia</h2>
+              <p id="lblFluxoDiaSubtitle" style="color:var(--muted); margin:0.25rem 0 0; font-size:0.85rem;">Diferenças detectadas na última importação</p>
+            </div>
+            <button id="btnFecharFluxoDia" style="background:transparent; border:none; color:var(--muted); font-size:1.5rem; cursor:pointer;">✕</button>
+          </div>
+          <!-- KPIs do Fluxo -->
+          <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:1rem;">
+            <div style="background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:10px; padding:1rem; text-align:center;">
+              <div style="color:var(--muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">Itens Novos</div>
+              <div id="kpiFluxoNovos" style="color:#f59e0b; font-size:1.8rem; font-weight:700; margin-top:0.25rem;">0</div>
+            </div>
+            <div style="background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.3); border-radius:10px; padding:1rem; text-align:center;">
+              <div style="color:var(--muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">Itens Removidos</div>
+              <div id="kpiFluxoRemovidos" style="color:#ef4444; font-size:1.8rem; font-weight:700; margin-top:0.25rem;">0</div>
+            </div>
+            <div style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:1rem; text-align:center;">
+              <div style="color:var(--muted); font-size:0.75rem; text-transform:uppercase; letter-spacing:1px;">Impacto Financeiro</div>
+              <div id="kpiFluxoImpacto" style="color:#10b981; font-size:1.4rem; font-weight:700; margin-top:0.25rem;">R$ 0,00</div>
+            </div>
+          </div>
+          <!-- Tabela de Novidades -->
+          <div style="overflow-y:auto; flex:1;">
+            <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+              <thead>
+                <tr style="border-bottom:1px solid rgba(255,255,255,0.1); color:var(--muted); text-align:left;">
+                  <th style="padding:0.5rem 0.75rem;">Tipo</th>
+                  <th style="padding:0.5rem 0.75rem;">Ordem</th>
+                  <th style="padding:0.5rem 0.75rem;">Descrição</th>
+                  <th style="padding:0.5rem 0.75rem;">Conta</th>
+                  <th style="padding:0.5rem 0.75rem; text-align:right;">Custo do Mês</th>
+                </tr>
+              </thead>
+              <tbody id="tbodyFluxoDia" style="color:#fff;"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dashboard Widgets -->
+      <section id="kpisCustoGeral" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0;">
+        
+        <!-- Widget 1: Desempenho do Budget -->
+        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Desempenho Budget Manutenção</span>
+            <i class="fa-solid fa-bullseye" style="color: var(--primary); font-size: 1.2rem;"></i>
+          </div>
+          <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+            <strong id="kpiCustoMes" style="font-size: 2rem; color: #fff; line-height: 1;">R$ 0,00</strong>
+            <span style="color: var(--muted); font-size: 0.9rem;">/ <span id="kpiBudgetTotalResumo">R$ 0,00</span></span>
+          </div>
+          <!-- Barra de Progresso do Budget -->
+          <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden; margin-top: 0.5rem;">
+            <div id="barBudgetConsumido" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--success), var(--warning)); transition: width 1s ease-in-out;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem; color: var(--muted);">
+            <span>Consumido: <strong id="lblPercentConsumido" style="color: #fff;">0%</strong></span>
+            <span>Resta: <strong id="lblSaldoBudget" style="color: var(--success);">R$ 0,00</strong></span>
+          </div>
+        </div>
+
+        <!-- Widget 2: Composição do Budget -->
+        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Composição do Budget Anual</span>
+            <i class="fa-solid fa-chart-pie" style="color: #8b5cf6; font-size: 1.2rem;"></i>
+          </div>
+          <strong id="kpiBudgetTotal" style="font-size: 1.5rem; color: #fff; margin-bottom: 1rem; line-height: 1;">R$ 0,00</strong>
+          
+          <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span> Manutenção</span>
+              <strong id="kpiBudgetManutencao">R$ 0,00</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6;"></span> Ferramentaria</span>
+              <strong id="kpiBudgetFerramentas">R$ 0,00</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+              <span style="display: flex; align-items: center; gap: 0.5rem;"><span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span> Facilities</span>
+              <strong id="kpiBudgetFacilities">R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Widget 3: Controle Geral -->
+        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Validação de Custo</span>
+            <i class="fa-solid fa-file-invoice-dollar" style="color: #d4af37; font-size: 1.2rem;"></i>
+          </div>
+          <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <div>
+              <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Manutenção</span>
+              <strong id="kpiManutencao" style="font-size: 1.2rem; color: #fff;">R$ 0,00</strong>
+            </div>
+            <div>
+              <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Ferramentaria</span>
+              <strong id="kpiFerramentaria" style="font-size: 1.1rem; color: #ccc;">R$ 0,00</strong>
+            </div>
+            <div>
+              <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Facilities</span>
+              <strong id="kpiFacilities" style="font-size: 1.1rem; color: #ccc;">R$ 0,00</strong>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Widget 4: Alertas Inteligentes (Detecção de Anomalias) -->
+        <div class="panel" id="widgetAlertasInteligentes" style="background: linear-gradient(145deg, rgba(239, 68, 68, 0.05) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(239, 68, 68, 0.2); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; grid-column: 1 / -1; display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <span style="color: var(--danger); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
+              <i class="fa-solid fa-triangle-exclamation"></i> Alertas Inteligentes (Anomalias)
+            </span>
+          </div>
+          <div id="alertasInteligentesContainer" style="display: flex; flex-direction: column; gap: 0.5rem;">
+            <!-- Alertas renderizados via JS -->
+          </div>
+        </div>
+        
+
+      </section>
+
+      <!-- Gráficos Main Container -->
+      <section id="chartsContainer" style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 1.5rem; margin-bottom: 1.5rem; min-height: 350px; flex-shrink: 0;">
+        <!-- Gráfico de Evolução (Mensal) -->
+        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Evolução de Custos por Classificação</h3>
+          <div style="flex: 1; position: relative;">
+            <canvas id="chartEvolucaoCustos"></canvas>
+          </div>
+        </div>
+        
+        <!-- Gráfico de Estratificação por CC -->
+        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Estratificação por C.C. (Top 10)</h3>
+          <div style="flex: 1; position: relative;">
+            <canvas id="chartEstratificacaoCC"></canvas>
+          </div>
+        </div>
+
+        <!-- Gráfico de Radar: Técnico x Equipamento -->
+        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+          <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Técnicos x Linhas (Top 5)</h3>
+          <div style="flex: 1; position: relative; display: flex; justify-content: center; align-items: center;">
+            <canvas id="chartRadarTecnicos"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tabela Detalhada de Budgets -->
+      <section class="panel" id="tabelaBudgetsContainer" style="margin-bottom: 1.5rem; display: none; background: var(--surface); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto; flex-shrink: 0;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+          <h3 style="margin: 0; font-size: 1rem; color: var(--text);">Desdobramento do Budget</h3>
+          <button id="btnEntregarLogica" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;"><i class="fa-solid fa-file-export"></i> Entregar Lógica</button>
+        </div>
+        <table class="data-table" id="tabelaDetalhamentoBudgets" style="width: 100%; text-align: right; font-size: 0.85rem;">
+          <thead>
+            <tr>
+              <th style="text-align: left;">ÁREA</th>
+              <th style="text-align: left;">TIPO</th>
+              <th>%</th>
+              <th>META MÊS</th>
+              <th>META SEMANA</th>
+              <th>REAL</th>
+              <th>ESTIMATIVA ACUMULADA</th>
+              <th>PLANEJADO x DIA</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Preenchido via JS -->
+          </tbody>
+        </table>
+      </section>
+      </div>
+    </div>
+
+    <!-- VIEW: PREVISÕES PREDITIVAS -->
+    <div id="view-custo-previsoes" class="view" style="padding: 1.5rem;">
+      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+        <div class="header-left">
+          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Previsões (Burn Rate)</h1>
+          <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Modelagem Preditiva de Estouro de Budget</p>
+        </div>
+        <div class="header-right">
+          <button id="btnExportarRelatorioIA" class="btn btn-primary" style="display: flex; gap: 0.5rem; align-items: center; background: linear-gradient(145deg, #10b981 0%, #059669 100%); border-color: #059669;">
+            <i class="fa-solid fa-file-pdf"></i> Exportar Relatório IA
+          </button>
+          <button id="btnRunForecast" type="button" class="btn btn-outline" style="display: flex; align-items: center; gap: 0.5rem; border-color: rgba(255,255,255,0.1); color: var(--text); font-size: 0.85rem;">
+            <i class="fa-solid fa-rotate"></i> Recalcular Modelo
+          </button>
+        </div>
+      </header>
+      
+      <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+        <div id="previsoes-container" style="flex: 1;">
+          <p style="color: #888;">Carregando modelo preditivo...</p>
+        </div>
+        
+        <aside id="asideExplainability" style="flex: 0 0 300px; display: none;">
+          <!-- Widget 5: Motor de Inteligência Artificial (Explainability) -->
+          <div class="panel" id="widgetExplainability" style="background: linear-gradient(145deg, rgba(59, 130, 246, 0.05) 0%, rgba(255,255,255,0.01) 100%); border: 1px solid rgba(59, 130, 246, 0.2); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+              <span style="color: #3b82f6; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-brain"></i> IA (Tomada de Decisão)
+              </span>
+            </div>
+            <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
+              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste mês em <strong id="aiProjFinal" style="color:#fff; font-size: 1rem;">R$ 0,00</strong>, podendo variar de <span id="aiRangeMin" style="color:#ccc;">R$ 0</span> a <span id="aiRangeMax" style="color:#ccc;">R$ 0</span> (confiança: <strong id="aiConfianca" style="color:#facc15;">—</strong>).</p>
+              <p style="margin-bottom: 0;"><strong>Como a IA aprende:</strong> Nosso modelo inteligente aprende diariamente com as cargas de dados feitas via <strong>Importar Financeiro</strong> (que processou <span id="aiVolOrdens" style="color:#fff;">0</span> ordens este mês). Ele analisa seu ritmo de gasto atual e vasculha o histórico buscando meses com padrão de consumo semelhante. O mês que a IA julgou ter o comportamento mais parecido com o cenário de agora foi <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong> (<span id="aiSimilaridade" style="color:#facc15;">—</span>% de semelhança). A IA projeta a curva futura usando o padrão desses meses históricos como referência, prevendo estolhos antes de acontecerem.</p>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <!-- VIEW: MOVIMENTAÇÕES (Tabela) -->
+    <div id="view-custo-movimentacoes" class="view" style="padding: 1.5rem;">
+      <div style="display: flex; flex-direction: column; height: calc(100vh - 3rem); overflow: hidden;">
+      <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+        <div class="header-left">
+          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Movimentações</h1>
+          <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Dados detalhados do Custo Geral</p>
+        </div>
+      </header>
+      
+      <!-- Filtros de Busca -->
+      <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface); flex-shrink: 0;">
+        <label class="search-field"><span>Busca</span><input type="search" id="filtroBuscaCustoGeral" placeholder="Buscar por Ordem, Item, Descrição..." /></label>
+        <label>
+          <span>Filtro de Ordem</span>
+          <select id="filtroOrdemCustoGeral">
+            <option value="todas">Todas as Ordens</option>
+            <option value="com_ordem">Com Ordem (Atribuída)</option>
+            <option value="sem_ordem">Sem Ordem (Em branco)</option>
+          </select>
+        </label>
+        <label>
+          <span>Área (Filtro)</span>
+          <select id="filtroAreaCustoGeral" style="border-color: var(--primary);">
+            <option value="todas">Todas (Visão Real do Banco)</option>
+            <option value="manutencao_excel">Apenas Manutenção (Visão Planilha: Falhas Ocultas)</option>
+          </select>
+        </label>
+        <label>
+          <span>Colunas</span>
+          <select id="filtroModoColunasCustoGeral">
+            <option value="resumo">Visão Resumo (Ordem, Solicitante, Material, Área)</option>
+            <option value="todas">Todas as Colunas</option>
+          </select>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 0.25rem;">
+          <span>Data De</span>
+          <input type="date" id="filtroDataDeCustoGeral" style="background: var(--bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text); padding: 0.35rem 0.6rem; font-size: 0.85rem;" />
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 0.25rem;">
+          <span>Data Até</span>
+          <input type="date" id="filtroDataAteCustoGeral" style="background: var(--bg); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text); padding: 0.35rem 0.6rem; font-size: 0.85rem;" />
+        </label>
+        <button type="button" class="btn btn-ghost" id="btnLimparFiltrosCustoGeral">Limpar filtros</button>
+      </section>
+
+      <div class="row-action-bar hidden" id="rowActionBarCustoGeral" aria-live="polite">
+        <div class="row-action-info">
+          <span class="row-action-label" id="rowActionLabelCustoGeral">Linha selecionada</span>
+          <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+        </div>
+        <div class="row-action-buttons">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDetalheCustoGeral">Ver detalhes</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnEditarCustoGeral">✏️ Editar</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnExcluirCustoGeral">🗑️ Excluir</button>
+        </div>
+      </div>
+
+      <!-- Tabela do Custo Geral -->
+      <section class="crud-section" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden;">
+        <div class="table-scroll-main" style="flex: 1; display: flex; flex-direction: column;">
+          <div class="table-scroll-inner" style="flex: 1; overflow: auto; min-height: 0;">
+            <table class="data-table">
+              <thead id="tabelaHeadCustoGeral" style="position: sticky; top: 0; z-index: 10; background: var(--surface);"></thead>
+              <tbody id="tabelaBodyCustoGeral"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      </div>
+    </div>
+    <div id="view-consertos" class="view"></div>
+    <div id="view-compras" class="view"></div>
+    
+    <!-- VIEW: GESTÃO DE EQUIPE (Mestre) -->
+    <div id="view-gestao-tarefas" class="view">
+      <div class="view-header">
+        <div style="display:flex; justify-content:space-between; align-items:center; width:100%;">
+          <h2>Gestão de Equipe & Delegação</h2>
+          <button type="button" class="btn" id="btnNovaTarefaDelegada">+ Nova Tarefa</button>
+        </div>
+      </div>
+      <div class="view-content">
+        <div class="panel" style="margin-bottom: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem;">
+          <h3 style="margin-top: 0; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between;">
+            Configuração de Orçamento & Áreas
+            <button type="button" class="btn btn-primary" id="btnSalvarConfigBudget" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">Salvar Configurações</button>
+          </h3>
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 1.5rem;">
+            <label><span>Total Mês (R$)</span><input type="number" id="cfgBudgetTotal" step="0.01"></label>
+            <label><span>M.O Terceiros</span><input type="number" id="cfgBudgetMO" step="0.01"></label>
+            <label><span>Peças Corretiva</span><input type="number" id="cfgBudgetCorretiva" step="0.01"></label>
+            <label><span>Peças Preventiva</span><input type="number" id="cfgBudgetPreventiva" step="0.01"></label>
+            <label><span>Materiais Reparo</span><input type="number" id="cfgBudgetReparo" step="0.01"></label>
+            <label><span>Débito Direto</span><input type="number" id="cfgBudgetDebito" step="0.01"></label>
+          </div>
+          <h4 style="margin-top: 0; color: var(--text-light); margin-bottom: 0.5rem; font-size: 0.9rem;">Vincular Responsáveis aos Alertas de Estouro:</h4>
+          <div style="overflow-x: auto;">
+            <table class="data-table" id="tabelaVinculoBudget" style="width: 100%; text-align: center; font-size: 0.85rem;">
+              <thead>
+                <tr>
+                  <th style="text-align: left;">Colaborador</th>
+                  <th>M.O Terceiros</th>
+                  <th>Peças Corretiva</th>
+                  <th>Peças Preventiva</th>
+                  <th>Materiais Reparo</th>
+                  <th>Débito Direto</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Renderizado via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="dashboardGestaoTarefas" style="display:flex; flex-direction:column; gap:1.5rem;">
+          <!-- Master dashboard rendered via JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW: MINHAS TAREFAS (Pupilo) -->
+    <div id="view-minhas-tarefas" class="view">
+      <div class="view-header">
+        <h2>Minhas Tarefas</h2>
+      </div>
+      <div class="view-content">
+        <div id="dashboardMinhasTarefas" style="display:flex; flex-direction:column; gap:1.5rem;">
+          <!-- Pupil dashboard rendered via JS -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- NAVEGADOR GERAL DE PLANOS DE MANUTENÇÃO (Drill-Down) -->
+    <div id="view-planos-manutencao" class="view">
+      <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
+        
+        <!-- Breadcrumbs Navigation -->
+        <nav aria-label="breadcrumb" style="margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+          <ol style="list-style: none; display: flex; gap: 0.5rem; padding: 0; margin: 0; font-size: 1rem; color: var(--muted); align-items: center;">
+            <li id="bc-mes" style="cursor: pointer; transition: color 0.2s;" onclick="planosGoToStep('mes')">Selecione o Mês</li>
+            <li id="bc-sep-1" style="display:none;">/</li>
+            <li id="bc-linha" style="cursor: pointer; transition: color 0.2s; display:none;" onclick="planosGoToStep('linha')">Linha</li>
+            <li id="bc-sep-2" style="display:none;">/</li>
+            <li id="bc-maquina" style="color: var(--text); font-weight: 500; display:none;">Máquina</li>
+          </ol>
+        </nav>
+
+        <!-- STEP 1: Seleção de Mês -->
+        <div id="step-mes" style="position: relative;">
+          <div style="position: absolute; top: 0; right: 0;">
+            <input type="file" id="fileImportExcelPreventiva" accept=".xlsx, .xls" style="display: none;" />
+            <button type="button" class="btn btn-outline" id="btnImportarPreventivaOnly" style="font-size: 0.85rem; border-color: rgba(56,189,248,0.4); color: #38bdf8; display: flex; align-items: center; gap: 0.4rem;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Importar Base
+            </button>
+          </div>
+          <header style="text-align: center; margin-bottom: 2rem;">
+            <div style="background: rgba(16,185,129,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text); margin: 0;">Navegador de Planos</h2>
+            <p style="color: var(--muted); max-width: 600px; margin: 0.5rem auto 0; font-size: 1.1rem; line-height: 1.6;">Selecione o mês para visualizar a programação de manutenção.</p>
+          </header>
+
+          <div class="months-grid">
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('JANEIRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JANEIRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('FEVEREIRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">FEVEREIRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('MARÇO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">MARÇO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('ABRIL')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">ABRIL</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('MAIO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">MAIO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('JUNHO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JUNHO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('JULHO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JULHO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('AGOSTO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">AGOSTO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('SETEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">SETEMBRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('OUTUBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">OUTUBRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('NOVEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">NOVEMBRO</div>
+            </div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlanos('DEZEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;">
+              <div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">DEZEMBRO</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Seleção de Linha & Dashboard da Linha -->
+        <div id="step-linha" style="display: none; width: 100%;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+              <button type="button" class="btn-icon" onclick="planosGoToStep('mes')" title="Voltar aos Meses" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; font-size: 1.2rem; cursor: pointer;">⬅️</button>
+              <div>
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 300; margin: 0; color: var(--text);">Linhas de Produção</h2>
+                <p style="color: var(--muted); margin: 0.25rem 0 0 0;">Mês de Referência: <strong id="step-linha-mes-label" style="color: var(--text);">JANEIRO</strong></p>
+              </div>
+            </div>
+          </header>
+
+          <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+            <!-- Menu Lateral de Linhas -->
+            <aside style="width: 250px; flex-shrink: 0;">
+              <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Selecione a Linha</h3>
+              <div id="linhas-list" style="display: flex; flex-direction: column; gap: 0.5rem;">
+              </div>
+            </aside>
+
+            <section id="calendario-preventiva-section" style="flex: 1; max-width: 600px; margin: 0 auto; background: var(--surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                  <h3 style="margin: 0; font-size: 1.5rem; color: var(--text);">Check-in de Preventivas</h3>
+                  <p style="margin: 0.25rem 0 0 0; color: var(--muted); font-size: 0.9rem;">Dias marcados pelas linhas de produção</p>
+                </div>
+                <button type="button" class="btn btn-outline" style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(16,185,129,0.4); color: #10b981; padding: 0.4rem 0.8rem;" onclick="exportarRelatorioCheckins()">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                  Exportar PDF
+                </button>
+              </div>
+              <div id="preventiva-checkin-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; flex: 1;">
+              </div>
+            </section>
+
+            <!-- Dashboard e Seleção de Máquina -->
+            <section id="step-maquina-section" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 id="linha-dashboard-title" style="margin: 0; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaExcel" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Exportar Linha Inteira (Excel)
+                  </button>
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaPDF" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(239,68,68,0.4); color: #ef4444;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Gerar Checklist (PDF)
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Gráficos/KPIs -->
+              <div class="kpi-grid" style="margin-bottom: 2rem;">
+                <div class="kpi-card" style="background: rgba(56,189,248,0.1); border-color: rgba(56,189,248,0.2);">
+                  <div class="label" style="color: #38bdf8;">Atividades Previstas</div>
+                  <div class="value" id="kpi-linha-atividades">0</div>
+                </div>
+                <div class="kpi-card" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2);">
+                  <div class="label" style="color: #10b981;">HH Total Estimado</div>
+                  <div class="value" id="kpi-linha-hh">0h</div>
+                </div>
+                <div class="kpi-card" style="background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2);">
+                  <div class="label" style="color: #f59e0b;">Custo Previsto</div>
+                  <div class="value" id="kpi-linha-custo">R$ 0,00</div>
+                </div>
+              </div>
+
+              <!-- Seleção de Máquina -->
+              <h4 style="margin-bottom: 1rem;">Selecione a Máquina</h4>
+              <div id="maquinas-grid-planos" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;">
+              </div>
+
+
+            </section>
+          </div>
+        </div>
+
+        <!-- STEP 3: Tabela de Atividades da Máquina -->
+        <div id="step-atividades" style="display: none; width: 100%;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+              <button type="button" class="btn-icon" onclick="planosGoToStep('linha')" title="Voltar à Linha" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; font-size: 1.2rem; cursor: pointer;">⬅️</button>
+              <div>
+                <h2 class="crud-title" id="atividades-maquina-title">Atividades Programadas</h2>
+                <p style="color: var(--muted); margin: 0.25rem 0 0 0;" id="atividades-maquina-subtitle">Linha 06 - Janeiro</p>
+              </div>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" class="btn btn-ghost" id="btnExportPreventiva">Exportar Excel</button>
+              <button type="button" class="btn" id="btnNovaPreventiva">+ Novo registro</button>
+            </div>
+          </header>
+
+          <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface);">
+            <label class="search-field">
+              <span>Busca</span>
+              <input type="search" id="filtroBuscaPreventiva" placeholder="Identificador, Descrição..." />
+            </label>
+            <label><span>Status/Auditoria</span><select id="filtroStatusPreventiva"><option value="TODOS">TODOS</option></select></label>
+            <button type="button" class="btn btn-ghost" id="btnLimparFiltrosPreventiva">Limpar filtros</button>
+          </section>
+          
+          <div class="row-action-bar hidden" id="rowActionBarPrev" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelPrev">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
+          <div class="table-scroll-main">
+            <div class="table-scroll-inner">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Identificador</th>
+                    <th>Máquina</th>
+                    <th>Descrição / Atividades</th>
+                    <th>Duração (h)</th>
+                    <th>HH Mec</th>
+                    <th>HH Elétrico</th>
+                    <th>Status</th>
+                    <th>Custo Previsto</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaPreventiva"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- =====================================================
+         NAVEGADOR GERAL — FRONT-END (clone com IDs -fe)
+         ===================================================== -->
+    <div id="view-planos-manutencao-frontend" class="view">
+      <div class="panel" style="padding: 3rem; display: flex; flex-direction: column; gap: 1.5rem; min-height: 80vh; background: linear-gradient(145deg, rgba(30,41,59,0.3) 0%, rgba(15,23,42,0.3) 100%);">
+        
+        <!-- Breadcrumbs -->
+        <nav aria-label="breadcrumb" style="margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 1rem;">
+          <ol style="list-style: none; display: flex; gap: 0.5rem; padding: 0; margin: 0; font-size: 1rem; color: var(--muted); align-items: center;">
+            <li id="bc-mes-fe" style="cursor: pointer; transition: color 0.2s;" onclick="planosGoToStepFrontend('mes')">Selecione o Mês</li>
+            <li id="bc-sep-1-fe" style="display:none;">/</li>
+            <li id="bc-linha-fe" style="cursor: pointer; transition: color 0.2s; display:none;" onclick="planosGoToStepFrontend('linha')">Linha</li>
+            <li id="bc-sep-2-fe" style="display:none;">/</li>
+            <li id="bc-maquina-fe" style="color: var(--text); font-weight: 500; display:none;">Máquina</li>
+          </ol>
+        </nav>
+
+        <!-- STEP 1: Seleção de Mês -->
+        <div id="step-mes-fe" style="position: relative;">
+          <div style="position: absolute; top: 0; right: 0;">
+            <input type="file" id="fileImportExcelPreventivaFE" accept=".xlsx, .xls" style="display: none;" />
+            <button type="button" class="btn btn-outline" id="btnImportarPreventivaSomenteFE" style="font-size: 0.85rem; border-color: rgba(110,231,183,0.4); color: #6ee7b7; display: flex; align-items: center; gap: 0.4rem;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Importar Base
+            </button>
+          </div>
+          <header style="text-align: center; margin-bottom: 2rem;">
+            <div style="background: rgba(16,185,129,0.1); width: 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            </div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 300; letter-spacing: 0.05em; color: var(--text); margin: 0;">Navegador de Planos</h2>
+            <p style="color: var(--muted); max-width: 600px; margin: 0.5rem auto 0; font-size: 1.1rem; line-height: 1.6;">Selecione o mês para visualizar a programação de manutenção.</p>
+          </header>
+          <div class="months-grid">
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('JANEIRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JANEIRO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('FEVEREIRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">FEVEREIRO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('MARÇO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">MARÇO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('ABRIL')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">ABRIL</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('MAIO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">MAIO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('JUNHO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JUNHO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('JULHO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">JULHO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('AGOSTO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">AGOSTO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('SETEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">SETEMBRO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('OUTUBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">OUTUBRO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('NOVEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">NOVEMBRO</div></div>
+            <div class="month-card" tabindex="0" onclick="selecionarMesPlansosFrontend('DEZEMBRO')" style="cursor:pointer; display:flex; align-items:center; justify-content:center; padding: 2rem;"><div class="month-card-header" style="border:none; padding:0; margin:0; font-size:1.2rem;">DEZEMBRO</div></div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Seleção de Linha -->
+        <div id="step-linha-fe" style="display: none; width: 100%;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+              <button type="button" class="btn-icon" onclick="planosGoToStepFrontend('mes')" title="Voltar aos Meses" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; font-size: 1.2rem; cursor: pointer;">⬅️</button>
+              <div>
+                <h2 style="font-family: 'Outfit', sans-serif; font-size: 2rem; font-weight: 300; margin: 0; color: var(--text);">Linhas de Produção</h2>
+                <p style="color: var(--muted); margin: 0.25rem 0 0 0;">Mês de Referência: <strong id="step-linha-mes-label-fe" style="color: var(--text);">JANEIRO</strong></p>
+              </div>
+            </div>
+          </header>
+          <div style="display: flex; gap: 2rem; flex-wrap: wrap;">
+            <aside style="width: 250px; flex-shrink: 0;">
+              <h3 style="margin-bottom: 1rem; font-size: 1.1rem;">Selecione a Linha</h3>
+              <div id="linhas-list-fe" style="display: flex; flex-direction: column; gap: 0.5rem;"></div>
+            </aside>
+            <section id="calendario-preventiva-section-fe" style="flex: 1; max-width: 600px; margin: 0 auto; background: var(--surface); padding: 1.5rem; border-radius: 8px; border: 1px solid var(--border); display: flex; flex-direction: column; min-height: 400px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <div>
+                  <h3 style="margin: 0; font-size: 1.5rem; color: var(--text);">Check-in de Preventivas</h3>
+                  <p style="margin: 0.25rem 0 0 0; color: var(--muted); font-size: 0.9rem;">Dias marcados pelas linhas de produção</p>
+                </div>
+                <button type="button" class="btn btn-outline" style="font-size: 0.8rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(16,185,129,0.4); color: #10b981; padding: 0.4rem 0.8rem;" onclick="exportarRelatorioCheckins()">
+                  <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                  Exportar PDF
+                </button>
+              </div>
+              <div id="preventiva-checkin-grid-fe" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; flex: 1;">
+              </div>
+            </section>
+
+            <section id="step-maquina-section-fe" style="flex: 1; display: none; background: var(--surface); padding: 2rem; border-radius: 8px; border: 1px solid var(--border);">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h3 id="linha-dashboard-title-fe" style="margin: 0; font-size: 1.5rem; color: var(--text);">Dashboard - Linha</h3>
+                <div style="display: flex; gap: 0.5rem;">
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaExcelFE" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Exportar Linha Inteira (Excel)
+                  </button>
+                  <button type="button" class="btn btn-outline" id="btnExportarLinhaPDFFE" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(239,68,68,0.4); color: #ef4444;">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                    Gerar Checklist (PDF)
+                  </button>
+                </div>
+              </div>
+              <div class="kpi-grid" style="margin-bottom: 2rem;">
+                <div class="kpi-card" style="background: rgba(110,231,183,0.1); border-color: rgba(110,231,183,0.2);">
+                  <div class="label" style="color: #6ee7b7;">Atividades Previstas</div>
+                  <div class="value" id="kpi-linha-atividades-fe">0</div>
+                </div>
+                <div class="kpi-card" style="background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.2);">
+                  <div class="label" style="color: #10b981;">HH Total Estimado</div>
+                  <div class="value" id="kpi-linha-hh-fe">0h</div>
+                </div>
+                <div class="kpi-card" style="background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2);">
+                  <div class="label" style="color: #f59e0b;">Freq. Média (meses)</div>
+                  <div class="value" id="kpi-linha-freq-fe">—</div>
+                </div>
+              </div>
+              <h4 style="margin-bottom: 1rem;">Selecione a Máquina</h4>
+              <div id="maquinas-grid-planos-fe" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; max-height: 400px; overflow-y: auto; padding-right: 0.5rem;"></div>
+              <!-- Botão import foi movido para a tela geral -->
+            </section>
+          </div>
+        </div>
+
+        <!-- STEP 3: Tabela de Atividades da Máquina -->
+        <div id="step-atividades-fe" style="display: none; width: 100%;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+              <button type="button" class="btn-icon" onclick="planosGoToStepFrontend('linha')" title="Voltar à Linha" style="background: rgba(255,255,255,0.05); padding: 0.5rem 1rem; border-radius: 8px; font-size: 1.2rem; cursor: pointer;">⬅️</button>
+              <div>
+                <h2 class="crud-title" id="atividades-maquina-title-fe">Atividades Programadas</h2>
+                <p style="color: var(--muted); margin: 0.25rem 0 0 0;" id="atividades-maquina-subtitle-fe">Linha 06 - Janeiro</p>
+              </div>
+            </div>
+            <div class="toolbar-actions">
+              <button type="button" class="btn btn-ghost" id="btnExportPreventivaFE">Exportar Excel</button>
+              <button type="button" class="btn" id="btnNovaPreventivaFE">+ Novo registro</button>
+            </div>
+          </header>
+          <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface);">
+            <label class="search-field"><span>Busca</span><input type="search" id="filtroBuscaPreventivaFE" placeholder="Máquina, Descrição..." /></label>
+            <label><span>Status/Auditoria</span><select id="filtroStatusPreventivaFE"><option value="TODOS">TODOS</option></select></label>
+            <button type="button" class="btn btn-ghost" id="btnLimparFiltrosPreventivaFE">Limpar filtros</button>
+          </section>
+
+          <div class="row-action-bar hidden" id="rowActionBarPrevFE" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelPrevFE">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
+          <div class="table-scroll-main">
+            <div class="table-scroll-inner">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Máquina</th>
+                    <th>Descrição</th>
+                    <th>Duração (h)</th>
+                    <th>HH Mec</th>
+                    <th>HH Elétrico</th>
+                    <th>HH Lub</th>
+                    <th>Freq. (meses)</th>
+                    <th>Sugestão</th>
+                    <th>Status</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaPreventivaFE"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="view-por-maquina" class="view">
+      <div class="panel" style="padding: 2rem; width: 100%; display:flex; gap:2rem; min-height: calc(100vh - 100px);">
+        <aside style="width:250px; border-right:1px solid var(--border); padding-right:1rem; flex-shrink: 0;">
+          <h3 style="margin-bottom:1rem;">Máquinas</h3>
+          <ul id="machineList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.5rem;">
+            <!-- populated by JS -->
+          </ul>
+        </aside>
+        <section style="flex:1; min-width:0;">
+          <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+            <h3 id="machineTitle" style="margin:0;">Selecione uma máquina</h3>
+            <div style="display: flex; gap: 1rem; align-items: center;">
+              <button type="button" class="btn btn-outline" id="btnImportarPlano" onclick="importarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(110,231,183,0.4); color: #6ee7b7;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Importar Excel
+              </button>
+              <button type="button" class="btn btn-outline" id="btnExportarPlano" onclick="exportarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+                Exportar Excel
+              </button>
+              <div id="geralSetorFilterContainer">
+                <select id="geralSetorFilter" onchange="renderMachineList(); renderMachineActivities()" style="background: rgba(30,41,59,0.8); border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; padding: 0.5rem 2rem 0.5rem 1rem; font-weight: 600; cursor: pointer; outline: none; appearance: none; font-family: 'DM Sans', sans-serif;">
+                  <option value="todos">Setor: Todos</option>
+                  <option value="frontend">Setor: Front-end</option>
+                  <option value="backend">Setor: Back-end</option>
+                </select>
+              </div>
+            </div>
+          </header>
+          <div class="table-scroll-main" style="border-radius: 6px; border: 1px solid var(--border); flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 75vh;">
+            <div class="table-scroll-inner" style="flex: 1; overflow: auto;">
+              <table class="data-table" id="machineActivitiesTable">
+                <thead></thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+
+    
+    <!-- =====================================================
+         PLANO MESTRE
+         ===================================================== -->
+    <div id="view-plano-mestre" class="view">
+      <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+          <div>
+            <h3 style="margin:0 0 0.25rem 0;">Plano Mestre de Manutenção</h3>
+            <p class="section-hint" style="margin:0;">Gerencie as atividades, frequências e cronogramas de cada máquina.</p>
+          </div>
+          <div style="display: flex; gap: 1rem;">
+            <input type="file" id="filePlanoMestre" accept=".xlsx, .xls" style="display: none;" />
+            <button id="btnImportPlanoMestre" class="btn btn-secondary">
+              <span class="icon">📁</span> Importar Excel
+            </button>
+          </div>
+        </div>
+
+        
+        <!-- DASHBOARD E FILTROS PLANO MESTRE -->
+        <section class="kpi-grid" style="margin-bottom: 1.5rem;">
+          <div class="kpi-card">
+            <div class="label">Total de Atividades</div>
+            <div class="value" id="pm-total-atividades">0</div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">H-H Estimado</div>
+            <div class="value" id="pm-total-hh">0.00</div>
+          </div>
+          <div class="kpi-card">
+            <div class="label">Máquinas</div>
+            <div class="value" id="pm-total-maquinas">0</div>
+          </div>
+          <div class="kpi-card" style="display: flex; align-items: center; justify-content: center; padding: 0.5rem; border:none; background: transparent; box-shadow: none;">
+             <canvas id="pmChartEstrategia" style="max-height: 80px;"></canvas>
+          </div>
+        </section>
+
+        <section class="filters" style="margin-bottom:1.5rem; justify-content: flex-start; flex-wrap: wrap;">
+          <label class="search-field" style="flex: 1; min-width: 250px; max-width: 400px;">
+            <span>Busca</span>
+            <input type="search" id="pm-search" placeholder="Buscar por TAG, Máquina ou Tarefa..." />
+          </label>
+          <label style="min-width: 150px;">
+            <span>Disciplina</span>
+            <select id="pm-filter-disciplina">
+              <option value="">Todas as Disciplinas</option>
+              <option value="MECÂNICA">Mecânica</option>
+              <option value="ELÉTRICA">Elétrica</option>
+            </select>
+          </label>
+          <label style="min-width: 150px;">
+            <span>Estratégia</span>
+            <select id="pm-filter-estrategia">
+              <option value="">Todas Estratégias</option>
+            </select>
+          </label>
+          <button id="btnExportPlanoMestre" class="btn btn-primary" style="margin-top: 1.5rem; height: 38px;">
+            <span class="icon">📊</span> Exportar Excel
+          </button>
+          <button id="btnExportPlanoMestrePDF" class="btn btn-outline" style="margin-top: 1.5rem; height: 38px; border-color: rgba(239,68,68,0.4); color: #ef4444; display: flex; align-items: center; gap: 0.4rem;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
+            Gerar Checklist (PDF)
+          </button>
+        </section>
+
+        <div id="planoMestreContent" style="min-height: 400px;">
+          <!-- Renderizado via JS -->
+        </div>
+      </div>
+    </div>
+
+    <div id="view-plano-preventiva" class="view">
+      <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
+        
+        <!-- Cabeçalho com seleção de contexto -->
+        <div style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom:1.5rem; gap:1rem;">
+          <div>
+            <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(56,189,248,0.1); border:1px solid rgba(56,189,248,0.25); border-radius:20px; padding:0.3rem 0.8rem; margin-bottom:0.75rem;">
+              <span class="setor-badge setor-badge-backend">BE</span>
+              <span style="font-size:0.8rem; color:#38bdf8; font-weight:500;">Back-end da Fábrica</span>
+            </div>
+            <h3 style="margin:0 0 0.25rem 0;">Gerador de Planos — Back-end</h3>
+            <p class="section-hint" style="margin:0;">Selecione máquina, mês e linha. Clique em <strong>Editar</strong> para abrir o modal (como no Controle RC), ajuste as tarefas e aplique somente ao contexto selecionado.</p>
+            <p id="planoContextoLabel" style="margin:0.5rem 0 0; font-size:0.85rem; color:var(--primary); display:none;"></p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btnAplicarPlano" style="white-space:nowrap;" disabled title="Selecione máquina, mês e linha">✅ Aplicar Plano à Preventiva</button>
+        </div>
+
+        <!-- Seletores -->
+        <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:flex-end; background:var(--surface); padding:1.25rem; border-radius:10px; border:1px solid var(--border);">
+          <label style="flex:1; min-width:160px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Máquina</span>
+            <select id="planoMachineSelect" onchange="carregarAtividadesPlano()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+              <option value="">Selecione a máquina...</option>
+            </select>
+          </label>
+          <label style="flex:1; min-width:160px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Mês</span>
+            <select id="planoMesSelect" onchange="carregarAtividadesPlano()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+              <option value="">Selecione o mês...</option>
+              <option value="JANEIRO">JANEIRO</option>
+              <option value="FEVEREIRO">FEVEREIRO</option>
+              <option value="MARÇO">MARÇO</option>
+              <option value="ABRIL">ABRIL</option>
+              <option value="MAIO">MAIO</option>
+              <option value="JUNHO">JUNHO</option>
+              <option value="JULHO">JULHO</option>
+              <option value="AGOSTO">AGOSTO</option>
+              <option value="SETEMBRO">SETEMBRO</option>
+              <option value="OUTUBRO">OUTUBRO</option>
+              <option value="NOVEMBRO">NOVEMBRO</option>
+              <option value="DEZEMBRO">DEZEMBRO</option>
+            </select>
+          </label>
+          <label style="flex:1; min-width:120px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Linha</span>
+            <select id="planoLinhaSelect" onchange="carregarAtividadesPlano()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+              <option value="L04">L04</option>
+              <option value="L05">L05</option>
+              <option value="L06" selected>L06</option>
+              <option value="L07">L07</option>
+              <option value="L08">L08</option>
+              <option value="L09">L09</option>
+            </select>
+          </label>
+        </div>
+
+        <!-- Tabela de atividades editáveis -->
+        <div style="margin-bottom:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <h4 style="margin:0;" id="planoAtividadesLabel">Atividades do Plano</h4>
+            <span id="planoAtividadesCount" style="font-size:0.8rem; color:var(--muted);"></span>
+          </div>
+
+          <div class="row-action-bar hidden" id="rowActionBarGerador" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelGerador">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
+          <div class="table-scroll-main" style="max-height:420px;">
+            <div class="table-scroll-inner">
+              <table class="data-table" id="planoActivitiesTable">
+                <thead>
+                  <tr>
+                    <th>Identificador</th>
+                    <th>Descrição</th>
+                    <th>Material</th>
+                    <th>Plano Padrão</th>
+                    <th>Duração (h)</th>
+                    <th>HH Mec</th>
+                    <th>HH Elétrico</th>
+                    <th>Resp. Fábrica</th>
+                    <th>Resp. Manutenção</th>
+                    <th>Status</th>
+                    <th>Prev. Custos</th>
+                    <th style="width:80px;">Editar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="12" style="text-align:center; color:var(--muted); padding:2rem;">Selecione uma máquina para carregar as atividades.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- =====================================================
+         GERADOR DE PLANOS — FRONT-END (clone com IDs -fe)
+         ===================================================== -->
+    <div id="view-plano-preventiva-frontend" class="view">
+      <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
+        <div style="display:flex; flex-direction:column; align-items:flex-start; margin-bottom:1.5rem; gap:1rem;">
+          <div>
+            <div style="display:inline-flex; align-items:center; gap:0.5rem; background:rgba(110,231,183,0.1); border:1px solid rgba(110,231,183,0.25); border-radius:20px; padding:0.3rem 0.8rem; margin-bottom:0.75rem;">
+              <span class="setor-badge setor-badge-frontend">FE</span>
+              <span style="font-size:0.8rem; color:#6ee7b7; font-weight:500;">Front-end da Fábrica</span>
+            </div>
+            <h3 style="margin:0 0 0.25rem 0;">Gerador de Planos — Front-end</h3>
+            <p class="section-hint" style="margin:0;">Selecione máquina, mês e linha do setor Front-end. As atividades são isoladas do Back-end.</p>
+            <p id="planoContextoLabel-fe" style="margin:0.5rem 0 0; font-size:0.85rem; color:var(--primary); display:none;"></p>
+          </div>
+          <button type="button" class="btn btn-primary" id="btnAplicarPlanoFE" style="white-space:nowrap; border-color: #6ee7b7;" disabled title="Selecione máquina, mês e linha">✅ Aplicar Plano Front-end</button>
+        </div>
+
+        <div style="display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; align-items:flex-end; background:var(--surface); padding:1.25rem; border-radius:10px; border:1px solid var(--border);">
+          <label style="flex:1; min-width:160px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Máquina</span>
+            <select id="planoMachineSelectFE" onchange="carregarAtividadesPlanoFE()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+              <option value="">Selecione a máquina...</option>
+            </select>
+          </label>
+          <label style="flex:1; min-width:160px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Mês</span>
+            <select id="planoMesSelectFE" onchange="carregarAtividadesPlanoFE()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+              <option value="">Selecione o mês...</option>
+              <option>JANEIRO</option><option>FEVEREIRO</option><option>MARÇO</option><option>ABRIL</option>
+              <option>MAIO</option><option>JUNHO</option><option>JULHO</option><option>AGOSTO</option>
+              <option>SETEMBRO</option><option>OUTUBRO</option><option>NOVEMBRO</option><option>DEZEMBRO</option>
+            </select>
+          </label>
+          <label style="flex:1; min-width:120px;">
+            <span style="font-size:0.8rem; color:var(--muted); display:block; margin-bottom:0.4rem;">Linha</span>
+            <select id="planoLinhaSelectFE" onchange="carregarAtividadesPlanoFE()" style="width:100%; padding:0.6rem; background:var(--bg); border:1px solid var(--border); color:var(--text); border-radius:6px; font-size:0.9rem;">
+              <option value="L04">L04</option><option value="L05">L05</option>
+              <option value="L06" selected>L06</option><option value="L07">L07</option>
+              <option value="L08">L08</option><option value="L09">L09</option>
+            </select>
+          </label>
+        </div>
+
+        <div style="margin-bottom:1.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+            <h4 style="margin:0;" id="planoAtividadesLabelFE">Atividades do Plano</h4>
+            <span id="planoAtividadesCountFE" style="font-size:0.8rem; color:var(--muted);"></span>
+          </div>
+
+          <div class="row-action-bar hidden" id="rowActionBarGeradorFE" aria-live="polite">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelGeradorFE">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm btn-detalhes-prev">Ver detalhes</button>
+            </div>
+          </div>
+
+          <div class="table-scroll-main" style="max-height:420px;">
+            <div class="table-scroll-inner">
+              <table class="data-table" id="planoActivitiesTableFE">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Máquina</th>
+                    <th>Descrição</th>
+                    <th>Duração (h)</th>
+                    <th>HH Mec</th>
+                    <th>HH Elétrico</th>
+                    <th>HH Lub</th>
+                    <th>Freq. (meses)</th>
+                    <th>Sugestão</th>
+                    <th>Status</th>
+                    <th style="width:80px;">Editar</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="11" style="text-align:center; color:var(--muted); padding:2rem;">Selecione uma máquina para carregar as atividades.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Edição de Atividade — Front-end -->
+    <div class="modal-overlay" id="modalEditarAtividadeFE">
+      <div class="modal modal-lg" style="max-width:780px; width:95%; max-height:90vh; overflow-y:auto;">
+        <header class="modal-header">
+          <h2 id="modalAtivTituloFE">Editar Atividade — Front-end</h2>
+          <button type="button" class="btn-icon" id="btnFecharModalAtividadeFE" aria-label="Fechar">✕</button>
+        </header>
+        <form id="formEditarAtividadeFE">
+          <input type="hidden" id="editAtivIdFE" />
+          <div class="form-section">
+            <h3>Identificação</h3>
+            <div class="form-grid">
+              <label><span>Identificador</span><input type="text" id="editAtivIdentificadorFE" placeholder="Ex: ESMALTADEIRA - 01" /></label>
+              <label><span>Máquina</span><input type="text" id="editAtivMaquinaFE" readonly style="opacity:0.6;" /></label>
+              <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Descrições / Atividades</span>
+                  <div id="listaDescricoesGeradorFE" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovaDescricaoGeradorFE" style="align-self:flex-start;">+ Adicionar descrição</button>
+                </div>
+                <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Materiais</span>
+                  <div id="listaMateriaisGeradorFE" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovoMaterialGeradorFE" style="align-self:flex-start;">+ Adicionar material</button>
+                </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Parâmetros</h3>
+            <div class="form-grid">
+              <label><span>Duração (horas)</span><input type="number" id="editAtivDuracaoFE" step="0.5" min="0" placeholder="0" /></label>
+              <label><span>HH Mecânico</span><input type="number" id="editAtivHhMecFE" step="0.5" min="0" placeholder="0" /></label>
+              <label><span>HH Elétrico</span><input type="number" id="editAtivHhEleFE" step="0.5" min="0" placeholder="0" /></label>
+              <label><span>HH Lubrificação</span><input type="number" id="editAtivHhLubFE" step="0.5" min="0" placeholder="0" /></label>
+              <label><span>Frequência (meses)</span><input type="number" id="editAtivFreqFE" step="1" min="0" placeholder="Ex: 6" /></label>
+              <label><span>Status / Auditoria</span>
+                <select id="editAtivStatusFE">
+                  <option value="">-- Sem status --</option>
+                  <option value="PENDENTE">PENDENTE</option>
+                  <option value="EM ANDAMENTO">EM ANDAMENTO</option>
+                  <option value="FINALIZADO">FINALIZADO</option>
+                  <option value="CANCELADO">CANCELADO</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="form-section">
+            <h3>Responsável / Sugestão</h3>
+            <div class="form-grid">
+              <label><span>Sugestão de Resp.</span><input type="text" id="editAtivSugestaoFE" placeholder="Nome sugerido" /></label>
+            </div>
+          </div>
+          <footer class="modal-header" style="justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); border-bottom:none; padding:1rem 1.5rem;">
+            <button type="button" class="btn btn-ghost" id="btnCancelarModalAtividadeFE">Cancelar</button>
+            <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de Edição de Atividade do Plano (estilo RC) -->
+    <div class="modal-overlay" id="modalEditarAtividade">
+      <div class="modal modal-lg" style="max-width:780px; width:95%; max-height:90vh; overflow-y:auto;">
+        <header class="modal-header">
+          <h2 id="modalAtivTitulo">Editar Atividade</h2>
+          <button type="button" class="btn-icon" id="btnFecharModalAtividade" aria-label="Fechar">✕</button>
+        </header>
+        <form id="formEditarAtividade">
+          <input type="hidden" id="editAtivId" />
+          
+          <div class="form-section">
+            <h3>Identificação</h3>
+            <div class="form-grid">
+              <label>
+                <span>Identificador</span>
+                <input type="text" id="editAtivIdentificador" placeholder="Ex: Atv. 3.2" />
+              </label>
+              <label>
+                <span>Máquina</span>
+                <input type="text" id="editAtivMaquina" readonly style="opacity:0.6;" />
+              </label>
+                              <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Descrições / Atividades</span>
+                  <div id="listaDescricoesGerador" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovaDescricaoGerador" style="align-self:flex-start;">+ Adicionar descrição</button>
+                </div>
+                <div class="full" style="display:flex; flex-direction:column; gap:0.5rem;">
+                  <span style="font-size:0.75rem; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:0.05em;">Materiais</span>
+                  <div id="listaMateriaisGerador" style="display:flex; flex-direction:column; gap:0.5rem;"></div>
+                  <button type="button" class="btn btn-outline btn-sm" id="btnNovoMaterialGerador" style="align-self:flex-start;">+ Adicionar material</button>
+                </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Parâmetros</h3>
+            <div class="form-grid">
+              <label>
+                <span>Duração (horas)</span>
+                <input type="number" id="editAtivDuracao" step="0.5" min="0" placeholder="0" />
+              </label>
+              <label>
+                <span>HH Mecânico</span>
+                <input type="number" id="editAtivHhMec" step="0.5" min="0" placeholder="0" />
+              </label>
+              <label>
+                <span>HH Elétrico</span>
+                <input type="number" id="editAtivHhEle" step="0.5" min="0" placeholder="0" />
+              </label>
+              <label>
+                <span>Previsão de Custos (R$)</span>
+                <input type="number" id="editAtivCustos" step="0.01" min="0" placeholder="0,00" />
+              </label>
+              <label>
+                <span>Plano Padrão</span>
+                <select id="editAtivPlanoPadrao">
+                  <option value="S">Sim (S)</option>
+                  <option value="N">Não (N)</option>
+                </select>
+              </label>
+              <label>
+                <span>Status / Auditoria</span>
+                <select id="editAtivStatus">
+                  <option value="">-- Sem status --</option>
+                  <option value="PENDENTE">PENDENTE</option>
+                  <option value="EM ANDAMENTO">EM ANDAMENTO</option>
+                  <option value="FINALIZADO">FINALIZADO</option>
+                  <option value="CANCELADO">CANCELADO</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <h3>Responsáveis</h3>
+            <div class="form-grid">
+              <label>
+                <span>Resp. Fábrica</span>
+                <input type="text" id="editAtivRespFabrica" placeholder="Nome do responsável" />
+              </label>
+              <label>
+                <span>Resp. Manutenção</span>
+                <input type="text" id="editAtivRespManut" placeholder="Nome do responsável" />
+              </label>
+            </div>
+          </div>
+
+          <footer class="modal-header" style="justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); border-bottom:none; padding:1rem 1.5rem;">
+            <button type="button" class="btn btn-ghost" id="btnCancelarModalAtividade">Cancelar</button>
+            <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+          </footer>
+        </form>
+      </div>
+    </div>
+
+    <div id="view-fornecedores" class="view">
+      <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem;">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <h2>Relatório de Fornecedores (SLA)</h2>
+          <div class="tooltip-container" style="display: flex; gap: 1rem; align-items: center;">
+            <button type="button" class="btn btn-outline" id="btnConfigContatos" onclick="document.getElementById('modalFornecedorContato').classList.add('open')" style="font-size: 0.85rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+              Contatos
+            </button>
+            <button type="button" class="btn btn-primary" id="btnExportSlaPdf">Gerar Relatório SLA (PDF)</button>
+            <div class="tooltip-card">
+              <strong style="color: var(--text); font-size: 0.95rem; display: block; margin-bottom: 0.5rem; text-align: left;">Conteúdo do Relatório SLA:</strong>
+              <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--muted); text-align: left; line-height: 1.5;">
+                <li>Layout fotográfico executivo formatado para impressão (fundo branco).</li>
+                <li>Painel com as Notas Globais (Pontualidade Média, Melhor Fornecedor).</li>
+                <li>Tabela Analítica desdobrada com barra de progresso individual de pontualidade.</li>
+                <li><strong>Ranking de Ofensores:</strong> Seção automática isolando a tabela dos 3 piores fornecedores da cadeia para ações de cobrança.</li>
+              </ul>
+            </div>
+          </div>
+        </header>
+
+        <!-- KPI Grid -->
+        <div class="sla-grid" style="margin-bottom: 2rem;">
+          <div class="kpi-card tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Total Fornecedores Ativos
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiTotal">0</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: auto; left: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Contagem de Fornecedores</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">Exibe o número total de fornecedores distintos que possuem itens no sistema (independente se o item foi entregue ou está pendente).</p>
+            </div>
+          </div>
+          <div class="kpi-card tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Pontualidade Global
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiPontualidade">0%</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: auto; left: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Cálculo de Pontualidade</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">Considera apenas itens <strong>ENTREGUES</strong>. É o percentual de itens entregues <em>antes ou no dia exato</em> da Previsão de Entrega acordada.</p>
+            </div>
+          </div>
+          <div class="kpi-card tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Atraso Médio Global
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiAtraso">0 dias</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Cálculo de Atraso Médio</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">Considera apenas itens <strong>ENTREGUES com atraso</strong>. É a média aritmética de quantos dias de atraso houveram após a Previsão de Entrega (Dias fora não contam aqui).</p>
+            </div>
+          </div>
+          <div class="kpi-card kpi-gold tooltip-container">
+            <div class="label" style="display: flex; align-items: center; justify-content: space-between;">
+              Fornecedor Destaque
+              <span style="font-size: 0.8rem; opacity: 0.5; border: 1px solid currentColor; border-radius: 50%; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center;">?</span>
+            </div>
+            <div class="value" id="slaKpiDestaque" style="font-size: 1.25rem;">-</div>
+            <div class="tooltip-card" style="width: 280px; text-align: left; top: 110%; right: 0;">
+              <strong style="color: var(--text); font-size: 0.85rem;">Critério do Top 1</strong>
+              <p style="font-size: 0.8rem; margin-top: 0.4rem; color: var(--text-light); line-height: 1.4;">O fornecedor classificado como Destaque é aquele que possui a <strong>maior pontualidade</strong>, com desempate baseado no <strong>maior volume</strong> de itens entregues.</p>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: flex; gap: 1.5rem; align-items: flex-start;">
+          <div class="table-scroll-main" style="flex: 1;">
+            <div class="table-scroll-inner">
+              <table class="data-table" id="tabelaFornecedoresEl">
+                <thead>
+                  <tr>
+                    <th>Fornecedor</th>
+                    <th>Itens Entregues</th>
+                    <th>Pontualidade (%)</th>
+                    <th>Média de Atraso (Dias)</th>
+                    <th>Status Geral</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaFornecedores"></tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Floating Info Card -->
+          <div class="sla-floating-card">
+            <h4><span style="font-size: 1.1rem;">💡</span> Como funciona o SLA?</h4>
+            <div class="sla-info-content">
+              <p>Esta aba mede o desempenho de todos os fornecedores (<strong>Service Level Agreement</strong>).</p>
+              <ul>
+                <li><strong>Pontualidade:</strong> Mede % de itens que o fornecedor entregou <em>dentro ou antes</em> da Data de Previsão estipulada no PO.</li>
+                <li><strong>Média de Atraso:</strong> A quantidade média de dias que o fornecedor costuma atrasar quando perde o prazo. Prazos cumpridos não somam atraso.</li>
+                <li>A lista conta <strong>apenas</strong> itens marcados como Entregues (que possuem Data de Recebimento).</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-calendario" class="view">
+      <div class="panel" style="padding: 1.5rem;">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+          <button type="button" class="btn btn-ghost" id="btnCalPrev">← Anterior</button>
+          
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <h2 id="calendarioMesAno" style="margin: 0;">Mês Ano</h2>
+            <div class="tooltip-container">
+              <button type="button" class="btn-icon" aria-label="Ajuda do Calendário" style="border-radius: 50%; background: var(--surface); border: 1px solid var(--border); width: 24px; height: 24px; font-size: 0.8rem; display: flex; align-items: center; justify-content: center; cursor: help; color: var(--text-light);">?</button>
+              <div class="tooltip-card" style="width: 320px; text-align: left; z-index: 50;">
+                <strong style="color: var(--text); font-size: 0.95rem; display: block; margin-bottom: 0.5rem;">Como funciona o Calendário:</strong>
+                <ul style="margin: 0; padding-left: 1.2rem; font-size: 0.85rem; color: var(--muted); line-height: 1.5;">
+                  <li><strong>Exibição:</strong> Os itens aparecem no dia correspondente à sua <em>Data de Previsão de Entrega</em>.</li>
+                  <li style="margin-top: 0.3rem;"><strong>Legenda de Cores:</strong>
+                    <ul style="padding-left: 1rem; margin-top: 0.2rem; margin-bottom: 0.2rem;">
+                      <li><span style="color: #10b981; font-weight: bold;">Verde:</span> Entregue.</li>
+                      <li><span style="color: #f59e0b; font-weight: bold;">Amarelo:</span> Em aberto (No prazo).</li>
+                      <li><span style="color: #ef4444; font-weight: bold;">Vermelho:</span> Atrasado (Prazo vencido).</li>
+                    </ul>
+                  </li>
+                  <li style="margin-top: 0.3rem;"><strong>Nomenclatura:</strong> Exibe a descrição do Item (ou Fornecedor/RC caso esteja sem nome).</li>
+                  <li style="margin-top: 0.3rem;"><strong>Ação:</strong> Clique em um cartão para abrir a <em>Visão de Raio-X</em> do item.</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <button type="button" class="btn btn-ghost" id="btnCalNext">Próximo →</button>
+        </header>
+        <p class="section-hint">Visão mensal baseada na Data de Previsão de Entrega dos itens em aberto e recebidos.</p>
+        <div class="calendario-grid" id="calendarioGrid"></div>
+      </div>
+    </div>
+
+      <section id="secaoCrudGraficos" class="crud-section hidden" style="flex: 0 0 auto;">
+        <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem; margin-bottom: 1.5rem;">
+          <header style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <h2 style="color: #fff; margin: 0 0 0.25rem 0;">Análise Mensal</h2>
+              <p class="section-hint" style="margin-bottom: 0;">Visão financeira (Previsto vs Recebido) filtrada para o contexto atual.</p>
+            </div>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+              <button type="button" class="btn btn-outline" id="btnFluxoConsertos" style="font-size: 0.85rem; padding: 0.4rem 0.8rem; display:none;" title="Abrir gráfico de Fluxo de Consertos">📊 Fluxo do Mês</button>
+              <button type="button" class="btn btn-outline" id="btnToggleChart" style="font-size: 0.85rem; padding: 0.4rem 0.8rem;">Mostrar Gráfico</button>
+            </div>
+          </header>
+          <div id="chartContainer" class="hidden" style="margin-top: 1.5rem;">
+            <div class="chart-box crud-chart-box">
+              <div class="chart-canvas-wrap">
+                <canvas id="chartCrudMes"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    <section id="secaoTabela" class="crud-section hidden">
+      <div class="toolbar panel">
+        <div>
+          <h2 class="crud-title" id="crudTitle">Controle RC</h2>
+          <span class="table-count" id="tableCount">0 registros</span>
+        </div>
+        <div class="toolbar-actions">
+          <button type="button" class="btn btn-outline" id="btnInlineEdit" title="Ativar Edição por Linha" style="border-color: rgba(255,255,255,0.2); color: var(--text); padding: 0.5rem 0.75rem;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            <span style="pointer-events: none; font-weight: 500;">Modo Edição</span>
+          </button>
+          <button type="button" class="btn btn-ghost" id="btnExport">Exportar Excel</button>
+          <button type="button" class="btn" id="btnNovo">+ Novo registro</button>
+        </div>
+      </div>
+
+      <div class="row-action-bar hidden" id="rowActionBar" aria-live="polite">
+        <div class="row-action-info">
+          <span class="row-action-label" id="rowActionLabel">Linha selecionada</span>
+          <span class="row-action-hint">Duplo clique na linha para ver detalhes</span>
+        </div>
+        <div class="row-action-buttons">
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDetalhe">Ver detalhes</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowEditar">Editar</button>
+          <button type="button" class="btn btn-ghost btn-sm" id="btnRowDuplicar">Duplicar</button>
+          <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnRowExcluir">Excluir</button>
+        </div>
+      </div>
+
+      <div class="table-scroll-main" id="tableScrollMain">
+        <div class="table-scroll-inner" id="tableScrollInner">
+          <table class="data-table">
+            <thead id="tabelaHead"></thead>
+            <tbody id="tabelaBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal Alertas do Dia -->
+  <div class="modal-overlay" id="modalAlertasDia">
+    <div class="modal">
+      <header class="modal-header" style="border-bottom-color: var(--danger);">
+        <h2>🔔 Atualizações de Prazos</h2>
+        <button type="button" class="btn-icon" id="btnFecharAlertasDia" aria-label="Fechar">✕</button>
+      </header>
+      <div class="form-section">
+        <p style="margin-bottom: 1rem; color: var(--text-light);">Os seguintes itens mudaram de status de prazo desde a sua última visita:</p>
+        <ul id="listaAlertasDia" style="list-style: none; padding: 0; display: flex; flex-direction: column; gap: 0.5rem;">
+        </ul>
+      </div>
+      <footer class="modal-header" style="justify-content: flex-end; border-top: 1px solid var(--border); border-bottom: none;">
+        <button type="button" class="btn btn-primary" id="btnOkAlertasDia">Ciente</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal CRUD completo -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal modal-lg">
+      <header class="modal-header">
+        <h2 id="modalTitulo">Registro RC</h2>
+        <button type="button" class="btn-icon" id="btnFecharModal" aria-label="Fechar">✕</button>
+      </header>
+      <form id="formRegistro">
+        <div class="form-section">
+          <h3>Identificação</h3>
+          <p id="formIdHint" class="form-hint"></p>
+          <div class="form-grid">
+            <label style="display: none;"><span>Sinal</span><input name="sinal" type="hidden" /></label>
+            <label>
+              <span>ID (agrupa o mesmo item — pode repetir)</span>
+              <div class="input-with-btn">
+                <input name="item_id" type="number" min="1" step="1" />
+                <button type="button" class="btn btn-ghost btn-sm" id="btnProximoId" title="Sugerir próximo ID">Próximo ID</button>
+              </div>
+            </label>
+            <label><span>Natureza</span>
+              <select name="natureza">
+                <option value="CONSERTO">Conserto</option>
+                <option value="FABRICACAO">Fabricação</option>
+                <option value="COMPRA">Compra</option>
+              </select>
+            </label>
+            <label class="full"><span>Item *</span><input name="item" required /></label>
+            <label class="full"><span>Descrição da falha</span><textarea name="descricao_falha" rows="2"></textarea></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Local &amp; responsável</h3>
+          <div class="form-grid">
+            <label><span>Solicitante</span><input name="solicitante" /></label>
+            <label><span>Criticidade</span>
+              <select name="criticidade">
+                <option value="">—</option>
+                <option value="CRITICA">CRITICA</option>
+                <option value="ALTA">ALTA</option>
+                <option value="MEDIA">MEDIA</option>
+                <option value="BAIXA">BAIXA</option>
+              </select>
+            </label>
+            <label><span>Linha</span><input name="linha" /></label>
+            <label><span>Máquina</span><input name="maquina" /></label>
+            <label><span>Fornecedor</span><input name="fornecedor" /></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Documentos &amp; valores</h3>
+          <div class="form-grid">
+            <label><span>NF saída</span><input name="nf_saida" /></label>
+            <label><span>Data saída</span><input name="data_saida" type="date" /></label>
+            <label><span>Orçamento</span><input name="orcamento" /></label>
+            <label><span>RC</span><input name="rc" /></label>
+            <label><span>PO</span><input name="po" /></label>
+            <label><span>Valor Reparo (R$)</span><input name="valor" type="number" step="0.01" /></label>
+            <label title="Valor patrimonial do item físico, independente do custo de reparo"><span>Valoração do Item (R$) 🏷️</span><input name="valoracao" type="number" step="0.01" min="0" placeholder="Valor patrimonial" /></label>
+            <label><span>Previsão entrega</span><input name="previsao_entrega" type="date" /></label>
+            <label><span>Data recebimento</span><input name="data_recebimento" type="date" /></label>
+            <label><span>Nota Retorno</span><input name="nota_retorno" type="text" placeholder="Número da NF de retorno (opcional)" /></label>
+            <label class="full"><span>Comentário</span><textarea name="comentario" rows="2"></textarea></label>
+          </div>
+        </div>
+        <div class="form-section">
+          <h3>Foto / Mídia da RC</h3>
+          <div class="foto-upload-area">
+            <div id="fotoPreviewWrap" class="foto-preview-wrap">
+              <em class="drill-no-media" id="fotoPlaceholder">Nenhum registro de mídia</em>
+              <img id="fotoPreview" class="foto-preview-img" style="display:none" alt="Preview" />
+            </div>
+            <div class="foto-upload-actions">
+              <label class="btn btn-ghost btn-sm foto-upload-label">
+                📷 Anexar foto
+                <input type="file" accept="image/*" id="inputFoto" class="foto-input-hidden" />
+              </label>
+              <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnRemoverFoto" style="display:none">Remover foto</button>
+            </div>
+          </div>
+        </div>
+        <div class="form-section calc-section">
+          <h3>Campos calculados (somente leitura)</h3>
+          <div class="calc-preview" id="calcPreview"></div>
+        </div>
+        <footer class="form-actions">
+          <button type="button" class="btn btn-danger" id="btnExcluirModal" style="display:none">Excluir</button>
+          <button type="button" class="btn btn-ghost" id="btnMarcarEntregue">Marcar entregue hoje</button>
+          <button type="submit" class="btn">Salvar alterações</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- Painel drill-down (clique nos gráficos) -->
+  <div class="drill-overlay" id="drillOverlay"></div>
+  <aside class="drill-panel" id="drillPanel">
+    <header class="drill-header">
+      <div>
+        <h2 id="drillTitulo">Detalhes</h2>
+        <p id="drillSubtitulo"></p>
+      </div>
+      <button type="button" class="btn-icon" id="drillFechar">✕</button>
+    </header>
+    <div class="drill-stats" id="drillStats"></div>
+    <div class="drill-insight panel" id="drillInsight"></div>
+    <div class="drill-lista" id="drillLista"></div>
+  </aside>
+
+  <!-- Formulário Tela Cheia de Preventiva -->
+  <div id="view-form-preventiva" class="view" style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg); z-index: 50; overflow-y: auto; padding: 2rem;">
+    <div class="panel" style="max-width: 1000px; margin: 0 auto; width: 100%; padding: 2.5rem;">
+      <header style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1.5rem; margin-bottom: 2rem;">
+        <h2 id="formTituloPreventiva" style="font-family: 'DM Sans', sans-serif; font-size: 1.5rem; margin: 0;">Registro Preventiva</h2>
+        <button type="button" class="btn btn-ghost" id="btnFecharFormPreventiva">← Voltar</button>
+      </header>
+      
+      <form id="formRegistroPreventiva">
+        <div class="form-section">
+          <h3>Identificação e Logística</h3>
+          <div class="form-grid">
+            <input type="hidden" name="id" />
+            <label><span>Identificador *</span><input name="identificador" required placeholder="Ex: Atv. 1" /></label>
+            <label><span>Máquina</span><input name="maquina" /></label>
+            <label><span>Plano padrão?</span>
+              <select name="plano_padrao">
+                <option value="S">S</option>
+                <option value="N">N</option>
+              </select>
+            </label>
+            <label><span>Duração (Horas)</span><input name="duracao_horas" type="number" step="0.1" /></label>
+            <label><span>HH Mec</span><input name="hh_mec" type="number" step="0.1" /></label>
+            <label><span>HH Elétrico</span><input name="hh_eletrico" type="number" step="0.1" /></label>
+            <label><span>Resp. Fábrica</span><input name="resp_fabrica" /></label>
+            <label><span>Resp. Manutenção</span><input name="resp_manutencao" /></label>
+            <label><span>Status/Auditoria</span><input name="status_auditoria" /></label>
+            <label><span>Previsão de Custos (R$)</span><input name="previsao_custos" type="number" step="0.01" /></label>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Programação (Dias/Turnos)</h3>
+          <p class="section-hint">Lista de dias programados para esta atividade.</p>
+          <div id="listaProgramacao" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnNovaProgramacao">+ Adicionar Dia/Turno</button>
+        </div>
+
+        <div class="form-section">
+          <h3>Descrições / Atividades</h3>
+          <p class="section-hint">Adicione múltiplas descrições associadas a este identificador.</p>
+          <div id="listaDescricoesPreventiva" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnNovaDescricaoPreventiva">+ Adicionar nova atv/descrição</button>
+        </div>
+
+        <div class="form-section">
+          <h3>Materiais</h3>
+          <p class="section-hint">Adicione múltiplos materiais necessários para esta atividade.</p>
+          <div id="listaMateriaisPreventiva" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 1rem;"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="btnNovoMaterialPreventiva">+ Adicionar novo material</button>
+        </div>
+
+        <footer class="form-actions" style="margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border);">
+          <button type="button" class="btn btn-danger" id="btnExcluirPreventivaModal" style="display:none">Excluir Registro</button>
+          <div style="flex: 1;"></div>
+          <button type="button" class="btn btn-ghost" id="btnCancelarFormPreventiva">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar alterações</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL CONTATO FORNECEDOR -->
+  <div id="modalFornecedorContato" class="modal-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <header class="modal-header">
+        <h2>Contatos do Fornecedor</h2>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalFornecedorContato').classList.remove('open')">✕</button>
+      </header>
+      <form id="formContatoFornecedor">
+        <div class="form-section">
+          <div class="form-grid" style="grid-template-columns: 1fr;">
+            <label><span>Fornecedor (Selecione)</span>
+              <select name="fornecedor_nome" id="contatoFornecedorNome" required>
+                <option value="">Carregando fornecedores...</option>
+              </select>
+            </label>
+            <label><span>E-mail</span><input type="email" name="email" id="contatoEmail" placeholder="vendas@fornecedor.com" /></label>
+            <label><span>WhatsApp (com DDD)</span><input type="tel" name="telefone" id="contatoTelefone" placeholder="11999999999" /></label>
+            <label class="full"><span>Mensagem de Introdução</span>
+              <textarea name="mensagem_padrao" id="contatoMensagem" rows="4">Olá, bom dia! Tudo bem?
+
+Segue abaixo itens para verificação de atraso.</textarea>
+              <div style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: var(--gold); background: rgba(212,175,55,0.1); padding: 0.4rem 0.6rem; border-radius: 4px; border: 1px solid rgba(212,175,55,0.3);">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                <span>A lista de peças e RCs atrasados será gerada e anexada automaticamente no final desta mensagem.</span>
+              </div>
+            </label>
+          </div>
+        </div>
+        <footer class="form-actions" style="margin-top: 1.5rem;">
+          <button type="button" class="btn btn-ghost" onclick="document.getElementById('modalFornecedorContato').classList.remove('open')">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Salvar Contato</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <div id="lightboxOverlay" class="lightbox-overlay">
+    <img id="lightboxImg" class="lightbox-img" alt="Foto RC Ampliada" />
+  </div>
+
+  <!-- MODAL: NOVA TAREFA DELEGADA -->
+  <div id="modalNovaTarefaDelegada" class="modal-overlay">
+    <div class="modal" style="max-width: 500px;">
+      <header class="modal-header">
+        <h2>Atribuir Nova Tarefa</h2>
+        <button type="button" class="btn-icon" onclick="document.getElementById('modalNovaTarefaDelegada').classList.remove('open')">×</button>
+      </header>
+      <form id="formNovaTarefaDelegada">
+        <div class="form-section">
+          <div class="form-grid" style="grid-template-columns: 1fr;">
+            <label>
+              <span>Título da Atividade *</span>
+              <input type="text" id="ntdTitulo" required placeholder="Ex: Verificar lubrificação da Prensa 02" />
+            </label>
+            <label>
+              <span>Descrição / Instruções</span>
+              <textarea id="ntdDescricao" rows="3" placeholder="Detalhes adicionais..."></textarea>
+            </label>
+            <label>
+              <span>Atribuir para (Pupilo) *</span>
+              <select id="ntdAtribuidoPara" required>
+                <!-- Preenchido via JS -->
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="form-actions" style="margin-top: 1.5rem; justify-content: flex-end;">
+          <button type="button" class="btn btn-outline" id="btnCancelarTarefaDelegada">Cancelar</button>
+          <button type="submit" class="btn">Atribuir Tarefa</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: TAREFA RECEBIDA (POPUP AUTOMÁTICO) -->
+  <div id="modalNovaTarefaRecebida" class="modal-overlay">
+    <div class="modal" style="max-width: 450px; text-align: center;">
+      <header class="modal-header" style="justify-content: center; position: relative;">
+        <h2 style="color: var(--primary);">🚀 Nova Tarefa Recebida!</h2>
+        <button type="button" class="btn-icon" style="position: absolute; right: 1rem;" onclick="document.getElementById('modalNovaTarefaRecebida').classList.remove('open')">×</button>
+      </header>
+      <div style="padding: 2rem 1.5rem;">
+        <h3 id="ntrTitulo" style="font-size: 1.4rem; color: var(--text); margin-bottom: 0.25rem;">Título da Tarefa</h3>
+        <p id="ntrDe" style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 1.5rem;">DELEGADO POR: <span style="color: var(--text); font-weight: bold;">Mestre</span></p>
+        
+        <p id="ntrDescricao" style="color: var(--muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 2rem; background: rgba(0,0,0,0.15); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 8px;">Descrição detalhada aqui.</p>
+        
+        <button class="btn btn-primary" style="width: 100%; padding: 0.75rem; font-size: 1rem; font-weight: 600;" onclick="document.getElementById('modalNovaTarefaRecebida').classList.remove('open'); showView('minhas-tarefas');">Ir para Minhas Tarefas</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalCustoGeral">
+    <div class="modal modal-lg">
+      <header class="modal-header">
+        <h2 id="modalCustoGeralTitle">Novo Registro - Custo Geral</h2>
+        <button type="button" class="btn-icon" id="btnFecharModalCustoGeral" aria-label="Fechar">✕</button>
+      </header>
+      <form id="formCustoGeral">
+        <input type="hidden" id="cg_id" />
+        
+        <div class="form-section">
+          <h3>Identificação</h3>
+          <div class="form-grid">
+            <label><span>Ordem</span><input type="text" id="cg_numero_ordem" /></label>
+            <label><span>Item (Código)</span><input type="text" id="cg_it_codigo" /></label>
+            <label><span>Nro. Documento</span><input type="text" id="cg_nro_docto" /></label>
+            <label><span>Data</span><input type="date" id="cg_dt_trans" /></label>
+            <label class="full"><span>Descrição</span><input type="text" id="cg_descricao_codigo" /></label>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Movimento & Local</h3>
+          <div class="form-grid">
+            <label><span>Movimento (Ent/Sai)</span><input type="text" id="cg_ent_sai" /></label>
+            <label><span>Quantidade</span><input type="number" id="cg_quantidade" step="any" /></label>
+            <label><span>Linha</span><input type="text" id="cg_linha" /></label>
+            <label><span>Mês</span><input type="number" id="cg_mes" placeholder="Ex: 5" /></label>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Solicitante & Área</h3>
+          <div class="form-grid">
+            <label><span>Cód. Solicitante</span><input type="text" id="cg_solicitante" /></label>
+            <label><span>Nome Solicitante</span><input type="text" id="cg_nome_solicitante" /></label>
+            <label><span>Área</span><input type="text" id="cg_area" /></label>
+            <label><span>Centro de Custo (C.C.)</span><input type="text" id="cg_cc" /></label>
+          </div>
+        </div>
+
+        <div class="form-section">
+          <h3>Custos <small style="color:var(--muted); font-weight:normal;">(Use vírgula para centavos)</small></h3>
+          <div class="form-grid">
+            <label><span>Material</span><input type="text" id="cg_material" /></label>
+            <label><span>GGF</span><input type="text" id="cg_ggf" /></label>
+            <label><span>Custo do Mês</span><input type="text" id="cg_custo_do_mes" /></label>
+            <label><span>Custo Mês Anterior</span><input type="text" id="cg_custo_mes_anterior" /></label>
+            <label><span>Custo de Entrada</span><input type="text" id="cg_custo_de_entrada" /></label>
+          </div>
+        </div>
+
+        <footer class="form-actions">
+          <button type="button" class="btn btn-outline" id="btnCancelarModalCustoGeral">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSalvarModalCustoGeral">Salvar Registro</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  </div>
+  </div>
+  <script type="module" src="js/app.js?v=84"></script>
+
+  <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
+  <div class="modal-overlay" id="modalEditarAtividadePM">
+    <div class="modal modal-lg" style="max-width: 780px; width: 95%; max-height: 90vh; overflow-y: auto;">
+      <header class="modal-header">
+        <h3>Editar Atividade do Plano Mestre</h3>
+        <button type="button" class="btn-icon" id="btnFecharModalAtividadePM" aria-label="Fechar">✕</button>
+      </header>
+      <form id="formEditarAtividadePM" onsubmit="event.preventDefault(); window.salvarEdicaoAtividade();">
+        <input type="hidden" id="pm_atividade_id">
+        <div class="form-section">
+          <h3>Detalhes</h3>
+          <div class="form-grid">
+            <label class="full">
+              <span>Hierarquia / Componente</span>
+              <input type="text" id="pm_atividade_hierarquia" readonly style="opacity: 0.7;">
+            </label>
+            <label class="full">
+              <span>Ação / O que fazer?</span>
+              <textarea id="pm_atividade_acao" rows="2"></textarea>
+            </label>
+            <label>
+              <span>Estratégia</span>
+              <input type="text" id="pm_atividade_estrategia">
+            </label>
+            <label>
+              <span>Frequência</span>
+              <input type="text" id="pm_atividade_frequencia">
+            </label>
+            <label>
+              <span>H-H Previsto</span>
+              <input type="number" step="0.01" id="pm_atividade_hh">
+            </label>
+            <label>
+              <span>Material / Componente</span>
+              <input type="text" id="pm_atividade_material">
+            </label>
+          </div>
+        </div>
+        <footer class="modal-header" style="justify-content: flex-end; gap: 0.75rem; border-top: 1px solid var(--border); border-bottom: none; padding: 1rem 1.5rem;">
+          <button type="button" class="btn btn-ghost" id="btnCancelarModalAtividadePM">Cancelar</button>
+          <button type="button" class="btn btn-primary" id="btnSalvarAtividadePM">💾 Salvar Alterações</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+</body>
+  <!-- COPILOTO DO CONTROLLER -->
+  <button id="copiloto-fab" title="Copiloto do Controller">🤖</button>
+
+  <div id="copiloto-window">
+    <div class="copiloto-header">
+      <div class="cop-avatar">🤖</div>
+      <div>
+        <h4>Copiloto do Controller</h4>
+        <p>Powered by IA Local (Ollama)</p>
+      </div>
+      <button class="cop-close" id="copiloto-close">×</button>
+    </div>
+    <div id="copiloto-messages"></div>
+    <div class="cop-suggestion-chips" id="copiloto-chips"></div>
+    <div class="copiloto-footer">
+      <textarea id="copiloto-input" placeholder="Pergunte sobre os custos do mês..." rows="1"></textarea>
+      <button class="cop-send" id="copiloto-send">➤</button>
+    </div>
+  </div>
+
+</html>

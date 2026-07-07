@@ -3,9 +3,9 @@ import {
   agregarRecebidosPrevistos,
   agregarPorMaquina,
   agregarPrazosRetorno,
-} from './logic.js?v=9';
-import { abrirDrilldown, registrosPorClique } from './drilldown.js?v=4';
-import { fmtMoeda } from './ui.js?v=2';
+} from './logic.js?v=999';
+import { abrirDrilldown, registrosPorClique } from './drilldown.js?v=999';
+import { fmtMoeda } from './ui.js?v=999';
 
 const COLORS = {
   ENTREGUE: '#34d399',
@@ -81,41 +81,46 @@ function gradient(ctx, c1, c2) {
 
 function makeClickHandler(chartId) {
   return (_event, elements, chart) => {
-    if (!elements?.length || !chart) return;
-    const el = elements[0];
-    const label = chart.data.labels[el.index];
-    const datasetLabel = chart.data.datasets[el.datasetIndex]?.label;
-    const regs = registrosPorClique(
-      chartId === 'mes' ? 'mes-dataset' : chartId,
-      label,
-      datasetLabel,
-      registrosRef
-    );
+    try {
+      if (!elements?.length || !chart) return;
+      const el = elements[0];
+      const label = chart.data.labels[el.index];
+      const datasetLabel = chart.data.datasets[el.datasetIndex]?.label;
+      const regs = registrosPorClique(
+        chartId === 'mes' ? 'mes-dataset' : chartId,
+        label,
+        datasetLabel,
+        registrosRef
+      );
 
-    const titulos = {
-      status: `Custos: ${label}`,
-      mes: `${datasetLabel || 'Valores'} — ${label}`,
-      maquina: `Gastos: ${label}`,
-    };
-    const chartKey = chartId === 'mes' ? 'mes' : chartId;
+      const titulos = {
+        status: `Custos: ${label}`,
+        mes: `${datasetLabel || 'Valores'} — ${label}`,
+        maquina: `Gastos: ${label}`,
+      };
+      const chartKey = chartId === 'mes' ? 'mes' : chartId;
 
-    const total = regs.reduce((s, r) => s + (Number(r.valor) || 0), 0);
-    abrirDrilldown({
-      titulo: titulos[chartKey] || `${datasetLabel} — ${label}`,
-      subtitulo: chartKey === 'prazos' ? `${regs.length} iten(s) nesta faixa` : `${regs.length} registro(s) · Total ${fmtMoeda(total)}`,
-      registros: regs,
-      meta: {
-        isPrazosCard: chartKey === 'prazos',
-        insight:
-          chartKey === 'status'
-            ? `Este status representa ${((total / (registrosRef.reduce((a, r) => a + (Number(r.valor) || 0), 0) || 1)) * 100).toFixed(1)}% do valor filtrado no dashboard.`
-            : chartKey === 'maquina'
-              ? 'Considere priorizar manutenção preventiva se o custo concentrar em uma única máquina/linha.'
-              : chartKey === 'prazos'
-                ? 'Acompanhe os itens atrasados para evitar gargalos na produção.'
-                : 'Compare previsto vs recebido para ajustar fluxo de caixa do mês.',
-      },
-    });
+      const total = regs.reduce((s, r) => s + (Number(r.valor) || 0), 0);
+      abrirDrilldown({
+        titulo: titulos[chartKey] || `${datasetLabel} — ${label}`,
+        subtitulo: chartKey === 'prazos' ? `${regs.length} iten(s) nesta faixa` : `${regs.length} registro(s) · Total ${fmtMoeda(total)}`,
+        registros: regs,
+        meta: {
+          isPrazosCard: chartKey === 'prazos',
+          insight:
+            chartKey === 'status'
+              ? `Este status representa ${((total / (registrosRef.reduce((a, r) => a + (Number(r.valor) || 0), 0) || 1)) * 100).toFixed(1)}% do valor filtrado no dashboard.`
+              : chartKey === 'maquina'
+                ? 'Considere priorizar manutenção preventiva se o custo concentrar em uma única máquina/linha.'
+                : chartKey === 'prazos'
+                  ? 'Acompanhe os itens atrasados para evitar gargalos na produção.'
+                  : 'Compare previsto vs recebido para ajustar fluxo de caixa do mês.',
+        },
+      });
+    } catch (err) {
+      console.error("Erro no clique do grafico:", err);
+      alert("Erro ao abrir detalhamento: " + err.message);
+    }
   };
 }
 

@@ -4,7 +4,7 @@ import { agregarRecebidosPrevistos } from './logic.js?v=9';
 
 // Proxy local — resolve bloqueio de CORS da Cloudflare.
 // O proxy roda em localhost:8001 e repassa para a Cloudflare.
-const GROQ_URL = 'http://localhost:8001/groq';
+const GROQ_URL = 'http://localhost:8080/groq';
 const GROQ_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 let conversationHistory = [];
@@ -470,7 +470,7 @@ async function enviarMensagem(texto) {
     
     if (thinkingDiv) thinkingDiv.innerHTML = resposta;
   } catch(e) {
-    if (thinkingDiv) thinkingDiv.innerHTML = '⚠️ Erro ao comunicar via proxy. Verifique se a janela do servidor Python (porta 8001) está aberta.';
+    if (thinkingDiv) thinkingDiv.innerHTML = '⚠️ Erro ao comunicar via proxy. Verifique se a janela do servidor Python (porta 8080) está aberta.';
   }
 
   isThinking = false;
