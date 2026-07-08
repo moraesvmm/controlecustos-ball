@@ -52,8 +52,8 @@ netstat -ano | findstr ":8080" | findstr "LISTENING" >nul
 if %errorlevel% equ 0 (
     echo  [INFO] O servidor ja esta em execucao (Porta 8080 ocupada).
     echo  [INFO] Redirecionando para o sistema no navegador...
-    start http://127.0.0.1:8080
-    timeout /t 2 >nul
+    start "" "http://127.0.0.1:8080"
+    ping 127.0.0.1 -n 3 >nul
     exit /b 0
 )
 
