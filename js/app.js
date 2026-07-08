@@ -20,7 +20,7 @@ import {
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, subscribeTarefas, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=999';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=999';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js?v=999';
 import {
   COLUNAS_TABELA,
@@ -43,6 +43,7 @@ import { initImportPlanoMestre } from './import_plano_mestre.js?v=999';
 import { renderPrevisoes } from './previsoes.js';
 import { initAlertas, toggleAlertasPanel } from './alertas.js?v=999';
 import { initCopiloto } from './copiloto.js?v=999';
+import { initIndicadores } from './indicadores.js?v=3';
 
 let registros = [];
 let registrosCustoGeral = [];
@@ -974,7 +975,7 @@ function showView(name) {
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
-                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral', 'custo-movimentacoes', 'plano-mestre', 'custo-previsoes'].includes(name);
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral', 'custo-movimentacoes', 'plano-mestre', 'custo-previsoes', 'indicadores'].includes(name);
 
   const isTask = ['gestao-tarefas', 'minhas-tarefas'].includes(name);
 
@@ -1268,24 +1269,60 @@ async function init() {
       tarefasDelegadas = await getTarefasDelegadas();
       renderGestaoTarefas();
       renderMinhasTarefas();
-      subscribeTarefas((payload) => {
-        // Reload tasks on any change
-        getTarefasDelegadas().then(data => {
-          tarefasDelegadas = data;
+      
+      // ==========================================================================
+      // ESCUTA ATIVA (REAL-TIME) - ARQUITETURA DISTRIBUÍDA
+      // ==========================================================================
+      // Responsabilidade: Reagir aos eventos empurrados pelo backend local via SSE
+      // (Server-Sent Events) quando QUALQUER modificação for feita no banco
+      // de dados (seja por você ou por outro usuário em outro PC).
+      //
+      // Quando acionado, ele silenciosamente baixa apenas as tabelas novamente
+      // (registros, preventivas, custos, tarefas) e atualiza a tela para garantir
+      // que todos os usuários tenham sempre a versão mais recente dos dados,
+      // incluindo notificações de "Nova Tarefa" se aplicável.
+      // ==========================================================================
+      initRealtimeSync(async () => {
+        // Quando receber evento de atualização, recarrega os dados silenciosamente
+        try {
+          registros = await carregarRegistros();
+          try {
+            const todosPreventiva = await carregarPreventiva();
+            registrosPreventiva = todosPreventiva.filter(r => r.setor !== 'frontend');
+            registrosPreventivaFrontend = todosPreventiva.filter(r => r.setor === 'frontend');
+          } catch(e){}
+          try { registrosCustoGeral = await getDadosCustoGeral(); } catch(e){}
+          
+          window._registrosGlobais = [...registros, ...(registrosCustoGeral || [])];
+          
+          const novas = await getTarefasDelegadas();
+          const oldIds = new Set(tarefasDelegadas.map(t => t.id));
+          tarefasDelegadas = novas;
+          
+          const novasMim = tarefasDelegadas.filter(t => !oldIds.has(t.id) && t.atribuido_para === window.currentUser?.username);
+          if (novasMim.length > 0) {
+            const nova = novasMim[0];
+            document.getElementById('ntrTitulo').textContent = nova.titulo;
+            document.getElementById('ntrDe').innerHTML = `DELEGADO POR: <span style="color: var(--text); font-weight: bold;">${nova.atribuido_por}</span>`;
+            document.getElementById('ntrDescricao').textContent = nova.descricao || 'Sem descrição detalhada.';
+            document.getElementById('modalNovaTarefaRecebida')?.classList.add('open');
+            toast(`Nova tarefa atribuída por ${nova.atribuido_por}!`, 'info');
+          }
+          
+          refresh();
           renderGestaoTarefas();
           renderMinhasTarefas();
           
-          // Show Modal se a task is assigned to current user
-          if (payload.eventType === 'INSERT' && payload.new.atribuido_para === window.currentUser?.username) {
-            document.getElementById('ntrTitulo').textContent = payload.new.titulo;
-            document.getElementById('ntrDe').innerHTML = `DELEGADO POR: <span style="color: var(--text); font-weight: bold;">${payload.new.atribuido_por}</span>`;
-            document.getElementById('ntrDescricao').textContent = payload.new.descricao || 'Sem descrição detalhada.';
-            document.getElementById('modalNovaTarefaRecebida')?.classList.add('open');
-            
-            toast(`Nova tarefa atribuída por ${payload.new.atribuido_por}!`, 'info');
+          // Se a tela de KPIs estiver ativa, atualiza ela também
+          const v = document.getElementById('view-indicadores');
+          if (v && v.style.display !== 'none' && window.carregarEAtualizarPainel) {
+             window.carregarEAtualizarPainel();
           }
-        });
+        } catch (err) {
+          console.error("Erro na sincronização automática:", err);
+        }
       });
+      
       // Start interval for timers
       if (!intervalTarefas) {
         intervalTarefas = setInterval(() => {
@@ -1647,6 +1684,7 @@ async function init() {
     });
   });
 
+  initIndicadores();
   atualizarBotaoEdicao();
   showView('dashboard');
 }
@@ -3081,6 +3119,7 @@ onAuthStateChange((user) => {
         // Inicializar módulos de IA
         initAlertas();
         initCopiloto();
+        initIndicadores();
         // Sininho de alertas
         document.getElementById('btnAlertaBell')?.addEventListener('click', toggleAlertasPanel);
         

@@ -5,7 +5,12 @@ let supabaseClient = null;
 
 export function getClient() {
   if (!supabaseClient && window.supabase) {
-    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      realtime: {
+        timeout: 1 // mock
+      },
+      auth: { persistSession: false }
+    });
   }
   return supabaseClient;
 }
@@ -463,21 +468,45 @@ export async function atualizarStatusTarefa(id, status, typeTime) {
   return data;
 }
 
-export function subscribeTarefas(callback) {
-  const client = getClient();
-  if (!client) return null;
-  
-  const channel = client.channel('custom-tarefas-channel')
-    .on(
-      'postgres_changes',
-      { event: '*', schema: 'public', table: 'tarefas_delegadas' },
-      (payload) => {
-        callback(payload);
-      }
-    )
-    .subscribe();
+// ==============================================================================
+// MÓDULO REAL-TIME / SINCRONIZAÇÃO DISTRIBUÍDA (SSE)
+// ==============================================================================
+// Responsabilidade: Manter o frontend (navegador) 100% atualizado com o banco
+// de dados sem precisar de F5, simulando o efeito de WebSocket do Supabase.
+// Funciona escutando a rota /api/stream do backend Python.
+// ==============================================================================
+export function initRealtimeSync(callback) {
+  // Option 2: Backend Polling + SSE (Server-Sent Events)
+  // O backend Python monitora a data de modificação do banco de dados (mtime).
+  // Se mudar, ele emite um evento SSE. O frontend recebe aqui e executa o callback de refresh.
+  try {
+    // A porta 8080 pode variar, mas normalmente usamos endpoints relativos
+    // Usa rota relativa para garantir que funciona independente do IP/Porta onde o sistema roda
+    const evtSource = new EventSource("/api/stream");
     
-  return channel;
+    evtSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'db_updated') {
+          console.log("Realtime: Banco de dados alterado por outro usuário (ou por nós). Disparando refresh...");
+          if (typeof callback === 'function') {
+            callback();
+          }
+        }
+      } catch (err) {
+        console.error("Erro ao fazer parse do evento SSE:", err);
+      }
+    };
+
+    evtSource.onerror = (err) => {
+      console.warn("Realtime: Conexão SSE falhou ou foi desconectada. Tentando reconectar automaticamente...");
+    };
+    
+    return evtSource;
+  } catch (err) {
+    console.error("Erro ao iniciar sincronização realtime SSE:", err);
+    return null;
+  }
 }
 
 // =============================

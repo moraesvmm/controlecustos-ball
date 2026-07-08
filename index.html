@@ -111,6 +111,9 @@
           <button type="button" data-tab="dashboard" class="nav-item active" style="width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--muted); font-size: 0.95rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.2s;">
             ⊞ Dashboard
           </button>
+          <button type="button" data-tab="indicadores" class="nav-item" style="width: 100%; text-align: left; padding: 0.75rem 1rem; background: transparent; border: none; color: var(--muted); font-size: 0.95rem; cursor: pointer; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-weight: 500; transition: all 0.2s;">
+            📈 Indicadores (KPI)
+          </button>
         </div>
         
         <div>
@@ -261,6 +264,167 @@
           <label><span>Fornecedor</span><input id="filtroFornecedor" list="listaFornecedoresFiltro" value="TODOS" autocomplete="off" onfocus="if(this.value==='TODOS')this.value=''" onblur="if(this.value==='')this.value='TODOS'"><datalist id="listaFornecedoresFiltro"></datalist></label>
           <button type="button" class="btn btn-ghost" id="btnLimparFiltros">Limpar filtros</button>
         </section>
+      </div>
+
+      <!-- MÓDULO INDICADORES (KPI) -->
+      <div id="view-indicadores" class="view" style="padding: 1.5rem;">
+        <div style="display: flex; flex-direction: column; padding-bottom: 2rem; height: 100%;">
+          <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div>
+              <h3 style="margin: 0; color: var(--text-primary);">Painel Executivo de Indicadores</h3>
+              <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">Análise Estratégica Completa</p>
+            </div>
+            <div style="display: flex; gap: 1rem;">
+              <input type="file" id="fileImportKPI" accept=".xlsx, .xls" style="display: none;" />
+              <button type="button" class="btn btn-primary" id="btnUploadKPI" style="display: flex; gap: 0.5rem; align-items: center; background: linear-gradient(135deg, var(--gold), #d4af37); color: #000; border: none; font-weight: 600;">
+                Upload Base Excel
+              </button>
+              <button type="button" class="btn btn-secondary" id="btnEditKPI" onclick="if(window.abrirModalEdicaoKPI) window.abrirModalEdicaoKPI(); else console.error('abrirModalEdicaoKPI not loaded');" style="display: flex; gap: 0.5rem; align-items: center; border: 1px solid var(--border); background: var(--bg3); color: var(--text-primary);">
+                Editar Dados Manuais
+              </button>
+            </div>
+          </header>
+
+          <!-- SUB TABS -->
+          <div class="kpi-tabs" style="display: flex; gap: 1rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+            <button type="button" class="kpi-tab-btn active" data-kpitab="global" style="background: none; border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid var(--gold);">Visão Global</button>
+            <button type="button" class="kpi-tab-btn" data-kpitab="linhas" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent;">Visão por Linha</button>
+            <button type="button" class="kpi-tab-btn" data-kpitab="compliance" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent;">Compliance & Ações</button>
+          </div>
+
+          <!-- TAB 1: GLOBAL -->
+          <div id="kpi-view-global" class="kpi-subview" style="display: flex; flex-direction: column; gap: 1.5rem;">
+            <!-- KPI Cards Top -->
+            <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);">
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Breakdown Atual (Semana)</div>
+                <div class="value" id="kpiBreakdownSemana" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              </div>
+              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);">
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Breakdown Acumulado (Mês)</div>
+                <div class="value" id="kpiBreakdownMes" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              </div>
+              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);">
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Meta Global</div>
+                <div class="value" id="kpiBreakdownMeta" style="font-size: 2rem; color: #10b981;">--</div>
+              </div>
+            </div>
+
+            <!-- Gráficos Principais -->
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+              <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h4 style="margin: 0; color: var(--text-primary);">Evolução vs Target</h4>
+                  <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.25rem; border-radius: 6px;">
+                    <button type="button" id="btnKpiDiario" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Diário</button>
+                    <button type="button" id="btnKpiSemana" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:var(--bg3); color:var(--text-primary);">Semanal</button>
+                    <button type="button" id="btnKpiMes" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Mensal</button>
+                  </div>
+                </div>
+                <div style="height: 300px; position: relative;">
+                  <canvas id="chartKpiEvolucao"></canvas>
+                </div>
+              </div>
+
+              <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <h4 style="margin: 0; color: var(--text-primary);">Top Ofensores</h4>
+                  <select id="selectKpiSemanaOfensor" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; outline: none;"></select>
+                </div>
+                <div style="height: 300px; position: relative;">
+                  <canvas id="chartKpiOfensores"></canvas>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: LINHAS -->
+          <div id="kpi-view-linhas" class="kpi-subview" style="display: none; flex-direction: column; gap: 1.5rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <h4 style="margin: 0; color: var(--text-primary);">Selecione a Linha:</h4>
+              <select id="selectKpiLinha" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 12px; border-radius: 4px; font-size: 1rem; outline: none;">
+                <option value="Linha 4">Linha 4</option>
+                <option value="Linha 5">Linha 5</option>
+                <option value="Linha 6">Linha 6</option>
+                <option value="Linha 7">Linha 7</option>
+                <option value="Linha 8">Linha 8</option>
+                <option value="Linha 9">Linha 9</option>
+              </select>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+                <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                  <div class="label" style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Breakdown Anual (<span id="lblKpiLinhaAnual">--</span>)</div>
+                  <div class="value" id="valKpiLinhaAnual" style="font-size: 2.5rem; color: var(--text-primary); font-weight: bold;">--</div>
+                </div>
+                <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                  <div class="label" style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Breakdown Mensal (<span id="lblKpiLinhaMensal">--</span>)</div>
+                  <div class="value" id="valKpiLinhaMensal" style="font-size: 2.5rem; color: var(--text-primary); font-weight: bold;">--</div>
+                </div>
+              </div>
+
+              <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto;">
+                <h4 style="margin-top: 0; color: var(--text-primary);">MTBF (Horas) - <span id="lblKpiLinhaMtbf">Linha 4</span></h4>
+                <table class="data-table" id="tableKpiMtbf" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
+                  <thead>
+                    <tr>
+                      <th>Máquina</th>
+                      <th>Reparos Mecânicos</th>
+                      <th>Reparos Elétricos</th>
+                      <th>Target</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="4" style="text-align:center; padding: 2rem; color:var(--text-secondary);">Sem dados de MTBF</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 3: COMPLIANCE E AÇÕES -->
+          <div id="kpi-view-compliance" class="kpi-subview" style="display: none; flex-direction: column; gap: 1.5rem;">
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">PM Compliance</div>
+                <div class="value" id="kpiCompPM" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              </div>
+              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Lubrificação</div>
+                <div class="value" id="kpiCompLubri" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              </div>
+              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Preventiva</div>
+                <div class="value" id="kpiCompPrev" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              </div>
+              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Plano Espec.</div>
+                <div class="value" id="kpiCompEspec" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              </div>
+            </div>
+
+            <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
+              <h4 style="margin-top: 0; margin-bottom: 1rem; color: var(--text-primary);">Plano de Ações em Andamento</h4>
+              <div style="overflow-x: auto;">
+                <table class="data-table" id="tableKpiAcoes" style="width: 100%; border-collapse: collapse;">
+                  <thead>
+                    <tr>
+                      <th>Data</th>
+                      <th>Projeto</th>
+                      <th>Responsável</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="4" style="text-align:center; padding: 2rem; color:var(--text-secondary);">Nenhum plano carregado. Faça o upload da planilha.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div> <!-- End inner wrapper -->
       </div>
 
     <div id="view-dashboard" class="view active">
@@ -2056,7 +2220,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=1000"></script>
+  <script type="module" src="js/app.js?v=1002"></script>
 
   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
   <div class="modal-overlay" id="modalEditarAtividadePM">
@@ -2101,6 +2265,57 @@ Segue abaixo itens para verificação de atraso.</textarea>
           <button type="button" class="btn btn-primary" id="btnSalvarAtividadePM">💾 Salvar Alterações</button>
         </footer>
       </form>
+    </div>
+  </div>
+  
+  <!-- MODAL EDITAR KPIS MANUAIS -->
+  <div id="modal-edit-kpi" class="modal-overlay" style="display: none;">
+      <div class="modal" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+        <header class="modal-header">
+          <h2>Editar KPIs (Entrada Manual)</h2>
+          <button type="button" class="btn-close" id="btnCloseEditKpi" onclick="if(window.fecharModalEdicaoKPI) window.fecharModalEdicaoKPI();" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer;">&times;</button>
+        </header>
+        <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; display: flex; flex-direction: column; gap: 2rem;">
+          
+          <section>
+            <h4 style="margin-top: 0; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Métricas de Linha (L4 a L9)</h4>
+            <table class="data-table" id="tableEditKpiLinhas" style="width: 100%; text-align: center;">
+              <thead><tr><th>Linha</th><th>Breakdown Anual (%)</th><th>Breakdown Mensal (%)</th></tr></thead>
+              <tbody>
+                <tr><td>Linha 4</td><td contenteditable="true" class="edit-cell">10.5</td><td contenteditable="true" class="edit-cell">5.4</td></tr>
+                <tr><td>Linha 5</td><td contenteditable="true" class="edit-cell">0.0</td><td contenteditable="true" class="edit-cell">0.0</td></tr>
+                <tr><td>Linha 6</td><td contenteditable="true" class="edit-cell">13.3</td><td contenteditable="true" class="edit-cell">18.3</td></tr>
+                <tr><td>Linha 7</td><td contenteditable="true" class="edit-cell">14.1</td><td contenteditable="true" class="edit-cell">14.8</td></tr>
+                <tr><td>Linha 8</td><td contenteditable="true" class="edit-cell">10.8</td><td contenteditable="true" class="edit-cell">11.0</td></tr>
+                <tr><td>Linha 9</td><td contenteditable="true" class="edit-cell">14.7</td><td contenteditable="true" class="edit-cell">11.4</td></tr>
+              </tbody>
+            </table>
+          </section>
+
+          <section>
+            <h4 style="margin-top: 0; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Compliance</h4>
+            <div class="form-grid">
+              <label><span>PM Compliance (%)</span><input type="number" id="editKpiCompPM" value="42.0"></label>
+              <label><span>Lubrificação (%)</span><input type="number" id="editKpiCompLubri" value="86.0"></label>
+              <label><span>Preventiva (%)</span><input type="number" id="editKpiCompPrev" value="47.5"></label>
+              <label><span>Plano Específico (%)</span><input type="number" id="editKpiCompEspec" value="35.0"></label>
+            </div>
+          </section>
+
+          <section>
+            <h4 style="margin-top: 0; color: var(--gold); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">Kpis Breakdown Diário</h4>
+            <div class="form-grid">
+              <label><span>Elétrica (Max %):</span><input type="number" id="editKpiDiaElec" value="3.9" step="0.1"></label>
+              <label><span>Mecânica (Max %):</span><input type="number" id="editKpiDiaMec" value="8.2" step="0.1"></label>
+            </div>
+            <p style="font-size:0.75rem; color:var(--muted); margin-top:0.5rem;">*Estes valores irão randomizar o gráfico diário até o limite inserido para demonstração.</p>
+          </section>
+
+        </div>
+        <div class="modal-footer" style="padding: 1rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+          <button type="button" class="btn btn-primary" id="btnSaveKpiManual" onclick="if(window.salvarDadosManuaisKPI) window.salvarDadosManuaisKPI(); else console.error('salvarDadosManuaisKPI not loaded');">Salvar Alterações</button>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -1,13 +1,27 @@
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 import os
 import sqlite3
 import json
+import asyncio
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
 DB_PATH = os.path.join(os.path.dirname(__file__), "database", "database.sqlite")
+
+# ==============================================================================
+# ARQUITETURA DISTRIBUÍDA (Multi-Servidor / Banco Único)
+# ==============================================================================
+# Responsabilidade deste Backend: Servir de intermediário local para o navegador
+# do usuário, processando regras de negócio e gravando no arquivo SQLite.
+#
+# Atenção: Como este servidor Python roda localmente na máquina de CADA usuário
+# (ou seja, não há um servidor central), a comunicação "Real-Time" (SSE) 
+# funciona monitorando a data de modificação física do arquivo `database.sqlite` 
+# na rede compartilhada. Se a data (mtime) muda, significa que outro PC salvou
+# dados, e este servidor avisa a tela local (frontend) para recarregar.
+# ==============================================================================
 
 app = FastAPI(title="Controle RC Backend (Localhost SQLite)")
 
@@ -22,8 +36,13 @@ app.add_middleware(
 def get_db():
     conn = sqlite3.connect(DB_PATH, timeout=30)
     conn.row_factory = sqlite3.Row
+    # ATENÇÃO: NÃO UTILIZAR WAL AQUI.
+    # Como o banco está numa rede compartilhada (Windows SMB), o WAL corromperia 
+    # o banco porque ele exige "Shared Memory" (mmap) suportado apenas localmente.
+    # TRUNCATE ou DELETE são os únicos modos seguros para rede.
     conn.execute("PRAGMA journal_mode=TRUNCATE;")
     conn.execute("PRAGMA synchronous=NORMAL;")
+    conn.execute("PRAGMA cache_size=-20000;") # Usa 20MB de RAM local para cache de leitura (muito mais rápido)
     
     # Criar tabela de usuários local caso não exista
     conn.execute('''
@@ -61,6 +80,82 @@ def get_db():
             anexos TEXT
         )
     ''')
+    
+    # Criar tabelas do Módulo de Indicadores (KPIs)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_breakdowns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            periodo_tipo TEXT, 
+            periodo_nome TEXT,
+            breakdown_real REAL,
+            target_meta REAL,
+            UNIQUE(periodo_tipo, periodo_nome)
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_maquinas_ofensoras (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            semana TEXT,
+            maquina TEXT,
+            tempo_mecanico_min REAL,
+            tempo_total_min REAL,
+            tempo_disponivel_min REAL,
+            breakdown_pct REAL,
+            UNIQUE(semana, maquina)
+        )
+    ''')
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_plano_acoes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_str TEXT,
+            projeto TEXT,
+            responsavel TEXT,
+            status_col TEXT,
+            ref_id TEXT
+        )
+    ''')
+    
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_linhas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            linha TEXT UNIQUE,
+            anual_pct REAL,
+            mensal_pct REAL
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_diario (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dia INTEGER UNIQUE,
+            eletrica_pct REAL,
+            mecanica_pct REAL
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_compliance (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT UNIQUE,
+            valor_pct REAL
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_mtbf (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT,
+            maquina TEXT,
+            linha_4 REAL,
+            linha_5 REAL,
+            linha_6 REAL,
+            linha_7 REAL,
+            linha_8 REAL,
+            linha_9 REAL,
+            target REAL
+        )
+    ''')
+
     conn.commit()
     return conn
 
@@ -326,6 +421,39 @@ async def post_prazo_ciente(req: Request):
         conn.close()
     
     return {"status": "ok"}
+
+# ==========================================
+# SSE (Server-Sent Events) - REALTIME SYNC
+# ==========================================
+@app.get("/api/stream")
+async def sse_stream(request: Request):
+    """
+    Endpoint SSE que escuta as mudanças no arquivo SQLite.
+    Como a arquitetura é distribuída (cada PC roda o seu server.py),
+    o método mais rápido e leve de detectar que *outro* PC salvou algo 
+    é checando a data de modificação (mtime) do arquivo database.sqlite.
+    """
+    async def event_generator():
+        last_mtime = 0
+        if os.path.exists(DB_PATH):
+            last_mtime = os.path.getmtime(DB_PATH)
+        
+        while True:
+            if await request.is_disconnected():
+                break
+            
+            # Checa a data de modificação do arquivo
+            if os.path.exists(DB_PATH):
+                current_mtime = os.path.getmtime(DB_PATH)
+                if current_mtime > last_mtime:
+                    last_mtime = current_mtime
+                    # Arquivo mudou! Envia um evento SSE para o frontend atualizar a tela
+                    yield f"data: {json.dumps({'type': 'db_updated'})}\n\n"
+            
+            # Aguarda 1 segundo antes de checar novamente (muito leve para a rede/disco)
+            await asyncio.sleep(1)
+            
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.get("/")
 def read_root():

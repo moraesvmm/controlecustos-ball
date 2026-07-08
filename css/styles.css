@@ -291,6 +291,12 @@ nav.tabs button.active {
 
 .search-field input { min-width: 100%; }
 
+/* Estilo global para as opções (dropdown) do select */
+select option {
+  background: var(--bg2);
+  color: var(--text);
+}
+
 /* Views */
 .view { display: none; }
 .view.active { display: block; }
@@ -1246,6 +1252,15 @@ body.view-crud .main-layout {
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
 }
 
+/* Foco global em elementos editáveis (Ex: Tabela de KPIs manual) */
+[contenteditable="true"]:focus,
+.edit-cell:focus {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+  background: rgba(212, 175, 55, 0.1);
+  border-radius: 4px;
+}
+
 /* --- OtimizaÃ§Ã£o Visual do Login --- */
 .login-alert {
   overflow: hidden;
@@ -1829,6 +1844,11 @@ body.light-mode .filters select:focus,
 body.light-mode .filters input:focus {
   outline: 2px solid rgba(184, 134, 11, 0.5);
   border-color: var(--gold);
+}
+
+body.light-mode select option {
+  background: #ffffff;
+  color: #0f172a;
 }
 
 /* Modal no light */
