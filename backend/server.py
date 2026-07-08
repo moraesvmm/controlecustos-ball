@@ -290,17 +290,31 @@ async def insert_record(table: str, req: Request):
         data = [data]
     if not data: return []
     
+    import uuid
+    from datetime import datetime
+
     conn = get_db()
     try:
-        keys = data[0].keys()
-        cols = ", ".join(keys)
-        vals = ", ".join(["?"] * len(keys))
-        query = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
-        
-        tuples = [tuple(row[k] for k in keys) for row in data]
-        cursor = conn.executemany(query, tuples)
+        inserted_rows = []
+        for row_data in data:
+            if "id" not in row_data or not row_data["id"]:
+                row_data["id"] = str(uuid.uuid4())
+            if "created_at" not in row_data:
+                row_data["created_at"] = datetime.now().isoformat()
+            
+            keys = list(row_data.keys())
+            cols = ", ".join(keys)
+            vals = ", ".join(["?"] * len(keys))
+            query = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
+            
+            conn.execute(query, tuple(row_data[k] for k in keys))
+            
+            # Fetch the inserted row to return it
+            cursor = conn.execute(f"SELECT * FROM {table} WHERE id = ?", (row_data["id"],))
+            inserted_rows.append(dict(cursor.fetchone()))
+            
         conn.commit()
-        return {"inserted": cursor.rowcount}
+        return inserted_rows
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     finally:
@@ -327,8 +341,12 @@ async def update_record(table: str, req: Request):
         cursor = conn.execute(query, values)
         conn.commit()
         
-        # Supabase usually returns the updated row if Prefer: return=representation is set, but we just return []
-        return [data] 
+        # Retrieve the updated row(s) to simulate Supabase 'select()'
+        select_query = f"SELECT * FROM {table}{where_clause}"
+        select_cursor = conn.execute(select_query, values[len(data.values()):])
+        updated_rows = [dict(ix) for ix in select_cursor.fetchall()]
+        
+        return updated_rows 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
     finally:
