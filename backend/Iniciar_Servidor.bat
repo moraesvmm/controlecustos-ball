@@ -49,29 +49,34 @@ echo.
 
 :: Verifica se a porta 8080 ja esta em uso (servidor ja rodando)
 netstat -ano | findstr ":8080" | findstr "LISTENING" >nul
-if %errorlevel% equ 0 (
-    echo  [INFO] O servidor ja esta em execucao (Porta 8080 ocupada).
-    echo  [INFO] Redirecionando para o sistema no navegador...
-    start "" "http://127.0.0.1:8080"
-    ping 127.0.0.1 -n 3 >nul
-    exit /b 0
-)
+if %errorlevel% neq 0 goto :start_server
 
+echo  [INFO] O servidor ja esta em execucao (Porta 8080 ocupada).
+echo  [INFO] Redirecionando para o sistema no navegador...
+start "" "http://127.0.0.1:8080"
+ping 127.0.0.1 -n 3 >nul
+exit /b 0
+
+:start_server
 :: Abre o navegador automaticamente apos 3 segundos
 start "" /B cmd /c "ping 127.0.0.1 -n 3 >nul && start http://127.0.0.1:8080"
 
 :: Inicia o servidor e aguarda na mesma janela
 powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-Location -LiteralPath '%BACKEND_DIR%'; & '%PY_DIR%\Scripts\uvicorn.exe' server:app --host 127.0.0.1 --port 8080"
 
-if %errorlevel% neq 0 (
-    color 0C
-    echo.
-    echo  [ERRO] O servidor foi encerrado.
-    echo.
-) else (
-    echo.
-    echo  [OK] Servidor encerrado com sucesso.
-)
+if %errorlevel% equ 0 goto :server_ok
+
+color 0C
+echo.
+echo  [ERRO] O servidor foi encerrado com erro.
+echo.
+goto :end
+
+:server_ok
+echo.
+echo  [OK] Servidor encerrado com sucesso.
+
+:end
 
 
 echo.
