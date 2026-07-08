@@ -977,10 +977,18 @@ function renderSlide() {
   const ev = presentationEvidencias[currentSlideIndex];
   
   const img = document.getElementById('apresentacao-imagem');
+  const backdrop = document.getElementById('apresentacao-backdrop');
+  
   // Efeito rápido de fade
   img.style.opacity = 0;
+  if(backdrop) backdrop.style.opacity = 0;
+  
   setTimeout(() => {
     img.src = ev.foto_url;
+    if(backdrop) {
+      backdrop.style.backgroundImage = `url('${ev.foto_url}')`;
+      backdrop.style.opacity = 1;
+    }
     img.style.opacity = 1;
   }, 100);
   
