@@ -262,33 +262,21 @@ function toggleEvolucao(tipo) {
   
   const ctxEl = document.getElementById('chartKpiEvolucao');
   if (!ctxEl) return;
-  const ctx = ctxEl.getContext('2d');
-  if (chartEvolucaoInstance) chartEvolucaoInstance.destroy();
+  
+  if (chartEvolucaoInstance && !chartEvolucaoInstance.isDisposed()) {
+    chartEvolucaoInstance.dispose();
+  }
+  chartEvolucaoInstance = echarts.init(ctxEl);
 
   const commonOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { labels: { color: '#cbd5e1', font: { family: 'Inter', size: 13, weight: '500' } }, position: 'top' },
-      tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: '#f8fafc',
-        bodyColor: '#e2e8f0',
-        borderColor: 'rgba(255,255,255,0.1)',
-        borderWidth: 1,
-        padding: 12,
-        cornerRadius: 8,
-        displayColors: true,
-        boxPadding: 4,
-        titleFont: { family: 'Inter', size: 14, weight: 'bold' },
-        bodyFont: { family: 'Inter', size: 13 }
-      }
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(15, 23, 42, 0.9)',
+      textStyle: { color: '#e2e8f0', fontFamily: 'Inter' },
+      borderColor: 'rgba(255,255,255,0.1)'
     },
-    scales: {
-      x: { grid: { display: false, drawBorder: false }, ticks: { color: '#94a3b8', font: { family: 'Inter' } } },
-      y: { grid: { color: 'rgba(255,255,255,0.05)', drawBorder: false, borderDash: [5, 5] }, ticks: { color: '#94a3b8', font: { family: 'Inter' }, padding: 10 } }
-    }
+    legend: { textStyle: { color: '#cbd5e1', fontFamily: 'Inter' }, top: 0 },
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true }
   };
 
   if (tipo === 'diario') {
@@ -298,81 +286,58 @@ function toggleEvolucao(tipo) {
       kpiDataDiario = Array.from({length:30}, (_,i) => ({dia: i+1, eletrica_pct: Math.random()*mE, mecanica_pct: Math.random()*mM}));
     }
     
-    chartEvolucaoInstance = new Chart(ctxEl, {
-      type: 'bar',
-      data: {
-        labels: kpiDataDiario.map(d => d.dia),
-        datasets: [
-          { 
-            label: 'Elétrica', 
-            data: kpiDataDiario.map(d => d.eletrica_pct.toFixed(2)), 
-            backgroundColor: () => {
-              let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-              gradient.addColorStop(0, 'rgba(239, 68, 68, 0.9)');
-              gradient.addColorStop(1, 'rgba(239, 68, 68, 0.2)');
-              return gradient;
-            },
-            borderColor: '#ef4444',
-            borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
-            borderRadius: 4
-          },
-          { 
-            label: 'Mecânica', 
-            data: kpiDataDiario.map(d => d.mecanica_pct.toFixed(2)), 
-            backgroundColor: () => {
-              let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-              gradient.addColorStop(0, 'rgba(59, 130, 246, 0.9)');
-              gradient.addColorStop(1, 'rgba(59, 130, 246, 0.2)');
-              return gradient;
-            },
-            borderColor: '#3b82f6',
-            borderWidth: { top: 2, right: 0, bottom: 0, left: 0 },
-            borderRadius: 4
+    chartEvolucaoInstance.setOption({
+      ...commonOptions,
+      tooltip: { ...commonOptions.tooltip, axisPointer: { type: 'shadow' } },
+      xAxis: { type: 'category', data: kpiDataDiario.map(d => d.dia), axisLabel: { color: '#94a3b8' }, axisLine: { show: false }, axisTick: { show: false } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8' } },
+      series: [
+        { 
+          name: 'Elétrica', 
+          type: 'bar', stack: 'total',
+          data: kpiDataDiario.map(d => d.eletrica_pct.toFixed(2)), 
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(239, 68, 68, 0.9)'}, {offset:1, color:'rgba(239, 68, 68, 0.2)'}]),
+            borderColor: '#ef4444', borderWidth: 1
           }
-        ]
-      },
-      options: { ...commonOptions, scales: { x: { stacked: true, grid: { display: false } }, y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)', borderDash: [5, 5] }, ticks: { color: '#94a3b8' } } } }
+        },
+        { 
+          name: 'Mecânica', 
+          type: 'bar', stack: 'total',
+          data: kpiDataDiario.map(d => d.mecanica_pct.toFixed(2)), 
+          itemStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(59, 130, 246, 0.9)'}, {offset:1, color:'rgba(59, 130, 246, 0.2)'}]),
+            borderColor: '#3b82f6', borderWidth: 1, borderRadius: [4, 4, 0, 0]
+          }
+        }
+      ]
     });
   } else {
     const data = kpiDataBreakdowns.filter(d => d.periodo_tipo === tipo);
-    chartEvolucaoInstance = new Chart(ctxEl, {
-      type: 'line',
-      data: {
-        labels: data.map(d => d.periodo_nome),
-        datasets: [
-          { 
-            label: 'Breakdown (%)', 
-            data: data.map(d => (d.breakdown_real * 100).toFixed(2)), 
-            borderColor: '#10b981', 
-            backgroundColor: () => {
-              let gradient = ctx.createLinearGradient(0, 0, 0, 400);
-              gradient.addColorStop(0, 'rgba(16, 185, 129, 0.4)');
-              gradient.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
-              return gradient;
-            }, 
-            fill: true, 
-            tension: 0.4,
-            borderWidth: 3,
-            pointBackgroundColor: '#0f172a',
-            pointBorderColor: '#10b981',
-            pointBorderWidth: 2,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            pointHoverBackgroundColor: '#10b981',
-            pointHoverBorderColor: '#fff'
+    chartEvolucaoInstance.setOption({
+      ...commonOptions,
+      xAxis: { type: 'category', boundaryGap: false, data: data.map(d => d.periodo_nome), axisLabel: { color: '#94a3b8' }, axisLine: { show: false }, axisTick: { show: false } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8' } },
+      series: [
+        { 
+          name: 'Breakdown (%)', 
+          type: 'line',
+          data: data.map(d => (d.breakdown_real * 100).toFixed(2)), 
+          itemStyle: { color: '#10b981' },
+          areaStyle: {
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(16, 185, 129, 0.4)'}, {offset:1, color:'rgba(16, 185, 129, 0.0)'}])
           },
-          { 
-            label: 'Meta', 
-            data: data.map(d => d.target_meta ? (d.target_meta * 100).toFixed(2) : null), 
-            borderColor: 'rgba(239, 68, 68, 0.8)', 
-            borderDash: [5, 5], 
-            borderWidth: 2,
-            pointRadius: 0,
-            fill: false 
-          }
-        ]
-      },
-      options: commonOptions
+          smooth: true, symbolSize: 8, lineStyle: { width: 3 }
+        },
+        { 
+          name: 'Meta', 
+          type: 'line',
+          data: data.map(d => d.target_meta ? (d.target_meta * 100).toFixed(2) : null), 
+          itemStyle: { color: 'rgba(239, 68, 68, 0.8)' },
+          lineStyle: { type: 'dashed', width: 2 },
+          symbolSize: 0
+        }
+      ]
     });
   }
 }
@@ -380,59 +345,49 @@ function toggleEvolucao(tipo) {
 function renderKpiOfensores(semana) {
   const ctxEl = document.getElementById('chartKpiOfensores');
   if (!ctxEl) return;
-  const ctx = ctxEl.getContext('2d');
   
   let data = kpiDataOfensores.filter(d => d.semana === semana);
-  data.sort((a, b) => b.breakdown_pct - a.breakdown_pct);
+  data.sort((a, b) => a.breakdown_pct - b.breakdown_pct); // Ascending for echarts horizontal bar
   
-  if (chartOfensoresInstance) chartOfensoresInstance.destroy();
-  chartOfensoresInstance = new Chart(ctxEl, {
-    type: 'bar',
-    data: {
-      labels: data.map(d => d.maquina),
-      datasets: [{
-        label: 'Breakdown (%)',
-        data: data.map(d => (d.breakdown_pct * 100).toFixed(2)),
-        backgroundColor: data.map((d, i) => {
-            let gradient = ctx.createLinearGradient(0, 0, 400, 0);
-            if (i < 3) { // Top 3 Ofensores -> Tons avermelhados / neon alert
-                gradient.addColorStop(0, 'rgba(244, 63, 94, 0.2)');
-                gradient.addColorStop(1, 'rgba(244, 63, 94, 0.9)');
-            } else { // Resto -> Tons azuis / roxos
-                gradient.addColorStop(0, 'rgba(99, 102, 241, 0.2)');
-                gradient.addColorStop(1, 'rgba(99, 102, 241, 0.9)');
-            }
-            return gradient;
-        }),
-        borderColor: data.map((d, i) => i < 3 ? '#f43f5e' : '#6366f1'),
-        borderWidth: { top: 0, right: 2, bottom: 0, left: 0 },
-        borderRadius: 4
-      }]
+  if (chartOfensoresInstance && !chartOfensoresInstance.isDisposed()) {
+      chartOfensoresInstance.dispose();
+  }
+  chartOfensoresInstance = echarts.init(ctxEl);
+  
+  chartOfensoresInstance.setOption({
+    tooltip: {
+      trigger: 'axis', axisPointer: { type: 'shadow' },
+      backgroundColor: 'rgba(15, 23, 42, 0.9)', textStyle: { color: '#f8fafc', fontFamily: 'Inter' }, borderColor: 'rgba(255,255,255,0.1)'
     },
-    options: { 
-      indexAxis: 'y', 
-      responsive: true, 
-      maintainAspectRatio: false, 
-      plugins: { 
-        legend: { display: false },
-        tooltip: {
-            backgroundColor: 'rgba(15, 23, 42, 0.9)',
-            titleColor: '#f8fafc',
-            bodyColor: '#e2e8f0',
-            borderColor: 'rgba(255,255,255,0.1)',
-            borderWidth: 1,
-            padding: 10,
-            cornerRadius: 8,
-            titleFont: { family: 'Inter', size: 14, weight: 'bold' }
-        }
-      },
-      scales: {
-          x: { grid: { color: 'rgba(255,255,255,0.05)', borderDash: [5, 5], drawBorder: false }, ticks: { color: '#94a3b8', font: { family: 'Inter' } } },
-          y: { grid: { display: false, drawBorder: false }, ticks: { color: '#e2e8f0', font: { family: 'Inter', weight: '500' } } }
-      }
-    }
+    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8' } },
+    yAxis: { type: 'category', data: data.map(d => d.maquina), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#e2e8f0', fontWeight: '500' } },
+    series: [{
+      name: 'Breakdown (%)',
+      type: 'bar',
+      data: data.map((d, i) => {
+          // data is sorted ascending, so top offenders are at the end (highest index)
+          const isTop3 = i >= data.length - 3;
+          return {
+              value: (d.breakdown_pct * 100).toFixed(2),
+              itemStyle: {
+                  color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
+                      {offset:0, color: isTop3 ? 'rgba(244, 63, 94, 0.9)' : 'rgba(99, 102, 241, 0.9)'},
+                      {offset:1, color: isTop3 ? 'rgba(244, 63, 94, 0.2)' : 'rgba(99, 102, 241, 0.2)'}
+                  ]),
+                  borderColor: isTop3 ? '#f43f5e' : '#6366f1',
+                  borderWidth: 1, borderRadius: [0, 4, 4, 0]
+              }
+          };
+      })
+    }]
   });
 }
+
+window.addEventListener('resize', () => {
+    if (chartEvolucaoInstance && !chartEvolucaoInstance.isDisposed()) chartEvolucaoInstance.resize();
+    if (chartOfensoresInstance && !chartOfensoresInstance.isDisposed()) chartOfensoresInstance.resize();
+});
 
 function renderViewLinha(linhaStr) {
   document.getElementById('lblKpiLinhaAnual').textContent = linhaStr;
