@@ -2056,3 +2056,60 @@ body.view-crud .crud-section {
 body.view-crud .kpi-grid {
   display: none !important;
 }
+
+/* ==========================================================
+   STYLING: KPI EDIT MODAL & DROPDOWNS (Golden Theme)
+   ========================================================== */
+
+/* contenteditable cells (Linhas 4-9 Breakdown) */
+#modal-edit-kpi .edit-cell {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--gold, #d4af37);
+  border-radius: 4px;
+  padding: 4px 8px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+#modal-edit-kpi .edit-cell:focus {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--gold, #d4af37);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+}
+
+/* Number inputs in the KPI Edit modal */
+#modal-edit-kpi .form-grid input[type="number"] {
+  background: rgba(212, 175, 55, 0.05) !important;
+  border: 1px solid rgba(212, 175, 55, 0.3) !important;
+  color: var(--gold, #d4af37) !important;
+  font-weight: bold;
+}
+
+#modal-edit-kpi .form-grid input[type="number"]:focus {
+  border-color: var(--gold, #d4af37) !important;
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2) !important;
+  background: rgba(212, 175, 55, 0.1) !important;
+}
+
+/* Selects / Dropdowns in KPI View (Semana Ofensor, Selecione a Linha) */
+select#selectKpiSemanaOfensor,
+select#selectKpiLinha {
+  background-color: var(--surface, #1e293b) !important;
+  border: 1px solid rgba(212, 175, 55, 0.4) !important;
+  color: var(--gold, #d4af37) !important;
+  font-weight: 600;
+  outline: none;
+}
+
+select#selectKpiSemanaOfensor:focus,
+select#selectKpiLinha:focus {
+  border-color: var(--gold, #d4af37) !important;
+  box-shadow: 0 0 5px rgba(212, 175, 55, 0.3) !important;
+}
+
+select#selectKpiSemanaOfensor option,
+select#selectKpiLinha option {
+  background-color: #0f172a;
+  color: #f8fafc;
+}

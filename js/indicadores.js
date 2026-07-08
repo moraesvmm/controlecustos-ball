@@ -1,3 +1,5 @@
+import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js?v=9';
+
 export async function initIndicadores() {
   const btnUploadKPI = document.getElementById('btnUploadKPI');
   const fileImportKPI = document.getElementById('fileImportKPI');
@@ -49,6 +51,62 @@ export async function initIndicadores() {
   window.abrirModalEdicaoKPI = abrirModalEdicao;
   window.salvarDadosManuaisKPI = salvarDadosManuais;
   window.fecharModalEdicaoKPI = () => { if(modalEdit) modalEdit.style.display = 'none'; };
+
+  // ALBUNS & EVIDENCIAS LOGIC
+  const selectKpiMesEvidencia = document.getElementById('selectKpiMesEvidencia');
+  if (selectKpiMesEvidencia) {
+    const dataAtual = new Date();
+    const mesesStr = [];
+    for(let i=0; i<6; i++) {
+      let d = new Date(dataAtual.getFullYear(), dataAtual.getMonth() - i, 1);
+      let m = String(d.getMonth() + 1).padStart(2, '0');
+      let y = d.getFullYear();
+      mesesStr.push(`${m}/${y}`);
+    }
+    selectKpiMesEvidencia.innerHTML = mesesStr.map(m => `<option value="${m}">${m}</option>`).join('');
+    
+    selectKpiMesEvidencia.addEventListener('change', () => {
+      document.getElementById('kpi-view-albuns').style.display = 'block';
+      document.getElementById('kpi-view-evidencias-galeria').style.display = 'none';
+      renderAlbuns(selectKpiMesEvidencia.value);
+    });
+    
+    // Album listeners
+    document.getElementById('btnNovoAlbum')?.addEventListener('click', () => abrirModalAlbum(null, selectKpiMesEvidencia.value));
+    document.getElementById('btnCloseModalAlbum')?.addEventListener('click', fecharModalAlbum);
+    document.getElementById('btnCancelarAlbum')?.addEventListener('click', fecharModalAlbum);
+    document.getElementById('btnSalvarAlbum')?.addEventListener('click', salvarAlbumForm);
+    
+    document.getElementById('btnVoltarAlbuns')?.addEventListener('click', () => {
+      document.getElementById('kpi-view-evidencias-galeria').style.display = 'none';
+      document.getElementById('kpi-view-albuns').style.display = 'block';
+      renderAlbuns(selectKpiMesEvidencia.value);
+    });
+
+    // Evidence listeners
+    document.getElementById('btnNovaEvidencia')?.addEventListener('click', () => abrirModalEvidencia(null, currentAlbumId));
+    document.getElementById('btnCloseModalEvidencia')?.addEventListener('click', fecharModalEvidencia);
+    document.getElementById('btnCancelarEvidencia')?.addEventListener('click', fecharModalEvidencia);
+    document.getElementById('btnSalvarEvidencia')?.addEventListener('click', salvarEvidenciaForm);
+    
+    // Presentation listeners
+    document.getElementById('btnApresentacao')?.addEventListener('click', () => abrirApresentacao(currentAlbumId));
+    document.getElementById('btnFecharApresentacao')?.addEventListener('click', fecharApresentacao);
+    document.getElementById('btnApresentacaoNext')?.addEventListener('click', nextSlide);
+    document.getElementById('btnApresentacaoPrev')?.addEventListener('click', prevSlide);
+    
+    document.addEventListener('keydown', (e) => {
+      const modal = document.getElementById('modal-apresentacao');
+      if (modal && modal.style.display === 'flex') {
+        if (e.key === 'ArrowRight') nextSlide();
+        if (e.key === 'ArrowLeft') prevSlide();
+        if (e.key === 'Escape') fecharApresentacao();
+      }
+    });
+
+    // Initial render
+    setTimeout(() => renderAlbuns(selectKpiMesEvidencia.value), 500);
+  }
 
   await carregarEAtualizarPainel();
 }
@@ -177,7 +235,9 @@ let kpiDataLinhas = [];
 let kpiDataDiario = [];
 let kpiDataCompliance = [];
 let kpiDataMtbf = [];
-
+let currentAlbumId = null;
+let presentationEvidencias = [];
+let currentSlideIndex = 0;
 async function carregarEAtualizarPainel() {
   try {
     kpiDataBreakdowns = await apiRequest('kpi_breakdowns', 'GET') || [];
@@ -251,6 +311,42 @@ function popularSelectSemanas() {
   });
 }
 
+const formatDataView = (opt) => {
+  let table = '<div style="background:transparent; padding:0; width:100%; height:100%; overflow:auto;"><table style="width:100%;text-align:left;border-collapse:collapse;font-size:0.85rem;"><tbody>';
+  const series = opt.series;
+  if (opt.xAxis && opt.xAxis.length > 0 && opt.xAxis[0].data) {
+    const axisData = opt.xAxis[0].data;
+    table += '<tr><th style="padding:8px;border-bottom:1px solid var(--border,#334155);">Categoria</th>';
+    series.forEach(s => { table += `<th style="padding:8px;border-bottom:1px solid var(--border,#334155);">${s.name || 'Valor'}</th>`; });
+    table += '</tr>';
+    for (let i = 0; i < axisData.length; i++) {
+      table += `<tr><td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${axisData[i]}</td>`;
+      series.forEach(s => {
+        let val = s.data[i];
+        if (val && typeof val === 'object') val = val.value;
+        table += `<td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${val !== null ? val : '—'}</td>`;
+      });
+      table += '</tr>';
+    }
+  } else if (opt.yAxis && opt.yAxis.length > 0 && opt.yAxis[0].data) {
+    const axisData = opt.yAxis[0].data;
+    table += '<tr><th style="padding:8px;border-bottom:1px solid var(--border,#334155);">Categoria</th>';
+    series.forEach(s => { table += `<th style="padding:8px;border-bottom:1px solid var(--border,#334155);">${s.name || 'Valor'}</th>`; });
+    table += '</tr>';
+    for (let i = 0; i < axisData.length; i++) {
+      table += `<tr><td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${axisData[i]}</td>`;
+      series.forEach(s => {
+        let val = s.data[i];
+        if (val && typeof val === 'object') val = val.value;
+        table += `<td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${val !== null ? val : '—'}</td>`;
+      });
+      table += '</tr>';
+    }
+  }
+  table += '</tbody></table></div>';
+  return table;
+};
+
 function toggleEvolucao(tipo) {
   document.getElementById('btnKpiSemana').style.background = (tipo==='semana') ? 'var(--bg3)' : 'transparent';
   document.getElementById('btnKpiMes').style.background = (tipo==='mes') ? 'var(--bg3)' : 'transparent';
@@ -270,13 +366,25 @@ function toggleEvolucao(tipo) {
 
   const commonOptions = {
     tooltip: {
-      trigger: 'item',
+      trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,0.04)' } },
       backgroundColor: 'rgba(15, 23, 42, 0.9)',
       textStyle: { color: '#e2e8f0', fontFamily: 'Inter' },
       borderColor: 'rgba(255,255,255,0.1)'
     },
-    legend: { textStyle: { color: '#cbd5e1', fontFamily: 'Inter' }, top: 0 },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true }
+    toolbox: {
+      feature: {
+        magicType: { type: ['line', 'bar'] },
+        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: '#0f172a', textareaColor: '#0f172a', textareaBorderColor: 'rgba(255,255,255,0.1)', textColor: '#e2e8f0', buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+        saveAsImage: { show: true, title: 'Salvar' }
+      },
+      iconStyle: { borderColor: '#94a3b8' }
+    },
+    dataZoom: [
+      { type: 'slider', xAxisIndex: 0, show: true, bottom: '2%', height: 12, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
+      { type: 'inside', xAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
+    ],
+    grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
+    legend: { textStyle: { color: '#cbd5e1' }, top: 0 }
   };
 
   if (tipo === 'diario') {
@@ -325,6 +433,11 @@ function toggleEvolucao(tipo) {
           type: 'line',
           data: data.map(d => (d.breakdown_real * 100).toFixed(2)), 
           itemStyle: { color: '#10b981' },
+          markPoint: {
+            data: [{ type: 'max', name: 'Maior' }],
+            label: { color: '#fff', fontSize: 10, fontWeight: 600, formatter: (p) => p.value.toFixed(1) + '%' }
+          },
+          animationDelay: (idx) => idx * 30,
 
           areaStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(16, 185, 129, 0.5)'}, {offset:1, color:'rgba(16, 185, 129, 0.0)'}])
@@ -362,6 +475,17 @@ function renderKpiOfensores(semana) {
       trigger: 'item',
       backgroundColor: 'rgba(15, 23, 42, 0.9)', textStyle: { color: '#f8fafc', fontFamily: 'Inter' }, borderColor: 'rgba(255,255,255,0.1)'
     },
+    toolbox: {
+      feature: {
+        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: '#0f172a', textareaColor: '#0f172a', textareaBorderColor: 'rgba(255,255,255,0.1)', textColor: '#e2e8f0', buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+        saveAsImage: { show: true, title: 'Salvar' }
+      },
+      iconStyle: { borderColor: '#94a3b8' }
+    },
+    dataZoom: [
+      { type: 'slider', yAxisIndex: 0, show: true, right: '2%', width: 12, startValue: data.length > 15 ? data.length - 15 : 0, endValue: data.length - 1, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
+      { type: 'inside', yAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
+    ],
     grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
     xAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
     yAxis: { type: 'category', data: data.map(d => d.maquina), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#e2e8f0', fontWeight: '500' } },
@@ -523,4 +647,362 @@ async function salvarDadosManuais() {
       const btn = document.getElementById('btnSaveKpiManual');
       btn.textContent = 'Salvar Alterações'; btn.disabled = false;
   }
+}
+
+// ==========================================
+// ==========================================
+// MÓDULO EVIDÊNCIAS E DIAGNÓSTICOS (ÁLBUNS E FOTOS)
+// ==========================================
+
+async function renderAlbuns(mes) {
+  const grid = document.getElementById('gridAlbuns');
+  const empty = document.getElementById('emptyAlbuns');
+  if (!grid || !empty) return;
+
+  grid.innerHTML = '<div style="color:var(--text-secondary); padding:2rem;">Carregando álbuns...</div>';
+  empty.style.display = 'none';
+
+  try {
+    const albuns = await carregarAlbuns(mes);
+    if (!albuns || albuns.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+
+    grid.innerHTML = '';
+    for (const alb of albuns) {
+      const card = document.createElement('div');
+      card.style.cssText = 'background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative;';
+      card.onmouseover = () => { card.style.transform = 'translateY(-4px)'; card.style.boxShadow = '0 8px 12px rgba(0,0,0,0.2)'; };
+      card.onmouseout = () => { card.style.transform = 'none'; card.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)'; };
+
+      // Buscar evidências para mostrar quantidade e capa
+      const evidencias = await carregarEvidenciasDoAlbum(alb.id);
+      const qtde = evidencias.length;
+      let capaHtml = '<div style="width:100%; height:180px; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 3rem; color: var(--border);">📁</div>';
+      
+      // Criar colagem (até 4 fotos)
+      if (qtde > 0) {
+        const fotos = evidencias.filter(e => e.foto_url).slice(0, 4);
+        if (fotos.length > 0) {
+           let gridStyle = fotos.length === 1 ? '1fr' : '1fr 1fr';
+           let rowsStyle = fotos.length <= 2 ? '1fr' : '1fr 1fr';
+           
+           let colagem = `<div style="width:100%; height:180px; display: grid; grid-template-columns: ${gridStyle}; grid-template-rows: ${rowsStyle}; gap: 2px; background: var(--border);">`;
+           fotos.forEach(f => {
+             colagem += `<div style="background: url('${f.foto_url}') center/cover no-repeat; width: 100%; height: 100%;"></div>`;
+           });
+           colagem += `</div>`;
+           capaHtml = colagem;
+        }
+      }
+
+      card.innerHTML = `
+        ${capaHtml}
+        <div style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.5rem; background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);">
+          <h4 style="margin: 0; color: var(--gold); font-size: 1.1rem; line-height: 1.3;">${alb.titulo}</h4>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="color: var(--text-secondary); font-size: 0.85rem;">${qtde} ${qtde === 1 ? 'foto' : 'fotos'}</span>
+            <div style="display: flex; gap: 0.5rem;">
+              <button class="btn-editar-album btn btn-ghost" style="padding: 4px; font-size: 0.8rem; border: none; z-index: 2;" data-id="${alb.id}" title="Editar">✏️</button>
+              <button class="btn-excluir-album btn btn-ghost" style="padding: 4px; font-size: 0.8rem; border: none; z-index: 2;" data-id="${alb.id}" title="Excluir">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Clicar no card abre a galeria (exceto nos botões de ação)
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('button')) return;
+        abrirGaleriaAlbum(alb);
+      });
+
+      card.querySelector('.btn-editar-album').addEventListener('click', () => abrirModalAlbum(alb, mes));
+      card.querySelector('.btn-excluir-album').addEventListener('click', async () => {
+        if (confirm(`Tem certeza que deseja excluir o álbum "${alb.titulo}" e todas as fotos dentro dele?`)) {
+          await excluirAlbum(alb.id);
+          renderAlbuns(mes);
+        }
+      });
+
+      grid.appendChild(card);
+    }
+  } catch (error) {
+    console.error('Erro ao carregar álbuns:', error);
+    grid.innerHTML = '<div style="color:#ef4444; padding:2rem;">Erro ao carregar álbuns.</div>';
+  }
+}
+
+function abrirGaleriaAlbum(album) {
+  currentAlbumId = album.id;
+  document.getElementById('kpi-view-albuns').style.display = 'none';
+  document.getElementById('kpi-view-evidencias-galeria').style.display = 'flex';
+  document.getElementById('lblAlbumAtualTitulo').textContent = `📂 ${album.titulo}`;
+  renderEvidenciasDoAlbumRender(album.id);
+}
+
+async function renderEvidenciasDoAlbumRender(album_id) {
+  const grid = document.getElementById('gridEvidencias');
+  const empty = document.getElementById('emptyEvidencias');
+  if (!grid || !empty) return;
+
+  grid.innerHTML = '<div style="color:var(--text-secondary); padding:2rem;">Carregando fotos...</div>';
+  empty.style.display = 'none';
+
+  try {
+    const evidencias = await carregarEvidenciasDoAlbum(album_id);
+    const btnApresentacao = document.getElementById('btnApresentacao');
+    
+    if (!evidencias || evidencias.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      if(btnApresentacao) btnApresentacao.style.display = 'none';
+      return;
+    }
+
+    if(btnApresentacao) btnApresentacao.style.display = 'flex';
+    grid.innerHTML = '';
+    evidencias.forEach(ev => {
+      const card = document.createElement('div');
+      card.style.cssText = 'background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; display: flex; flex-direction: column; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.1);';
+      
+      let imgHtml = '';
+      if (ev.foto_url) {
+        imgHtml = `<div style="width:100%; height:200px; background: var(--bg) url('${ev.foto_url}') center/cover no-repeat; border-bottom: 1px solid var(--border);"></div>`;
+      }
+
+      card.innerHTML = `
+        ${imgHtml}
+        <div style="padding: 1.25rem; flex: 1; display: flex; flex-direction: column;">
+          <h4 style="margin: 0 0 0.5rem 0; color: var(--gold); font-size: 1.1rem;">${ev.titulo}</h4>
+          <p style="margin: 0; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; flex: 1; white-space: pre-wrap;">${ev.descricao}</p>
+          <div style="margin-top: 1rem; display: flex; gap: 0.5rem; justify-content: flex-end;">
+            <button class="btn-editar-ev btn btn-ghost" style="padding: 4px 8px; font-size: 0.8rem; border: 1px solid var(--border);" data-id="${ev.id}">Editar</button>
+            <button class="btn-excluir-ev btn btn-ghost" style="padding: 4px 8px; font-size: 0.8rem; border: 1px solid rgba(239, 68, 68, 0.5); color: #fca5a5;" data-id="${ev.id}">Excluir</button>
+          </div>
+        </div>
+      `;
+
+      card.querySelector('.btn-editar-ev').addEventListener('click', () => abrirModalEvidencia(ev, album_id));
+      card.querySelector('.btn-excluir-ev').addEventListener('click', async () => {
+        if (confirm('Tem certeza que deseja excluir esta foto?')) {
+          await excluirEvidencia(ev.id);
+          renderEvidenciasDoAlbumRender(album_id);
+        }
+      });
+
+      grid.appendChild(card);
+    });
+  } catch (error) {
+    console.error('Erro ao carregar fotos:', error);
+    grid.innerHTML = '<div style="color:#ef4444; padding:2rem;">Erro ao carregar fotos.</div>';
+  }
+}
+
+// === MODAIS ===
+
+function abrirModalAlbum(album = null, mesAtual = '') {
+  const modal = document.getElementById('modal-album');
+  if (!modal) return;
+  document.getElementById('album_id').value = album ? album.id : '';
+  document.getElementById('album_mes').value = album ? album.mes : mesAtual;
+  document.getElementById('album_titulo').value = album ? album.titulo : '';
+  document.getElementById('modalAlbumTitulo').textContent = album ? 'Editar Álbum' : 'Criar Álbum';
+  modal.style.display = 'flex';
+}
+
+function fecharModalAlbum() {
+  const modal = document.getElementById('modal-album');
+  if (modal) modal.style.display = 'none';
+}
+
+async function salvarAlbumForm() {
+  const btn = document.getElementById('btnSalvarAlbum');
+  const txtOrig = btn.textContent;
+  btn.textContent = 'Salvando...'; btn.disabled = true;
+  
+  try {
+    const alb = {
+      id: document.getElementById('album_id').value || null,
+      mes: document.getElementById('album_mes').value,
+      titulo: document.getElementById('album_titulo').value
+    };
+    if (!alb.mes || !alb.titulo) { alert('Título é obrigatório.'); return; }
+    
+    await salvarAlbum(alb);
+    fecharModalAlbum();
+    
+    const currentMes = document.getElementById('selectKpiMesEvidencia').value;
+    if (currentMes === alb.mes) renderAlbuns(currentMes);
+    
+  } catch (error) {
+    console.error(error); alert('Erro ao salvar álbum.');
+  } finally {
+    btn.textContent = txtOrig; btn.disabled = false;
+  }
+}
+
+function abrirModalEvidencia(ev = null, album_id = '') {
+  const modal = document.getElementById('modal-evidencia');
+  if (!modal) return;
+  
+  document.getElementById('evidencia_id').value = ev ? ev.id : '';
+  
+  // Como reaproveitamos o form antigo, vamos esconder o campo Mês que não faz mais sentido
+  const mesInput = document.getElementById('evidencia_mes');
+  if (mesInput && mesInput.parentElement) {
+      mesInput.parentElement.style.display = 'none';
+  }
+  
+  document.getElementById('evidencia_titulo').value = ev ? ev.titulo : '';
+  document.getElementById('evidencia_descricao').value = ev ? ev.descricao : '';
+  document.getElementById('evidencia_foto_url').value = ev ? (ev.foto_url || '') : '';
+  
+  const fileInput = document.getElementById('evidencia_foto_file');
+  if (fileInput) fileInput.value = '';
+  
+  const preview = document.getElementById('evidencia_foto_preview');
+  if (preview) {
+    if (ev && ev.foto_url) {
+      preview.src = ev.foto_url;
+      preview.style.display = 'block';
+    } else {
+      preview.src = '';
+      preview.style.display = 'none';
+    }
+  }
+
+  // Setup file listener
+  if (fileInput && !fileInput.hasAttribute('data-bound')) {
+    fileInput.setAttribute('data-bound', 'true');
+    fileInput.addEventListener('change', function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        document.getElementById('evidencia_foto_url').value = evt.target.result;
+        if (preview) {
+          preview.src = evt.target.result;
+          preview.style.display = 'block';
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  document.getElementById('modalEvidenciaTitulo').textContent = ev ? 'Editar Foto' : 'Adicionar Foto';
+  modal.style.display = 'flex';
+}
+
+function fecharModalEvidencia() {
+  const modal = document.getElementById('modal-evidencia');
+  if (modal) modal.style.display = 'none';
+}
+
+async function salvarEvidenciaForm() {
+  const btn = document.getElementById('btnSalvarEvidencia');
+  const txtOrig = btn.textContent;
+  btn.textContent = 'Salvando...';
+  btn.disabled = true;
+  
+  try {
+    const ev = {
+      id: document.getElementById('evidencia_id').value || null,
+      album_id: currentAlbumId,
+      titulo: document.getElementById('evidencia_titulo').value,
+      descricao: document.getElementById('evidencia_descricao').value,
+      foto_url: document.getElementById('evidencia_foto_url').value
+    };
+    
+    if (!ev.album_id || !ev.titulo) {
+      alert('Título é obrigatório.');
+      return;
+    }
+    
+    await salvarEvidencia(ev);
+    fecharModalEvidencia();
+    
+    if (currentAlbumId) renderEvidenciasDoAlbumRender(currentAlbumId);
+    
+  } catch (error) {
+    console.error(error);
+    alert('Erro ao salvar foto.');
+  } finally {
+    btn.textContent = txtOrig;
+    btn.disabled = false;
+  }
+}
+
+// === MODO APRESENTAÇÃO ===
+
+async function abrirApresentacao(album_id) {
+  if (!album_id) return;
+  const evidencias = await carregarEvidenciasDoAlbum(album_id);
+  // Filtra apenas as evidências que têm foto
+  presentationEvidencias = evidencias.filter(e => e.foto_url);
+  
+  if (presentationEvidencias.length === 0) {
+    alert('Este álbum não possui fotos para apresentar.');
+    return;
+  }
+  
+  currentSlideIndex = 0;
+  document.getElementById('modal-apresentacao').style.display = 'flex';
+  
+  // Tenta entrar em modo tela cheia do navegador
+  try {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+      elem.requestFullscreen();
+    }
+  } catch (e) {
+    console.warn("Fullscreen API falhou", e);
+  }
+  
+  renderSlide();
+}
+
+function fecharApresentacao() {
+  document.getElementById('modal-apresentacao').style.display = 'none';
+  // Sai do tela cheia se estiver
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(()=>{});
+  }
+}
+
+function renderSlide() {
+  if (presentationEvidencias.length === 0) return;
+  
+  const ev = presentationEvidencias[currentSlideIndex];
+  
+  const img = document.getElementById('apresentacao-imagem');
+  // Efeito rápido de fade
+  img.style.opacity = 0;
+  setTimeout(() => {
+    img.src = ev.foto_url;
+    img.style.opacity = 1;
+  }, 100);
+  
+  document.getElementById('apresentacao-titulo').textContent = ev.titulo;
+  document.getElementById('apresentacao-descricao').textContent = ev.descricao;
+  document.getElementById('apresentacao-contador').textContent = `${currentSlideIndex + 1} / ${presentationEvidencias.length}`;
+}
+
+function nextSlide() {
+  if (presentationEvidencias.length === 0) return;
+  currentSlideIndex++;
+  if (currentSlideIndex >= presentationEvidencias.length) {
+    currentSlideIndex = 0; // Loop infinito
+  }
+  renderSlide();
+}
+
+function prevSlide() {
+  if (presentationEvidencias.length === 0) return;
+  currentSlideIndex--;
+  if (currentSlideIndex < 0) {
+    currentSlideIndex = presentationEvidencias.length - 1; // Loop invertido
+  }
+  renderSlide();
 }

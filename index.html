@@ -290,6 +290,7 @@
             <button type="button" class="kpi-tab-btn active" data-kpitab="global" style="background: none; border: none; color: var(--text-primary); font-weight: 600; cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid var(--gold);">Visão Global</button>
             <button type="button" class="kpi-tab-btn" data-kpitab="linhas" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent;">Visão por Linha</button>
             <button type="button" class="kpi-tab-btn" data-kpitab="compliance" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent;">Compliance & Ações</button>
+            <button type="button" class="kpi-tab-btn" data-kpitab="evidencias" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent;">Evidências (Galeria)</button>
           </div>
 
           <!-- TAB 1: GLOBAL -->
@@ -422,6 +423,59 @@
                 </table>
               </div>
             </div>
+          </div>
+
+          <!-- TAB 4: EVIDÊNCIAS (Álbuns) -->
+          <div id="kpi-view-evidencias" class="kpi-subview" style="display: none; flex-direction: column; gap: 1.5rem;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+              <div style="display: flex; align-items: center; gap: 1rem;">
+                <h4 style="margin: 0; color: var(--text-primary);">Mês de Referência:</h4>
+                <select id="selectKpiMesEvidencia" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 8px 12px; border-radius: 4px; font-size: 1rem; outline: none; min-width: 150px;">
+                  <!-- Preenchido via JS dinamicamente -->
+                </select>
+              </div>
+              <button type="button" class="btn btn-primary" id="btnNovoAlbum" style="display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(135deg, var(--gold), #d4af37); color: #000; border: none; font-weight: 600;">
+                <span>+</span> Criar Álbum
+              </button>
+            </div>
+
+            <!-- TELA DE ÁLBUNS -->
+            <div id="kpi-view-albuns">
+              <div id="gridAlbuns" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                <!-- Cards de álbuns renderizados via JS -->
+              </div>
+              <div id="emptyAlbuns" style="display: none; text-align: center; padding: 4rem; color: var(--text-secondary); background: var(--surface); border-radius: 8px; border: 1px dashed var(--border);">
+                Nenhum álbum registrado neste mês.
+              </div>
+            </div>
+
+            <!-- TELA DA GALERIA DO ÁLBUM (Escondida por padrão) -->
+            <div id="kpi-view-evidencias-galeria" style="display: none; flex-direction: column; gap: 1.5rem;">
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                  <button type="button" id="btnVoltarAlbuns" class="btn btn-ghost" style="padding: 6px 12px; display: flex; align-items: center; gap: 0.5rem;">⬅ Voltar aos Álbuns</button>
+                  <h3 id="lblAlbumAtualTitulo" style="margin: 0; color: var(--gold);"></h3>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                  <button type="button" class="btn btn-ghost" id="btnApresentacao" style="display: flex; align-items: center; gap: 0.5rem; color: #fff; font-weight: 600; border: 1px solid var(--border); display: none;">
+                    ▶ Apresentação
+                  </button>
+                  <button type="button" class="btn btn-primary" id="btnNovaEvidencia" style="display: flex; align-items: center; gap: 0.5rem; border: none; font-weight: 600;">
+                    <span>+</span> Adicionar Foto
+                  </button>
+                </div>
+              </div>
+
+              <!-- Grid de Evidências -->
+              <div id="gridEvidencias" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;">
+                <!-- Cards preenchidos via JS -->
+              </div>
+              <div id="emptyEvidencias" style="display: none; text-align: center; padding: 4rem; color: var(--text-secondary); background: var(--surface); border-radius: 8px; border: 1px dashed var(--border);">
+                Nenhuma foto registrada neste álbum.
+              </div>
+            </div>
+
           </div>
 
         </div> <!-- End inner wrapper -->
@@ -2316,6 +2370,86 @@ Segue abaixo itens para verificação de atraso.</textarea>
           <button type="button" class="btn btn-primary" id="btnSaveKpiManual" onclick="if(window.salvarDadosManuaisKPI) window.salvarDadosManuaisKPI(); else console.error('salvarDadosManuaisKPI not loaded');">Salvar Alterações</button>
         </div>
       </div>
+    </div>
+  </div>
+
+    <!-- MODAL NOVA/EDITAR EVIDÊNCIA -->
+  <div id="modal-evidencia" class="modal-overlay" style="display: none; z-index: 9999;">
+    <div class="modal" style="max-width: 600px; width: 100%;">
+      <header class="modal-header">
+        <h2 id="modalEvidenciaTitulo">Adicionar Evidência</h2>
+        <button type="button" class="btn-close" id="btnCloseModalEvidencia" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer;">&times;</button>
+      </header>
+      <div class="modal-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+        <input type="hidden" id="evidencia_id">
+        <label style="display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
+          Mês de Referência
+          <input type="text" id="evidencia_mes" placeholder="Ex: 07/2026" style="background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; font-family: inherit;">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
+          Título
+          <input type="text" id="evidencia_titulo" style="background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; font-family: inherit;">
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
+          Descrição Detalhada
+          <textarea id="evidencia_descricao" rows="4" style="background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; font-family: inherit; resize: vertical;"></textarea>
+        </label>
+        <label style="display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
+          Upload de Foto
+          <input type="file" id="evidencia_foto_file" accept="image/*" style="background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; font-family: inherit;">
+          <input type="hidden" id="evidencia_foto_url">
+          <img id="evidencia_foto_preview" src="" style="max-width: 100%; max-height: 200px; object-fit: contain; border-radius: 6px; display: none; margin-top: 0.5rem; border: 1px solid var(--border);">
+        </label>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 1rem;">
+        <button type="button" class="btn btn-ghost" id="btnCancelarEvidencia">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSalvarEvidencia">Salvar Evidência</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL NOVO/EDITAR ÁLBUM -->
+  <div id="modal-album" class="modal-overlay" style="display: none; z-index: 9999;">
+    <div class="modal" style="max-width: 500px; width: 100%;">
+      <header class="modal-header">
+        <h2 id="modalAlbumTitulo">Criar Álbum</h2>
+        <button type="button" class="btn-close" id="btnCloseModalAlbum" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer;">&times;</button>
+      </header>
+      <div class="modal-body" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+        <input type="hidden" id="album_id">
+        <input type="hidden" id="album_mes">
+        <label style="display: flex; flex-direction: column; gap: 0.5rem; color: var(--text-secondary); font-size: 0.85rem;">
+          Nome do Álbum
+          <input type="text" id="album_titulo" placeholder="Ex: Por que estamos nesta situação?" style="background: var(--bg); border: 1px solid var(--border); color: var(--text-primary); padding: 0.75rem; border-radius: 6px; font-family: inherit;">
+        </label>
+      </div>
+      <div class="modal-footer" style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 1rem;">
+        <button type="button" class="btn btn-ghost" id="btnCancelarAlbum">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="btnSalvarAlbum">Salvar Álbum</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL APRESENTAÇÃO (FULLSCREEN) -->
+  <div id="modal-apresentacao" style="display: none; position: fixed; inset: 0; background: #050505; z-index: 10000; flex-direction: column;">
+    <div style="position: absolute; top: 1rem; right: 1.5rem; z-index: 10001; display: flex; align-items: center; gap: 1rem;">
+      <span id="apresentacao-contador" style="color: rgba(255,255,255,0.6); font-size: 1.2rem; letter-spacing: 2px;">1 / 5</span>
+      <button type="button" id="btnFecharApresentacao" style="background: rgba(255,255,255,0.1); border: none; color: #fff; font-size: 1.5rem; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'" title="Sair (ESC)">&times;</button>
+    </div>
+    
+    <!-- ÁREA DA IMAGEM -->
+    <div style="flex: 1; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+      <button type="button" id="btnApresentacaoPrev" style="position: absolute; left: 2rem; z-index: 10001; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 2rem; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; backdrop-filter: blur(4px);" onmouseover="this.style.background='rgba(0,0,0,0.8)'; this.style.transform='scale(1.1)';" onmouseout="this.style.background='rgba(0,0,0,0.5)'; this.style.transform='scale(1)';">&#10094;</button>
+      
+      <img id="apresentacao-imagem" src="" style="max-width: 100%; max-height: 100vh; object-fit: contain; transition: opacity 0.3s;">
+      
+      <button type="button" id="btnApresentacaoNext" style="position: absolute; right: 2rem; z-index: 10001; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.2); color: #fff; font-size: 2rem; width: 60px; height: 60px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; backdrop-filter: blur(4px);" onmouseover="this.style.background='rgba(0,0,0,0.8)'; this.style.transform='scale(1.1)';" onmouseout="this.style.background='rgba(0,0,0,0.5)'; this.style.transform='scale(1)';">&#10095;</button>
+    </div>
+
+    <!-- LEGENDA TRANSLÚCIDA -->
+    <div style="position: absolute; bottom: 0; left: 0; right: 0; padding: 6rem 4rem 3rem 4rem; background: linear-gradient(0deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 40%, transparent 100%); pointer-events: none;">
+      <h2 id="apresentacao-titulo" style="margin: 0 0 1rem 0; color: var(--gold); font-size: 2.5rem; text-shadow: 0 2px 4px rgba(0,0,0,0.5); max-width: 1200px;"></h2>
+      <p id="apresentacao-descricao" style="margin: 0; color: #f3f4f6; font-size: 1.25rem; line-height: 1.6; max-width: 1200px; text-shadow: 0 1px 2px rgba(0,0,0,0.5); white-space: pre-wrap;"></p>
     </div>
   </div>
 

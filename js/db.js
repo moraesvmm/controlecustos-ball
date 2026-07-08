@@ -92,6 +92,17 @@ export async function fetchWithCache(tableName, cacheKey, mapFn, orderBy = 'id',
         }
       }
       
+      // Garantir que localData não tenha IDs duplicados (limpeza de estado local corrompido)
+      const deduplicated = [];
+      const seen = new Set();
+      for (const item of localData) {
+        if (!seen.has(String(item.id))) {
+          seen.add(String(item.id));
+          deduplicated.push(item);
+        }
+      }
+      localData = deduplicated;
+
       try {
         localStorage.setItem(cacheKey, JSON.stringify(localData));
         const safeSync = new Date();
@@ -686,4 +697,107 @@ export async function excluirCustoGeral(id) {
   const client = getClient();
   const { error } = await client.from('custo_geral').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ==========================================
+// MÓDULO: EVIDÊNCIAS (Indicadores / Diagnóstico)
+// ==========================================
+export async function carregarAlbuns(mes) {
+  const cache = localStorage.getItem('albuns_mensais');
+  let data = cache ? JSON.parse(cache) : null;
+  
+  if (!data) {
+    data = [
+      { id: 'album1', mes: '07/2026', titulo: 'Por que estamos nesta situação?' },
+      { id: 'album2', mes: '07/2026', titulo: 'Déficit de Treinamento / Processos' }
+    ];
+    localStorage.setItem('albuns_mensais', JSON.stringify(data));
+  }
+
+  // --- MIGRAÇÃO DE FOTOS ÓRFÃS ---
+  const evCache = localStorage.getItem('evidencias_mensais');
+  if (evCache) {
+    let evs = JSON.parse(evCache);
+    let mudou = false;
+    evs.forEach(e => {
+      if (!e.album_id) {
+        let alb = data.find(a => a.mes === e.mes);
+        if (!alb) {
+          alb = { id: 'album_migrado_' + Math.random().toString(36).substring(7), mes: e.mes, titulo: 'Fotos Antigas' };
+          data.push(alb);
+          localStorage.setItem('albuns_mensais', JSON.stringify(data));
+        }
+        e.album_id = alb.id;
+        mudou = true;
+      }
+    });
+    if (mudou) {
+      localStorage.setItem('evidencias_mensais', JSON.stringify(evs));
+    }
+  }
+
+  return data.filter(a => a.mes === mes);
+}
+
+export async function salvarAlbum(album) {
+  const cache = localStorage.getItem('albuns_mensais');
+  let data = cache ? JSON.parse(cache) : [];
+  if (!album.id) album.id = 'album_' + Date.now().toString();
+  const idx = data.findIndex(a => a.id === album.id);
+  if (idx >= 0) data[idx] = album;
+  else data.push(album);
+  localStorage.setItem('albuns_mensais', JSON.stringify(data));
+  return album;
+}
+
+export async function excluirAlbum(id) {
+  const cache = localStorage.getItem('albuns_mensais');
+  let data = cache ? JSON.parse(cache) : [];
+  data = data.filter(a => a.id !== id);
+  localStorage.setItem('albuns_mensais', JSON.stringify(data));
+  
+  // Apagar fotos em cascata
+  const cacheEv = localStorage.getItem('evidencias_mensais');
+  let evData = cacheEv ? JSON.parse(cacheEv) : [];
+  evData = evData.filter(e => e.album_id !== id);
+  localStorage.setItem('evidencias_mensais', JSON.stringify(evData));
+}
+
+export async function carregarEvidenciasDoAlbum(album_id) {
+  const cache = localStorage.getItem('evidencias_mensais');
+  let data = cache ? JSON.parse(cache) : null;
+  
+  if (!data) {
+    data = [
+      { id: '1', album_id: 'album1', titulo: 'Situações Críticas (Quadro Elétrico)', descricao: 'Equipamentos em situações críticas e básicas...', foto_url: 'img/evidencias/critica1.png' },
+      { id: '2', album_id: 'album1', titulo: 'Situações Críticas (Lâminas)', descricao: 'Desgaste severo.', foto_url: 'img/evidencias/critica2.png' },
+      { id: '3', album_id: 'album1', titulo: 'Situações Críticas (Sensores)', descricao: 'Sensores adaptados com abraçadeiras, sem fixação adequada.', foto_url: 'img/evidencias/critica3.png' },
+      { id: '4', album_id: 'album1', titulo: 'Situações Críticas (Tubos)', descricao: 'Tubos e estrutura com desgastes.', foto_url: 'img/evidencias/critica4.png' },
+      { id: '5', album_id: 'album2', titulo: 'Nível de Experiência - Eletrônicos', descricao: 'Novos: Carlos Alberto / Rodolpho / Carlos Shiavon / Natanael / Danilo / Alan\nExperientes: Michael / Mauricio' },
+      { id: '6', album_id: 'album2', titulo: 'Nível de Experiência - Mecânicos', descricao: 'Novos: Francisco / Edvaldo / Edmilson / Tecnico mecânico 2 (Em fase de contratação) / Tecnico mecânico 1 (Em fase de contratação)\nExperientes: Diego / Robson / Fernando / Cezar / Willians / Alessandro / Cleber' },
+      { id: '7', album_id: 'album2', titulo: 'Capacitação Técnica', descricao: 'Mesmos os mecânicos e eletrônicos mais experientes do nosso time nunca receberam um treinamento específico de nenhuma máquina, tudo o que é feito é baseado na expertise de cada um.' },
+      { id: '8', album_id: 'album2', titulo: 'Falta de Procedimentos', descricao: 'Tambor que nós erramos na montagem durante a preventiva da linha 7.\nNão realizamos inúmeras manutenções (Limpeza destes tambores e até hoje não temos a identificação das peças e procedimentos e métodos de montagem).' }
+    ];
+    localStorage.setItem('evidencias_mensais', JSON.stringify(data));
+  }
+
+  return data.filter(e => e.album_id === album_id);
+}
+
+export async function salvarEvidencia(evidencia) {
+  const cache = localStorage.getItem('evidencias_mensais');
+  let data = cache ? JSON.parse(cache) : [];
+  if (!evidencia.id) evidencia.id = Date.now().toString();
+  const idx = data.findIndex(e => e.id === evidencia.id);
+  if (idx >= 0) data[idx] = evidencia;
+  else data.push(evidencia);
+  localStorage.setItem('evidencias_mensais', JSON.stringify(data));
+  return evidencia;
+}
+
+export async function excluirEvidencia(id) {
+  const cache = localStorage.getItem('evidencias_mensais');
+  let data = cache ? JSON.parse(cache) : [];
+  data = data.filter(e => e.id !== id);
+  localStorage.setItem('evidencias_mensais', JSON.stringify(data));
 }

@@ -52,6 +52,52 @@ function gradient(c1, c2, horizontal = false) {
 
 const fmtLabel = (v) => 'R$ ' + (v/1000 >= 1 ? (v/1000).toFixed(0) + 'k' : v);
 
+const formatDataView = (opt) => {
+  let table = '<div style="background:transparent; padding:0; width:100%; height:100%; overflow:auto;"><table style="width:100%;text-align:left;border-collapse:collapse;font-size:0.85rem;"><tbody>';
+  const series = opt.series;
+  if (opt.xAxis && opt.xAxis.length > 0 && opt.xAxis[0].data) {
+    const axisData = opt.xAxis[0].data;
+    table += '<tr><th style="padding:8px;border-bottom:1px solid var(--border,#334155);">Categoria</th>';
+    series.forEach(s => { table += `<th style="padding:8px;border-bottom:1px solid var(--border,#334155);">${s.name || 'Valor'}</th>`; });
+    table += '</tr>';
+    for (let i = 0; i < axisData.length; i++) {
+      table += `<tr><td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${axisData[i]}</td>`;
+      series.forEach(s => {
+        let val = s.data[i];
+        if (val && typeof val === 'object') val = val.value;
+        table += `<td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${typeof val === 'number' ? fmtMoeda(val) : (val||'—')}</td>`;
+      });
+      table += '</tr>';
+    }
+  } else if (opt.yAxis && opt.yAxis.length > 0 && opt.yAxis[0].data) {
+    const axisData = opt.yAxis[0].data;
+    table += '<tr><th style="padding:8px;border-bottom:1px solid var(--border,#334155);">Categoria</th>';
+    series.forEach(s => { table += `<th style="padding:8px;border-bottom:1px solid var(--border,#334155);">${s.name || 'Valor'}</th>`; });
+    table += '</tr>';
+    for (let i = 0; i < axisData.length; i++) {
+      table += `<tr><td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${axisData[i]}</td>`;
+      series.forEach(s => {
+        let val = s.data[i];
+        if (val && typeof val === 'object') val = val.value;
+        table += `<td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${typeof val === 'number' ? fmtMoeda(val) : (val||'—')}</td>`;
+      });
+      table += '</tr>';
+    }
+  } else {
+    series.forEach(s => {
+      table += `<tr><th colspan="2" style="padding:8px;border-bottom:1px solid var(--border,#334155);">${s.name || 'Dados'}</th></tr>`;
+      s.data.forEach(d => {
+        let name = d.name || 'Item';
+        let val = d.value;
+        let formatted = (s.isCount) ? val : (typeof val === 'number' ? fmtMoeda(val) : (val||'—'));
+        table += `<tr><td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${name}</td><td style="padding:8px;border-bottom:1px solid rgba(255,255,255,0.05);">${formatted}</td></tr>`;
+      });
+    });
+  }
+  table += '</tbody></table></div>';
+  return table;
+};
+
 function makeClickHandler(chartId) {
   return (params) => {
     try {
@@ -170,8 +216,7 @@ export function renderDashboardCharts(registros) {
   const byMes = agregarRecebidosPrevistos(registros);
   const byMaquina = agregarPorMaquina(registros)
     .filter(x => x.valor > 0)
-    .sort((a, b) => a.valor - b.valor) // Sort asc for horizontal chart in Echarts
-    .slice(-10); // Take top 10
+    .sort((a, b) => a.valor - b.valor); // Sort asc for horizontal chart in Echarts
 
   const ignoredStatuses = ['PENDENTE', 'PENDENTE DE ENVIO', 'PENDENTE DE RC', 'PENDENTE DE ORÇAMENTO', 'PENDENTE DE ORCAMENTO'];
   const byStatusFiltered = byStatus.filter(x => !ignoredStatuses.includes(x.status));
@@ -182,13 +227,21 @@ export function renderDashboardCharts(registros) {
     const ch1 = echarts.init(ctx1);
     ch1.setOption({
       title: { text: 'STATUS × CUSTO', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+      toolbox: {
+        feature: {
+          magicType: { type: ['line', 'bar'] },
+          dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+          saveAsImage: { show: true, title: 'Salvar Imagem' }
+        },
+        iconStyle: { borderColor: tc.tickColor }
+      },
       tooltip: { 
           trigger: 'item', 
           backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
           valueFormatter: (value) => fmtMoeda(value)
       },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'category', data: byStatusFiltered.map(x => x.status), axisLabel: { color: tc.tickColor, ...CHART_FONT, interval: 0, formatter: (v) => v.replace(' DE ', '\\nDE ') }, axisTick: { show: false }, axisLine: { show: false } },
+      xAxis: { type: 'category', data: byStatusFiltered.map(x => x.status), axisLabel: { color: tc.tickColor, ...CHART_FONT, interval: 0, formatter: (v) => v.replace(' DE ', '\nDE ') }, axisTick: { show: false }, axisLine: { show: false } },
       yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
       series: [{
         name: 'Soma de VALOR',
@@ -200,7 +253,16 @@ export function renderDashboardCharts(registros) {
                 value: x.valor,
                 itemStyle: { color: gradient(colorTuple[0], colorTuple[1]), borderRadius: [8, 8, 0, 0] }
             }
-        })
+        }),
+        markPoint: {
+          data: [
+            { type: 'max', name: 'Maior Custo' },
+            { type: 'min', name: 'Menor Custo' }
+          ],
+          label: { color: '#fff', fontSize: 10, fontWeight: 600, formatter: (p) => fmtLabel(p.value) }
+        },
+        animationDelay: (idx) => idx * 100,
+        animationEasing: 'elasticOut'
       }]
     });
     ch1.on('click', makeClickHandler('status'));
@@ -214,6 +276,14 @@ export function renderDashboardCharts(registros) {
     const ch2 = echarts.init(ctx2);
     ch2.setOption({
       title: { text: 'RECEBIDOS E PREVISTOS', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+      toolbox: {
+        feature: {
+          magicType: { type: ['line', 'bar'] },
+          dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+          saveAsImage: { show: true, title: 'Salvar' }
+        },
+        iconStyle: { borderColor: tc.tickColor }
+      },
       tooltip: { 
           trigger: 'item', 
           backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
@@ -229,14 +299,16 @@ export function renderDashboardCharts(registros) {
           type: 'bar',
           data: byMes.map((x) => x.previsto),
   
-          itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [8, 8, 0, 0] }
+          itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [8, 8, 0, 0] },
+          animationDelay: (idx) => idx * 50
         },
         {
           name: 'Valor Recebido',
           type: 'bar',
           data: byMes.map((x) => x.recebido),
   
-          itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [8, 8, 0, 0] }
+          itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [8, 8, 0, 0] },
+          animationDelay: (idx) => idx * 50 + 20
         }
       ]
     });
@@ -250,7 +322,18 @@ export function renderDashboardCharts(registros) {
   if (ctx3) {
     const ch3 = echarts.init(ctx3);
     ch3.setOption({
-      title: { text: 'TOP 10 GASTOS POR MÁQUINA / LINHA', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+      title: { text: 'GASTOS POR MÁQUINA / LINHA', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+      toolbox: {
+        feature: {
+          dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+          saveAsImage: { show: true, title: 'Salvar' }
+        },
+        iconStyle: { borderColor: tc.tickColor }
+      },
+      dataZoom: [
+        { type: 'slider', yAxisIndex: 0, show: true, right: '2%', width: 12, startValue: byMaquina.length > 10 ? byMaquina.length - 10 : 0, endValue: byMaquina.length - 1, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
+        { type: 'inside', yAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
+      ],
       tooltip: { 
           trigger: 'item', 
           backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
@@ -265,7 +348,8 @@ export function renderDashboardCharts(registros) {
         data: byMaquina.map(x => ({ value: x.valor, name: x.maquina_linha })), // Keep full name in data point
         barWidth: '60%',
 
-        itemStyle: { color: gradient('rgba(212, 175, 55, 0.95)', 'rgba(180, 140, 40, 0.45)', true), borderRadius: [0, 8, 8, 0] }
+        itemStyle: { color: gradient('rgba(212, 175, 55, 0.95)', 'rgba(180, 140, 40, 0.45)', true), borderRadius: [0, 8, 8, 0] },
+        animationDelay: (idx) => idx * 30
       }]
     });
     ch3.on('click', (params) => {
@@ -290,6 +374,13 @@ export function renderDashboardCharts(registros) {
     const ch = echarts.init(ctx);
     ch.setOption({
       title: { text: title, textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+      toolbox: {
+        feature: {
+          dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+          saveAsImage: { show: true, title: 'Salvar' }
+        },
+        iconStyle: { borderColor: tc.tickColor }
+      },
       tooltip: { 
           trigger: 'item', 
           backgroundColor: tc.tooltipBg, borderColor: tc.borderColor,
@@ -300,6 +391,7 @@ export function renderDashboardCharts(registros) {
       series: [{
         name: natureza,
         type: 'pie',
+        isCount: true,
         radius: ['45%', '70%'],
         center: ['50%', '50%'],
         itemStyle: { 
@@ -326,7 +418,10 @@ export function renderDashboardCharts(registros) {
             length: 10,
             length2: 15,
             lineStyle: { width: 2, color: tc.tickColor }
-        }
+        },
+        animationType: 'scale',
+        animationEasing: 'elasticOut',
+        animationDelay: (idx) => Math.random() * 200
       }]
     });
     ch.on('click', makeClickHandler('prazos'));
@@ -403,6 +498,18 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
   fluxoChartInstance = echarts.init(ctx);
   fluxoChartInstance.setOption({
     title: { text: 'FLUXO DE CONSERTOS — Patrimonial Exposto vs. Custo de Reparo', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+    toolbox: {
+      feature: {
+        magicType: { type: ['line', 'bar'] },
+        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+        saveAsImage: { show: true, title: 'Salvar' }
+      },
+      iconStyle: { borderColor: tc.tickColor }
+    },
+    dataZoom: [
+      { type: 'slider', xAxisIndex: 0, show: true, bottom: '2%', height: 12, startValue: 0, endValue: 11, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
+      { type: 'inside', xAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
+    ],
     tooltip: { 
         trigger: 'item', 
         backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
@@ -418,14 +525,16 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
         type: 'bar',
         data: dados.map(d => d.enviado),
 
-        itemStyle: { color: gradient('rgba(251,191,36,0.9)', 'rgba(245,158,11,0.35)'), borderRadius: [8, 8, 0, 0] }
+        itemStyle: { color: gradient('rgba(251,191,36,0.9)', 'rgba(245,158,11,0.35)'), borderRadius: [8, 8, 0, 0] },
+        animationDelay: (idx) => idx * 50
       },
       {
         name: 'Custo Reparo (Recebido)',
         type: 'bar',
         data: dados.map(d => d.recebido),
 
-        itemStyle: { color: gradient('rgba(52,211,153,0.9)', 'rgba(16,185,129,0.35)'), borderRadius: [8, 8, 0, 0] }
+        itemStyle: { color: gradient('rgba(52,211,153,0.9)', 'rgba(16,185,129,0.35)'), borderRadius: [8, 8, 0, 0] },
+        animationDelay: (idx) => idx * 50 + 20
       }
     ]
   });

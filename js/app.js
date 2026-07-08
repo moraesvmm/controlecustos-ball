@@ -1103,7 +1103,7 @@ function abrirModalFluxoConsertos() {
   document.getElementById('fluxoFechar')?.addEventListener('click', () => modal.remove());
   modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
-  renderFluxo();
+  setTimeout(renderFluxo, 100); // Aguarda a modal renderizar fisicamente para o ECharts ler o Width correto
 }
 
 function abrirModal(id) {
@@ -1187,6 +1187,12 @@ async function salvarForm(e) {
     data_recebimento: f.data_recebimento.value || null,
     comentario: f.comentario.value,
   };
+  const btnSalvar = $('#formRegistro').querySelector('button[type="submit"]');
+  if (btnSalvar) {
+    btnSalvar.disabled = true;
+    btnSalvar.textContent = 'Salvando...';
+  }
+
   try {
     const salvo = await salvarRegistro(payload);
     const idx = registros.findIndex(r => String(r.id) === String(salvo.id));
@@ -1197,6 +1203,11 @@ async function salvarForm(e) {
     refresh();
   } catch (err) {
     toast('Erro ao salvar: ' + err.message, 'error');
+  } finally {
+    if (btnSalvar) {
+      btnSalvar.disabled = false;
+      btnSalvar.textContent = 'Salvar';
+    }
   }
 }
 
