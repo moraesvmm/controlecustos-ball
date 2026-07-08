@@ -8,11 +8,11 @@ import { abrirDrilldown, registrosPorClique } from './drilldown.js?v=999';
 import { fmtMoeda } from './ui.js?v=999';
 
 const COLORS = {
-  ENTREGUE: '#34d399',
-  'PENDENTE DE ENTREGA': '#fbbf24',
-  'PENDENTE DE PEDIDO': '#60a5fa',
-  'PENDENTE DE ORCAMENTO': '#c084fc',
-  PENDENTE: '#94a3b8',
+  ENTREGUE: ['rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'],
+  'PENDENTE DE ENTREGA': ['rgba(251, 191, 36, 0.9)', 'rgba(245, 158, 11, 0.35)'],
+  'PENDENTE DE PEDIDO': ['rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.35)'],
+  'PENDENTE DE ORCAMENTO': ['rgba(192, 132, 252, 0.9)', 'rgba(168, 85, 247, 0.35)'],
+  PENDENTE: ['rgba(148, 163, 184, 0.9)', 'rgba(100, 116, 139, 0.35)'],
 };
 
 const CHART_FONT = { fontFamily: "'DM Sans', system-ui", fontSize: 12 };
@@ -31,6 +31,9 @@ function themeColors() {
     tooltipTitle: isLight ? '#0f172a' : '#f1f5f9',
     tooltipText:  isLight ? '#334155' : '#cbd5e1',
     borderColor:  isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
+    pointerShadow: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+    pieBorder:    isLight ? '#ffffff' : '#0f172a',
+    shadowColor:  isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.4)',
   };
 }
 
@@ -46,6 +49,8 @@ function gradient(c1, c2, horizontal = false) {
     { offset: 1, color: c2 }
   ]);
 }
+
+const fmtLabel = (v) => 'R$ ' + (v/1000 >= 1 ? (v/1000).toFixed(0) + 'k' : v);
 
 function makeClickHandler(chartId) {
   return (params) => {
@@ -127,26 +132,28 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
   const option = {
     title: { text: titulo, textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
     tooltip: { 
-        trigger: 'axis', axisPointer: { type: 'shadow' },
+        trigger: 'item', 
         backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
         valueFormatter: (value) => fmtMoeda(value)
     },
     legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, top: 25 },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: { type: 'category', data: byMes.map((x) => x.mes), axisLabel: { color: tc.tickColor, ...CHART_FONT }, axisTick: { show: false }, axisLine: { show: false } },
-    yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: (v) => 'R$ ' + (v/1000 >= 1 ? (v/1000).toFixed(0) + 'k' : v) }, splitLine: { lineStyle: { color: tc.gridColor } } },
+    yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
     series: [
       {
         name: 'Valor Previsto',
         type: 'bar',
         data: byMes.map((x) => x.previsto),
-        itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [6, 6, 0, 0] }
+
+        itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [8, 8, 0, 0] }
       },
       {
         name: 'Valor Recebido',
         type: 'bar',
         data: byMes.map((x) => x.recebido),
-        itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [6, 6, 0, 0] }
+
+        itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [8, 8, 0, 0] }
       }
     ]
   };
@@ -181,16 +188,19 @@ export function renderDashboardCharts(registros) {
           valueFormatter: (value) => fmtMoeda(value)
       },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'category', data: byStatusFiltered.map(x => x.status), axisLabel: { color: tc.tickColor, ...CHART_FONT }, axisTick: { show: false }, axisLine: { show: false } },
-      yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: (v) => 'R$ ' + (v/1000 >= 1 ? (v/1000).toFixed(0) + 'k' : v) }, splitLine: { lineStyle: { color: tc.gridColor } } },
+      xAxis: { type: 'category', data: byStatusFiltered.map(x => x.status), axisLabel: { color: tc.tickColor, ...CHART_FONT, interval: 0, formatter: (v) => v.replace(' DE ', '\\nDE ') }, axisTick: { show: false }, axisLine: { show: false } },
+      yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
       series: [{
         name: 'Soma de VALOR',
         type: 'bar',
-        data: byStatusFiltered.map((x) => ({
-            value: x.valor,
-            itemStyle: { color: COLORS[x.status] || '#64748b' }
-        })),
-        itemStyle: { borderRadius: [8, 8, 0, 0] }
+
+        data: byStatusFiltered.map((x) => {
+            const colorTuple = COLORS[x.status] || COLORS['PENDENTE'];
+            return {
+                value: x.valor,
+                itemStyle: { color: gradient(colorTuple[0], colorTuple[1]), borderRadius: [8, 8, 0, 0] }
+            }
+        })
       }]
     });
     ch1.on('click', makeClickHandler('status'));
@@ -205,26 +215,28 @@ export function renderDashboardCharts(registros) {
     ch2.setOption({
       title: { text: 'RECEBIDOS E PREVISTOS', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
       tooltip: { 
-          trigger: 'axis', axisPointer: { type: 'shadow' },
+          trigger: 'item', 
           backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
           valueFormatter: (value) => fmtMoeda(value)
       },
       legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, top: 25 },
       grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
       xAxis: { type: 'category', data: byMes.map((x) => x.mes), axisLabel: { color: tc.tickColor, ...CHART_FONT }, axisTick: { show: false }, axisLine: { show: false } },
-      yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: (v) => 'R$ ' + (v/1000 >= 1 ? (v/1000).toFixed(0) + 'k' : v) }, splitLine: { lineStyle: { color: tc.gridColor } } },
+      yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
       series: [
         {
           name: 'Valor Previsto',
           type: 'bar',
           data: byMes.map((x) => x.previsto),
-          itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [6, 6, 0, 0] }
+  
+          itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [8, 8, 0, 0] }
         },
         {
           name: 'Valor Recebido',
           type: 'bar',
           data: byMes.map((x) => x.recebido),
-          itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [6, 6, 0, 0] }
+  
+          itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [8, 8, 0, 0] }
         }
       ]
     });
@@ -240,19 +252,20 @@ export function renderDashboardCharts(registros) {
     ch3.setOption({
       title: { text: 'TOP 10 GASTOS POR MÁQUINA / LINHA', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
       tooltip: { 
-          trigger: 'axis', axisPointer: { type: 'shadow' },
+          trigger: 'item', 
           backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
           valueFormatter: (value) => fmtMoeda(value)
       },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: (v) => 'R$ ' + (v/1000 >= 1 ? (v/1000).toFixed(0) + 'k' : v) }, splitLine: { lineStyle: { color: tc.gridColor } } },
+      grid: { left: '3%', right: '12%', bottom: '3%', containLabel: true },
+      xAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
       yAxis: { type: 'category', data: byMaquina.map(x => x.maquina_linha.length > 25 ? x.maquina_linha.substring(0,25) + '...' : x.maquina_linha), axisLabel: { color: tc.tickColor, ...CHART_FONT }, axisTick: { show: false }, axisLine: { show: false } },
       series: [{
         name: 'Valor Recebido',
         type: 'bar',
         data: byMaquina.map(x => ({ value: x.valor, name: x.maquina_linha })), // Keep full name in data point
         barWidth: '60%',
-        itemStyle: { color: gradient('rgba(212, 175, 55, 0.85)', 'rgba(180, 140, 40, 0.35)', true), borderRadius: [0, 8, 8, 0] }
+
+        itemStyle: { color: gradient('rgba(212, 175, 55, 0.95)', 'rgba(180, 140, 40, 0.45)', true), borderRadius: [0, 8, 8, 0] }
       }]
     });
     ch3.on('click', (params) => {
@@ -264,9 +277,9 @@ export function renderDashboardCharts(registros) {
 
   // --- Gráficos de Pizza (Prazos de Retorno) ---
   const prazosColors = {
-    'Em dias': '#34d399',
-    'Pendente de retorno': '#fbbf24',
-    'Atrasado para retorno': '#f87171'
+    'Em dias': gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.4)'),
+    'Pendente de retorno': gradient('rgba(251, 191, 36, 0.9)', 'rgba(245, 158, 11, 0.4)'),
+    'Atrasado para retorno': gradient('rgba(248, 113, 113, 0.9)', 'rgba(239, 68, 68, 0.4)')
   };
 
   function renderPrazoChart(canvasId, title, natureza) {
@@ -279,22 +292,41 @@ export function renderDashboardCharts(registros) {
       title: { text: title, textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
-          formatter: '{b}: {c} item(ns) ({d}%)'
+          backgroundColor: tc.tooltipBg, borderColor: tc.borderColor,
+          formatter: '{b}: {c} item(ns) ({d}%)',
+          textStyle: { color: tc.tooltipText, fontWeight: 500 }
       },
       legend: { bottom: 0, textStyle: { color: tc.legendColor, ...CHART_FONT } },
       series: [{
         name: natureza,
         type: 'pie',
-        radius: ['40%', '70%'],
-        center: ['50%', '55%'],
-        itemStyle: { borderColor: tc.borderColor, borderWidth: 2 },
+        radius: ['45%', '70%'],
+        center: ['50%', '50%'],
+        itemStyle: { 
+            borderColor: tc.pieBorder, 
+            borderWidth: 3, 
+            borderRadius: 8
+        },
         data: data.map(d => ({
             name: d.label,
             value: d.qtde,
             itemStyle: { color: prazosColors[d.label] }
         })),
-        label: { show: false }
+        label: { 
+            show: true, 
+            formatter: '{b}\n{d}%',
+            color: tc.titleColor,
+            fontFamily: 'Inter',
+            fontWeight: 600,
+            lineHeight: 16
+        },
+        labelLine: {
+            show: true,
+            smooth: 0.2,
+            length: 10,
+            length2: 15,
+            lineStyle: { width: 2, color: tc.tickColor }
+        }
       }]
     });
     ch.on('click', makeClickHandler('prazos'));
@@ -372,26 +404,28 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
   fluxoChartInstance.setOption({
     title: { text: 'FLUXO DE CONSERTOS — Patrimonial Exposto vs. Custo de Reparo', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
     tooltip: { 
-        trigger: 'axis', axisPointer: { type: 'shadow' },
+        trigger: 'item', 
         backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
         valueFormatter: (value) => fmtMoeda(value)
     },
     legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, top: 25 },
     grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
     xAxis: { type: 'category', data: dados.map(d => d.mes), axisLabel: { color: tc.tickColor, ...CHART_FONT }, axisTick: { show: false }, axisLine: { show: false } },
-    yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: (v) => 'R$ ' + (v/1000 >= 1 ? (v/1000).toFixed(0) + 'k' : v) }, splitLine: { lineStyle: { color: tc.gridColor } } },
+    yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
     series: [
       {
         name: 'Patrimonial Exposto (Enviado)',
         type: 'bar',
         data: dados.map(d => d.enviado),
-        itemStyle: { color: gradient('rgba(251,191,36,0.9)', 'rgba(245,158,11,0.35)'), borderRadius: [6, 6, 0, 0] }
+
+        itemStyle: { color: gradient('rgba(251,191,36,0.9)', 'rgba(245,158,11,0.35)'), borderRadius: [8, 8, 0, 0] }
       },
       {
         name: 'Custo Reparo (Recebido)',
         type: 'bar',
         data: dados.map(d => d.recebido),
-        itemStyle: { color: gradient('rgba(52,211,153,0.9)', 'rgba(16,185,129,0.35)'), borderRadius: [6, 6, 0, 0] }
+
+        itemStyle: { color: gradient('rgba(52,211,153,0.9)', 'rgba(16,185,129,0.35)'), borderRadius: [8, 8, 0, 0] }
       }
     ]
   });

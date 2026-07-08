@@ -270,7 +270,7 @@ function toggleEvolucao(tipo) {
 
   const commonOptions = {
     tooltip: {
-      trigger: 'axis',
+      trigger: 'item',
       backgroundColor: 'rgba(15, 23, 42, 0.9)',
       textStyle: { color: '#e2e8f0', fontFamily: 'Inter' },
       borderColor: 'rgba(255,255,255,0.1)'
@@ -288,26 +288,27 @@ function toggleEvolucao(tipo) {
     
     chartEvolucaoInstance.setOption({
       ...commonOptions,
-      tooltip: { ...commonOptions.tooltip, axisPointer: { type: 'shadow' } },
+      tooltip: { ...commonOptions.tooltip },
       xAxis: { type: 'category', data: kpiDataDiario.map(d => d.dia), axisLabel: { color: '#94a3b8' }, axisLine: { show: false }, axisTick: { show: false } },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8' } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
       series: [
         { 
           name: 'Elétrica', 
           type: 'bar', stack: 'total',
           data: kpiDataDiario.map(d => d.eletrica_pct.toFixed(2)), 
+
           itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(239, 68, 68, 0.9)'}, {offset:1, color:'rgba(239, 68, 68, 0.2)'}]),
-            borderColor: '#ef4444', borderWidth: 1
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(239, 68, 68, 0.9)'}, {offset:1, color:'rgba(239, 68, 68, 0.3)'}])
           }
         },
         { 
           name: 'Mecânica', 
           type: 'bar', stack: 'total',
           data: kpiDataDiario.map(d => d.mecanica_pct.toFixed(2)), 
+
           itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(59, 130, 246, 0.9)'}, {offset:1, color:'rgba(59, 130, 246, 0.2)'}]),
-            borderColor: '#3b82f6', borderWidth: 1, borderRadius: [4, 4, 0, 0]
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(59, 130, 246, 0.9)'}, {offset:1, color:'rgba(59, 130, 246, 0.3)'}]),
+            borderRadius: [8, 8, 0, 0]
           }
         }
       ]
@@ -317,15 +318,16 @@ function toggleEvolucao(tipo) {
     chartEvolucaoInstance.setOption({
       ...commonOptions,
       xAxis: { type: 'category', boundaryGap: false, data: data.map(d => d.periodo_nome), axisLabel: { color: '#94a3b8' }, axisLine: { show: false }, axisTick: { show: false } },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8' } },
+      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
       series: [
         { 
           name: 'Breakdown (%)', 
           type: 'line',
           data: data.map(d => (d.breakdown_real * 100).toFixed(2)), 
           itemStyle: { color: '#10b981' },
+
           areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(16, 185, 129, 0.4)'}, {offset:1, color:'rgba(16, 185, 129, 0.0)'}])
+            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(16, 185, 129, 0.5)'}, {offset:1, color:'rgba(16, 185, 129, 0.0)'}])
           },
           smooth: true, symbolSize: 8, lineStyle: { width: 3 }
         },
@@ -335,6 +337,7 @@ function toggleEvolucao(tipo) {
           data: data.map(d => d.target_meta ? (d.target_meta * 100).toFixed(2) : null), 
           itemStyle: { color: 'rgba(239, 68, 68, 0.8)' },
           lineStyle: { type: 'dashed', width: 2 },
+
           symbolSize: 0
         }
       ]
@@ -356,15 +359,16 @@ function renderKpiOfensores(semana) {
   
   chartOfensoresInstance.setOption({
     tooltip: {
-      trigger: 'axis', axisPointer: { type: 'shadow' },
+      trigger: 'item',
       backgroundColor: 'rgba(15, 23, 42, 0.9)', textStyle: { color: '#f8fafc', fontFamily: 'Inter' }, borderColor: 'rgba(255,255,255,0.1)'
     },
-    grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8' } },
+    grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
+    xAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
     yAxis: { type: 'category', data: data.map(d => d.maquina), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#e2e8f0', fontWeight: '500' } },
     series: [{
       name: 'Breakdown (%)',
       type: 'bar',
+
       data: data.map((d, i) => {
           // data is sorted ascending, so top offenders are at the end (highest index)
           const isTop3 = i >= data.length - 3;
@@ -373,10 +377,9 @@ function renderKpiOfensores(semana) {
               itemStyle: {
                   color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
                       {offset:0, color: isTop3 ? 'rgba(244, 63, 94, 0.9)' : 'rgba(99, 102, 241, 0.9)'},
-                      {offset:1, color: isTop3 ? 'rgba(244, 63, 94, 0.2)' : 'rgba(99, 102, 241, 0.2)'}
+                      {offset:1, color: isTop3 ? 'rgba(244, 63, 94, 0.35)' : 'rgba(99, 102, 241, 0.35)'}
                   ]),
-                  borderColor: isTop3 ? '#f43f5e' : '#6366f1',
-                  borderWidth: 1, borderRadius: [0, 4, 4, 0]
+                  borderRadius: [0, 8, 8, 0]
               }
           };
       })
