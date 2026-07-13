@@ -1036,6 +1036,15 @@ async function carregarConfiabilidade() {
     const chartsArea = document.querySelector('#kpi-view-confiabilidade > div:nth-child(3)');
 
     if (!dados || dados.length === 0) {
+      // Proteção anti-flicker: se os gráficos já estão visíveis (importação em andamento),
+      // aguarda 2s e tenta novamente antes de mostrar o estado vazio.
+      // Evita que o SSE dispare durante o DELETE e esconda os dados prematuramente.
+      const chartsEl = document.getElementById('chartConfiabMtbf');
+      const chartsAlreadyVisible = chartsEl && chartsEl.childElementCount > 0;
+      if (chartsAlreadyVisible) {
+        setTimeout(() => carregarConfiabilidade(), 2000);
+        return;
+      }
       if (empty) empty.style.display = 'block';
       if (cards) cards.style.display = 'none';
       if (chartsArea) chartsArea.style.display = 'none';
