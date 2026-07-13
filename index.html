@@ -316,7 +316,7 @@
             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
               <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h4 style="margin: 0; color: var(--text-primary);">Evolução vs Target</h4>
+                  <h4 style="margin: 0; color: var(--text-primary);">Evolução vs Target<span class="kpi-help-icon" title="Mostra o percentual de quebras de produção diárias em relação à meta (Target). Compara as falhas reais coletadas com a meta estipulada para a fábrica naquele período. O objetivo é manter a barra abaixo da linha da meta.">?</span></h4>
                   <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.25rem; border-radius: 6px;">
                     <button type="button" id="btnKpiDiario" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Diário</button>
                     <button type="button" id="btnKpiSemana" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:var(--bg3); color:var(--text-primary);">Semanal</button>
@@ -330,7 +330,7 @@
 
               <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h4 style="margin: 0; color: var(--text-primary);">Top Ofensores</h4>
+                  <h4 style="margin: 0; color: var(--text-primary);">Top Ofensores<span class="kpi-help-icon" title="Rankeia as máquinas que mais deram problemas no período selecionado, dividindo em falhas mecânicas (azul) e falhas elétricas (amarelo). Ajuda a focar os esforços da manutenção nos piores gargalos.">?</span></h4>
                   <select id="selectKpiSemanaOfensor" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; outline: none;"></select>
                 </div>
                 <div style="height: 300px; position: relative;">
@@ -367,7 +367,7 @@
               </div>
 
               <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto;">
-                <h4 style="margin-top: 0; color: var(--text-primary);">MTBF (Horas) - <span id="lblKpiLinhaMtbf">Linha 4</span></h4>
+                <h4 style="margin-top: 0; color: var(--text-primary); display:flex; align-items:center;">MTBF (Horas) - <span id="lblKpiLinhaMtbf" style="margin-left:5px;">Linha 4</span><span class="kpi-help-icon" title="Tempo Médio Entre Falhas (Mean Time Between Failures). Em linguagem simples: Em média, quantas horas a máquina consegue operar sem quebrar? Quanto MAIOR este número, mais confiável é a máquina.">?</span></h4>
                 <table class="data-table" id="tableKpiMtbf" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                   <thead>
                     <tr>
@@ -429,21 +429,21 @@
             <div id="confiabCardsArea" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
               <!-- Card MTBF -->
               <div class="panel" style="padding:1.5rem; border-radius:12px; border:1px solid var(--border); text-align:center; position:relative;">
-                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem;">MTBF Médio (h)</div>
+                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem; display:flex; align-items:center; justify-content:center;">MTBF Médio (h)<span class="kpi-help-icon" title="Tempo Médio Entre Falhas (Mean Time Between Failures). Em linguagem simples: Em média, quantas horas a máquina consegue operar sem quebrar? Quanto MAIOR este número, mais confiável é a máquina. É calculado pelo tempo de operação limpa dividido pelo número de falhas ocorridas no mês/semana.">?</span></div>
                 <div id="cardConfiabMtbf" style="font-size:2.6rem; font-weight:700; color:#10b981;">--</div>
                 <div id="cardConfiabMtbfMeta" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Meta: --h</div>
                 <div id="cardConfiabMtbfVar" style="font-size:0.82rem; margin-top:0.4rem; font-weight:600;"></div>
               </div>
               <!-- Card MTTR -->
               <div class="panel" style="padding:1.5rem; border-radius:12px; border:1px solid var(--border); text-align:center; position:relative;">
-                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem;">MTTR Médio (h)</div>
+                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem; display:flex; align-items:center; justify-content:center;">MTTR Médio (h)<span class="kpi-help-icon" title="Tempo Médio de Reparo (Mean Time To Repair). Em linguagem simples: Quando a máquina quebra, quanto tempo nossa equipe leva, em média, para consertá-la? Quanto MENOR este número, mais rápida e eficiente é a equipe. Calculado pelo tempo total parado dividido pelo número de falhas.">?</span></div>
                 <div id="cardConfiabMttr" style="font-size:2.6rem; font-weight:700; color:#f59e0b;">--</div>
                 <div id="cardConfiabMttrMeta" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Meta: --h</div>
                 <div id="cardConfiabMttrVar" style="font-size:0.82rem; margin-top:0.4rem; font-weight:600;"></div>
               </div>
               <!-- Card Indisponibilidade -->
               <div class="panel" style="padding:1.5rem; border-radius:12px; border:1px solid var(--border); text-align:center; position:relative;">
-                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem;">Indisponibilidade Média</div>
+                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem; display:flex; align-items:center; justify-content:center;">Indisponibilidade Média<span class="kpi-help-icon" title="Qual a porcentagem de tempo que a fábrica ficou parada aguardando conserto. É a soma total dos minutos de parada dividida pelo total de tempo do período (ex: 30 dias x 24h). Quanto menor o percentual, melhor.">?</span></div>
                 <div id="cardConfiabIndisp" style="font-size:2.6rem; font-weight:700; color:#ef4444;">--</div>
                 <div id="cardConfiabIndispMeta" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Meta: --%</div>
                 <div id="cardConfiabIndispVar" style="font-size:0.82rem; margin-top:0.4rem; font-weight:600;"></div>
@@ -453,15 +453,15 @@
             <!-- Gráficos (3 colunas) -->
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;">
               <div class="panel" style="padding:1.25rem; border-radius:12px; border:1px solid var(--border);">
-                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem;">MTBF por Período (h)</h4>
+                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem; display:flex; align-items:center;">MTBF por Período (h)<span class="kpi-help-icon" title="Evolução do Tempo Médio Entre Falhas. Quanto MAIOR a curva, mais tempo as máquinas trabalharam sem quebrar.">?</span></h4>
                 <div id="chartConfiabMtbf" style="width:100%; height:260px;"></div>
               </div>
               <div class="panel" style="padding:1.25rem; border-radius:12px; border:1px solid var(--border);">
-                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem;">MTTR por Período (h)</h4>
+                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem; display:flex; align-items:center;">MTTR por Período (h)<span class="kpi-help-icon" title="Evolução do Tempo Médio de Reparo. Quanto MENOR a curva, mais rápida a equipe conseguiu realizar os consertos mecânicos e elétricos.">?</span></h4>
                 <div id="chartConfiabMttr" style="width:100%; height:260px;"></div>
               </div>
               <div class="panel" style="padding:1.25rem; border-radius:12px; border:1px solid var(--border);">
-                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem;">Indisponibilidade (%)</h4>
+                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem; display:flex; align-items:center;">Indisponibilidade (%)<span class="kpi-help-icon" title="Evolução da porcentagem de tempo que a linha passou parada sendo consertada em relação ao tempo total disponível no mês ou semana.">?</span></h4>
                 <div id="chartConfiabIndisp" style="width:100%; height:260px;"></div>
               </div>
             </div>
@@ -493,19 +493,19 @@
           <div id="kpi-view-compliance" class="kpi-subview" style="display: none; flex-direction: column; gap: 1.5rem;">
             <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
               <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">PM Compliance</div>
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">PM Compliance<span class="kpi-help-icon" title="Aderência à Manutenção Preventiva. Mede se as manutenções preventivas que estavam programadas para o período foram executadas no prazo planejado. Um número alto indica alta disciplina.">?</span></div>
                 <div class="value" id="kpiCompPM" style="font-size: 2rem; color: var(--text-primary);">--</div>
               </div>
               <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Lubrificação</div>
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">Lubrificação<span class="kpi-help-icon" title="Índice de conformidade das inspeções de lubrificação da área.">?</span></div>
                 <div class="value" id="kpiCompLubri" style="font-size: 2rem; color: var(--text-primary);">--</div>
               </div>
               <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Preventiva</div>
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">Preventiva<span class="kpi-help-icon" title="Índice de conformidade da execução correta das Ordens de Manutenção Preventiva.">?</span></div>
                 <div class="value" id="kpiCompPrev" style="font-size: 2rem; color: var(--text-primary);">--</div>
               </div>
               <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Plano Espec.</div>
+                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">Plano Espec.<span class="kpi-help-icon" title="Índice de conformidade dos Planos Específicos ou Planos de Ação dedicados implementados na linha.">?</span></div>
                 <div class="value" id="kpiCompEspec" style="font-size: 2rem; color: var(--text-primary);">--</div>
               </div>
             </div>
