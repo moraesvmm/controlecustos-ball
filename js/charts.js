@@ -159,9 +159,9 @@ export function destroyCrudMesChart() {
 // Window resize handler for all charts
 window.addEventListener('resize', () => {
     chartInstances.forEach(c => {
-        if(c && !c.isDisposed()) c.resize();
+        if(c && !c.isDisposed() && c.getDom().clientWidth > 0) c.resize();
     });
-    if (crudMesChartInstance && !crudMesChartInstance.isDisposed()) crudMesChartInstance.resize();
+    if (crudMesChartInstance && !crudMesChartInstance.isDisposed() && crudMesChartInstance.getDom().clientWidth > 0) crudMesChartInstance.resize();
 });
 
 export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') {
@@ -573,7 +573,7 @@ export function destroyConfiabCharts() {
 
 window.addEventListener('resize', () => {
   ['mtbf', 'mttr', 'indisp'].forEach(k => {
-    if (confiabCharts[k] && !confiabCharts[k].isDisposed()) confiabCharts[k].resize();
+    if (confiabCharts[k] && !confiabCharts[k].isDisposed() && confiabCharts[k].getDom().clientWidth > 0) confiabCharts[k].resize();
   });
 });
 

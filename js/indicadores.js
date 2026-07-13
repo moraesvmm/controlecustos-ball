@@ -24,6 +24,7 @@ export async function initIndicadores() {
       const tabId = btn.getAttribute('data-kpitab');
       document.querySelectorAll('.kpi-subview').forEach(v => v.style.display = 'none');
       document.getElementById('kpi-view-' + tabId).style.display = 'flex';
+      setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
     });
   });
 
@@ -513,8 +514,12 @@ function renderKpiOfensores(semana) {
 }
 
 window.addEventListener('resize', () => {
-    if (chartEvolucaoInstance && !chartEvolucaoInstance.isDisposed()) chartEvolucaoInstance.resize();
-    if (chartOfensoresInstance && !chartOfensoresInstance.isDisposed()) chartOfensoresInstance.resize();
+    if (chartEvolucaoInstance && !chartEvolucaoInstance.isDisposed()) {
+        if (chartEvolucaoInstance.getDom().clientWidth > 0) chartEvolucaoInstance.resize();
+    }
+    if (chartOfensoresInstance && !chartOfensoresInstance.isDisposed()) {
+        if (chartOfensoresInstance.getDom().clientWidth > 0) chartOfensoresInstance.resize();
+    }
 });
 
 function renderViewLinha(linhaStr) {
