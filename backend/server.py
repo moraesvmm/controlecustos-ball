@@ -9,6 +9,7 @@ import asyncio
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
 DB_PATH = os.path.join(os.path.dirname(__file__), "database", "database.sqlite")
+SYNC_PATH = os.path.join(os.path.dirname(__file__), "database", "database.sync")
 
 # ==============================================================================
 # ARQUITETURA DISTRIBUÍDA (Multi-Servidor / Banco Único)
@@ -25,6 +26,25 @@ DB_PATH = os.path.join(os.path.dirname(__file__), "database", "database.sqlite")
 
 app = FastAPI(title="Controle RC Backend (Localhost SQLite)")
 
+@app.middleware("http")
+async def sse_trigger_middleware(request: Request, call_next):
+    override = request.headers.get("x-http-method-override", "").upper()
+    method = override if override else request.method
+    path = request.url.path
+    
+    response = await call_next(request)
+    
+    # Touch the sync file if it's a modifying request
+    if method in ["POST", "PATCH", "PUT", "DELETE"] and ("/rest/v1/" in path or "/api/" in path):
+        if 200 <= response.status_code < 300:
+            if path != "/api/stream":
+                try:
+                    with open(SYNC_PATH, 'a'):
+                        os.utime(SYNC_PATH, None)
+                except Exception:
+                    pass
+    return response
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -40,9 +60,13 @@ def get_db():
     # Como o banco está numa rede compartilhada (Windows SMB), o WAL corromperia 
     # o banco porque ele exige "Shared Memory" (mmap) suportado apenas localmente.
     # TRUNCATE ou DELETE são os únicos modos seguros para rede.
-    conn.execute("PRAGMA journal_mode=TRUNCATE;")
     conn.execute("PRAGMA synchronous=NORMAL;")
     conn.execute("PRAGMA cache_size=-20000;") # Usa 20MB de RAM local para cache de leitura (muito mais rápido)
+    return conn
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn.execute("PRAGMA journal_mode=TRUNCATE;")
     
     # Criar tabela de usuários local caso não exista
     conn.execute('''
@@ -204,12 +228,130 @@ def get_db():
             VALUES (?, ?, ?, ?)
         ''', (ln, 4.0, 0.5, 8.0))
 
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS retomada_l05 (
+            id          INTEGER PRIMARY KEY,
+            maquina     TEXT,
+            descricao   TEXT,
+            duracao     REAL,
+            profissional TEXT,
+            perc_execucao REAL DEFAULT 0,
+            os          TEXT,
+            status      TEXT DEFAULT NULL,
+            created_at  TEXT,
+            updated_at  TEXT
+        )
+    ''')
+
     conn.commit()
-    return conn
+    conn.close()
+
+
+@app.on_event("startup")
+def startup_event():
+    init_db()
 
 @app.get("/api/health")
 def health_check():
     return {"status": "ok", "db_path": DB_PATH}
+
+# ==============================================================================
+# MÓDULO: Retomada Linha 05
+# ==============================================================================
+
+@app.get("/api/retomada_l05")
+def get_retomada_l05():
+    conn = get_db()
+    try:
+        rows = conn.execute("SELECT * FROM retomada_l05 ORDER BY id").fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+@app.patch("/api/retomada_l05/{id}")
+async def patch_retomada_l05(id: int, req: Request):
+    from datetime import datetime
+    data = await req.json()
+    conn = get_db()
+    try:
+        current = conn.execute("SELECT * FROM retomada_l05 WHERE id=?", (id,)).fetchone()
+        if not current:
+            raise HTTPException(status_code=404, detail="Item não encontrado")
+        
+        current = dict(current)
+        
+        if "os" in data:
+            os_val = data.get("os")
+        else:
+            os_val = current["os"]
+            
+        if "perc_execucao" in data:
+            perc = float(data.get("perc_execucao", 0) or 0)
+            # Business rule: 100% -> CONCLUÍDO, >0 -> EM EXECUÇÃO, 0 -> None
+            if perc >= 100:
+                perc = 100
+                status = "CONCLUÍDO"
+            elif perc > 0:
+                status = "EM EXECUÇÃO"
+            else:
+                status = None
+        else:
+            perc = current["perc_execucao"]
+            status = current["status"]
+            
+        now = datetime.now().isoformat()
+        conn.execute(
+            "UPDATE retomada_l05 SET perc_execucao=?, status=?, os=?, updated_at=? WHERE id=?",
+            (perc, status, os_val, now, id)
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM retomada_l05 WHERE id=?", (id,)).fetchone()
+        return dict(row)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+@app.post("/api/retomada_l05/import")
+async def import_retomada_l05(req: Request):
+    """Bulk import from frontend (one-time). Replaces all rows."""
+    from datetime import datetime
+    data = await req.json()  # list of dicts
+    conn = get_db()
+    try:
+        conn.execute("DELETE FROM retomada_l05")
+        now = datetime.now().isoformat()
+        for row in data:
+            raw_status = row.get("status")
+            # Normalize status to use proper Portuguese
+            if raw_status and ("CONCLU" in str(raw_status).upper()):
+                normalized_status = "CONCLUÍDO"
+            elif raw_status and ("EXECU" in str(raw_status).upper()):
+                normalized_status = "EM EXECUÇÃO"
+            else:
+                normalized_status = None
+            # Business rule: 100% always → CONCLUÍDO
+            perc = float(row.get("perc_execucao", 0) or 0)
+            if perc >= 100:
+                perc = 100
+                normalized_status = "CONCLUÍDO"
+            elif perc > 0 and not normalized_status:
+                normalized_status = "EM EXECUÇÃO"
+            conn.execute(
+                "INSERT INTO retomada_l05 (id, maquina, descricao, duracao, profissional, perc_execucao, os, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (row.get("id"), row.get("maquina"), row.get("descricao"), row.get("duracao"),
+                 row.get("profissional"), perc, row.get("os"),
+                 normalized_status, now, now)
+            )
+        conn.commit()
+        count = conn.execute("SELECT COUNT(*) FROM retomada_l05").fetchone()[0]
+        return {"imported": count}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    finally:
+        conn.close()
+
+
 
 @app.post("/auth/v1/token")
 async def login(req: Request):
@@ -334,46 +476,56 @@ def get_all(table: str, req: Request):
 @app.post("/rest/v1/{table}")
 async def insert_record(table: str, req: Request):
     data = await req.json()
-    if not isinstance(data, list):
-        data = [data]
-    if not data: return []
+    from starlette.concurrency import run_in_threadpool
+    is_single = req.headers.get("Accept") == "application/vnd.pgrst.object+json"
     
-    import uuid
-    from datetime import datetime
+    def _do_insert():
+        import uuid
+        from datetime import datetime
+        conn = get_db()
+        try:
+            inserted_rows = []
+            rows_to_insert = data if isinstance(data, list) else [data]
+            if not rows_to_insert: return []
+            
+            for row_data in rows_to_insert:
+                if "id" not in row_data or not row_data["id"]:
+                    row_data["id"] = str(uuid.uuid4())
+                if "created_at" not in row_data:
+                    row_data["created_at"] = datetime.now().isoformat()
+                if "last_modified_at" not in row_data or not row_data["last_modified_at"]:
+                    row_data["last_modified_at"] = datetime.now().isoformat()
+                
+                keys = list(row_data.keys())
+                cols = ", ".join(keys)
+                vals = ", ".join(["?"] * len(keys))
+                query = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
+                
+                conn.execute(query, tuple(row_data[k] for k in keys))
+                
+                # Fetch the inserted row to return it
+                cursor = conn.execute(f"SELECT * FROM {table} WHERE id = ?", (row_data["id"],))
+                inserted_rows.append(dict(cursor.fetchone()))
+                
+            conn.commit()
+            if is_single and inserted_rows:
+                return inserted_rows[0]
+            return inserted_rows
+        finally:
+            conn.close()
 
-    conn = get_db()
     try:
-        inserted_rows = []
-        for row_data in data:
-            if "id" not in row_data or not row_data["id"]:
-                row_data["id"] = str(uuid.uuid4())
-            if "created_at" not in row_data:
-                row_data["created_at"] = datetime.now().isoformat()
-            
-            keys = list(row_data.keys())
-            cols = ", ".join(keys)
-            vals = ", ".join(["?"] * len(keys))
-            query = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
-            
-            conn.execute(query, tuple(row_data[k] for k in keys))
-            
-            # Fetch the inserted row to return it
-            cursor = conn.execute(f"SELECT * FROM {table} WHERE id = ?", (row_data["id"],))
-            inserted_rows.append(dict(cursor.fetchone()))
-            
-        conn.commit()
-        return inserted_rows
+        return await run_in_threadpool(_do_insert)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        conn.close()
 
 @app.patch("/rest/v1/{table}")
 async def update_record(table: str, req: Request):
     data = await req.json()
     if not data: return []
+    from starlette.concurrency import run_in_threadpool
+    is_single = req.headers.get("Accept") == "application/vnd.pgrst.object+json"
     
-    # Extrai o filtro da query (ex: ?id=eq.123)
     where_clause = ""
     values = list(data.values())
     for k, v in req.query_params.items():
@@ -382,23 +534,33 @@ async def update_record(table: str, req: Request):
             values.append(v.replace("eq.", ""))
             break
             
-    conn = get_db()
+    def _do_update():
+        conn = get_db()
+        try:
+            if "last_modified_at" not in data:
+                from datetime import datetime
+                data["last_modified_at"] = datetime.now().isoformat()
+            
+            set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
+            query = f"UPDATE {table} SET {set_clause}{where_clause}"
+            conn.execute(query, values)
+            conn.commit()
+            
+            # Retrieve the updated row(s) to simulate Supabase 'select()'
+            select_query = f"SELECT * FROM {table}{where_clause}"
+            select_cursor = conn.execute(select_query, values[len(data.values()):])
+            updated_rows = [dict(ix) for ix in select_cursor.fetchall()]
+            
+            if is_single and updated_rows:
+                return updated_rows[0]
+            return updated_rows 
+        finally:
+            conn.close()
+
     try:
-        set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
-        query = f"UPDATE {table} SET {set_clause}{where_clause}"
-        cursor = conn.execute(query, values)
-        conn.commit()
-        
-        # Retrieve the updated row(s) to simulate Supabase 'select()'
-        select_query = f"SELECT * FROM {table}{where_clause}"
-        select_cursor = conn.execute(select_query, values[len(data.values()):])
-        updated_rows = [dict(ix) for ix in select_cursor.fetchall()]
-        
-        return updated_rows 
+        return await run_in_threadpool(_do_update)
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
-    finally:
-        conn.close()
 
 @app.delete("/rest/v1/{table}")
 def delete_record(table: str, req: Request):
@@ -655,22 +817,22 @@ async def sse_stream(request: Request):
     """
     async def event_generator():
         last_mtime = 0
-        if os.path.exists(DB_PATH):
-            last_mtime = os.path.getmtime(DB_PATH)
+        if os.path.exists(SYNC_PATH):
+            last_mtime = os.path.getmtime(SYNC_PATH)
         
         while True:
             if await request.is_disconnected():
                 break
             
-            # Checa a data de modificação do arquivo
-            if os.path.exists(DB_PATH):
-                current_mtime = os.path.getmtime(DB_PATH)
+            # Checa a data de modificação do arquivo de sincronização
+            if os.path.exists(SYNC_PATH):
+                current_mtime = os.path.getmtime(SYNC_PATH)
                 if current_mtime > last_mtime:
                     last_mtime = current_mtime
-                    # Arquivo mudou! Envia um evento SSE para o frontend atualizar a tela
+                    # Arquivo de sync mudou! Envia um evento SSE para o frontend atualizar a tela
                     yield f"data: {json.dumps({'type': 'db_updated'})}\n\n"
             
-            # Aguarda 1 segundo antes de checar novamente (muito leve para a rede/disco)
+            # Aguarda 1 segundo antes de checar novamente
             await asyncio.sleep(1)
             
     return StreamingResponse(event_generator(), media_type="text/event-stream")

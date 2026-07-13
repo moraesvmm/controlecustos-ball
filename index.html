@@ -1485,6 +1485,123 @@
           </button>
         </section>
 
+        <!-- =====================================================
+             MÓDULO: RETOMADA LINHA 05 — OUTUBRO (Dropdown Premium)
+             ===================================================== -->
+        <div id="rl05-wrapper">
+
+          <!-- Header / Toggle -->
+          <div id="rl05-header" onclick="rl05Toggle()" role="button" tabindex="0"
+               onkeydown="if(event.key==='Enter')rl05Toggle()">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <!-- Ícone animado -->
+              <div style="width: 42px; height: 42px; background: linear-gradient(135deg, rgba(56,189,248,0.3), rgba(99,102,241,0.3)); border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+              </div>
+              <div>
+                <div style="font-size: 1.05rem; font-weight: 600; color: var(--text); line-height: 1.2;">Retomada Linha 05</div>
+                <div style="font-size: 0.78rem; color: #38bdf8; font-weight: 500; margin-top: 2px; letter-spacing: 0.04em;">OUTUBRO · 175 ATIVIDADES · ACOMPANHAMENTO DE EXECUÇÃO</div>
+              </div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1.5rem;">
+              <!-- Import button (intercept click) -->
+              <label onclick="event.stopPropagation()" title="Atualizar base via Excel" style="cursor: pointer;">
+                <input type="file" id="rl05-file-input" accept=".xlsx,.xls" style="display:none;"
+                       onchange="rl05ImportExcel(this.files[0]); this.value='';">
+                <span id="rl05-btn-import" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: #38bdf8; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; white-space: nowrap; pointer-events: none;">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Atualizar Excel
+                </span>
+              </label>
+              <!-- Arrow -->
+              <div id="rl05-toggle-icon" style="width: 32px; height: 32px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1rem; transition: transform 0.3s, background 0.2s;">▾</div>
+            </div>
+          </div>
+
+          <!-- Expandable Content -->
+          <div id="rl05-content">
+
+            <!-- Loading state -->
+            <div id="rl05-loading" style="display: flex; align-items: center; justify-content: center; padding: 4rem; gap: 1rem; color: var(--muted);">
+              <div style="width: 28px; height: 28px; border: 3px solid rgba(56,189,248,0.3); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+              <span>Carregando atividades…</span>
+            </div>
+
+            <!-- Main body (hidden until loaded) -->
+            <div id="rl05-body" style="display: none;">
+
+              <!-- Progress Hero -->
+              <div style="padding: 2rem 2rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                  <div>
+                    <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem;">Progresso Geral</div>
+                    <div style="font-size: 2.5rem; font-weight: 800; color: var(--text); line-height: 1;" id="rl05-prog-pct">0%</div>
+                    <div style="font-size: 0.82rem; color: var(--muted); margin-top: 0.25rem;" id="rl05-prog-label">0 de 175 concluídas</div>
+                  </div>
+                  <div style="text-align: right;">
+                    <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem;">Retomada da Linha</div>
+                    <div style="font-size: 1.5rem; font-weight: 700; color: #38bdf8;">L05</div>
+                    <div style="font-size: 0.78rem; color: var(--muted);">Outubro / 2025</div>
+                  </div>
+                </div>
+                <!-- Master progress bar -->
+                <div style="background: rgba(0,0,0,0.3); border-radius: 50px; height: 14px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);">
+                  <div id="rl05-prog-bar" style="height: 100%; width: 0%; background: linear-gradient(90deg,#3b82f6,#60a5fa); border-radius: 50px; transition: width 0.8s ease, background 0.5s; box-shadow: 0 0 8px rgba(59,130,246,0.5);"></div>
+                </div>
+              </div>
+
+              <!-- KPI Cards -->
+              <div class="rl05-kpi-grid">
+                <div class="rl05-kpi-card">
+                  <div class="rl05-kpi-label">Total</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-total" style="color: var(--text);">—</div>
+                </div>
+                <div class="rl05-kpi-card" style="border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.05);">
+                  <div class="rl05-kpi-label" style="color: #10b981;">✅ Concluídas</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-concluidos" style="color: #10b981;">—</div>
+                </div>
+                <div class="rl05-kpi-card" style="border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.05);">
+                  <div class="rl05-kpi-label" style="color: #f59e0b;">🔄 Em Execução</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-execucao" style="color: #f59e0b;">—</div>
+                </div>
+                <div class="rl05-kpi-card" style="border-color: rgba(148,163,184,0.15);">
+                  <div class="rl05-kpi-label">Pendentes</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-pendentes" style="color: var(--muted);">—</div>
+                </div>
+                <div class="rl05-kpi-card" style="border-color: rgba(99,102,241,0.2); background: rgba(99,102,241,0.04);">
+                  <div class="rl05-kpi-label" style="color: #818cf8;">HH Estimado</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-hh" style="color: #818cf8;">—</div>
+                </div>
+                <div class="rl05-kpi-card" style="border-color: rgba(56,189,248,0.2); background: rgba(56,189,248,0.04);">
+                  <div class="rl05-kpi-label" style="color: #38bdf8;">Máquinas</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-maquinas" style="color: #38bdf8;">—</div>
+                </div>
+              </div>
+
+              <!-- Filters -->
+              <div class="rl05-filters">
+                <input type="search" class="rl05-filter-input" placeholder="🔍  Buscar por descrição, profissional, OS..." style="flex: 1; min-width: 280px;"
+                       oninput="rl05FiltroBusca(this.value)">
+                <select class="rl05-filter-input" id="rl05-filter-maquina" onchange="rl05FiltroMaquina(this.value)" style="min-width: 160px;">
+                  <option value="">🏭 Todas as Máquinas</option>
+                </select>
+                <select class="rl05-filter-input" onchange="rl05FiltroStatus(this.value)" style="min-width: 160px;">
+                  <option value="">📋 Todos os Status</option>
+                  <option value="CONCLUÍDO">✅ Concluídas</option>
+                  <option value="EM EXECUÇÃO">🔄 Em Execução</option>
+                  <option value="">— Pendentes</option>
+                </select>
+              </div>
+
+              <!-- Grouped table body -->
+              <div style="padding: 1.5rem 2rem 2rem;">
+                <!-- Populated by JS -->
+              </div>
+
+            </div><!-- /rl05-body -->
+          </div><!-- /rl05-content -->
+        </div><!-- /rl05-wrapper -->
+
         <div id="planoMestreContent" style="min-height: 400px;">
           <!-- Renderizado via JS -->
         </div>
@@ -2563,6 +2680,19 @@ Segue abaixo itens para verificação de atraso.</textarea>
     </div>
   </div>
 
+  <script src="js/retomada_l05.js?v=2"></script>
+  <script>
+    (function() {
+      function tryInit() {
+        if (window.initRetomadaL05) { window.initRetomadaL05(); }
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryInit);
+      } else {
+        tryInit();
+      }
+    })();
+  </script>
 <script>window.__ENV = { SUPABASE_URL: "http://localhost:8080", USE_LOCAL_DATA: "false" };</script></body>
   <!-- COPILOTO DO CONTROLLER -->
   <button id="copiloto-fab" title="Copiloto do Controller">🤖</button>

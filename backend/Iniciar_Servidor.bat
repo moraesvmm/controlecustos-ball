@@ -47,15 +47,12 @@ echo.
 :: Executa o Uvicorn via PowerShell, que suporta caminhos UNC nativamente!
 :: Isso garante que nenhuma letra de rede temporaria (como Z:) seja criada.
 
-:: Verifica se a porta 8080 ja esta em uso (servidor ja rodando)
-netstat -ano | findstr ":8080" | findstr "LISTENING" >nul
-if %errorlevel% neq 0 goto :start_server
-
-echo  [INFO] O servidor ja esta em execucao (Porta 8080 ocupada).
-echo  [INFO] Redirecionando para o sistema no navegador...
-start "" "http://127.0.0.1:8080"
-ping 127.0.0.1 -n 3 >nul
-exit /b 0
+:: Verifica se a porta 8080 ja esta em uso (servidor antigo rodando) e encerra o processo
+echo  [INFO] Limpando processos antigos na porta 8080...
+FOR /F "tokens=5" %%a IN ('netstat -a -n -o ^| findstr :8080 ^| findstr LISTENING') DO (
+    echo  [INFO] Encerrando processo conflitante PID %%a ...
+    taskkill /F /PID %%a >nul 2>&1
+)
 
 :start_server
 :: Abre o navegador automaticamente apos 3 segundos

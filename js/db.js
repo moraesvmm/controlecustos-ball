@@ -202,10 +202,12 @@ export async function salvarRegistro(registro) {
   };
 
   if (!USE_LOCAL_DATA) {
+    payload.last_modified_at = new Date().toISOString();
     const user = await getCurrentUser();
     if (user && user.user_metadata && user.user_metadata.username) {
       payload.last_modified_by = user.user_metadata.username;
-      payload.last_modified_at = new Date().toISOString();
+    } else {
+      payload.last_modified_by = 'Sistema';
     }
   }
 
@@ -221,11 +223,16 @@ export async function salvarRegistro(registro) {
   }
 
   const client = getClient();
-  if (registro.id) {
+  if (registro.id && !registro._isNew) {
     const { data, error } = await client.from('rc_registros').update(payload).eq('id', registro.id).select().single();
     if (error) throw error;
     return enriquecerRegistro(data);
   }
+  
+  if (registro._isNew && registro.id) {
+    payload.id = registro.id;
+  }
+  
   const { data, error } = await client.from('rc_registros').insert(payload).select().single();
   if (error) throw error;
   return enriquecerRegistro(data);

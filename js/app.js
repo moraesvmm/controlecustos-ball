@@ -49,6 +49,7 @@ let registros = [];
 let registrosCustoGeral = [];
 let linhaSelecionadaCustoGeralId = null;
 let registrosPreventiva = [];
+
 Object.defineProperty(window, '_registrosPreventiva', { get: () => registrosPreventiva });
 window.fornecedoresContatosData = [];
 
@@ -813,16 +814,24 @@ function renderTabela() {
 
   tbody.innerHTML = data
     .map((r) => {
+      const isSyncing = false;
       const atrasado =
         (r.status || calcularStatus(r)) !== 'ENTREGUE' &&
         r.previsao_entrega &&
         new Date(r.previsao_entrega) < new Date();
       const sel = String(r.id) === String(linhaSelecionadaId) ? ' row-selected' : '';
+      const syncingClass = isSyncing ? ' row-syncing' : '';
       return `
-    <tr data-id="${r.id}" class="${atrasado ? 'row-late' : ''}${sel}">
+    <tr data-id="${r.id}" class="${atrasado ? 'row-late' : ''}${sel}${syncingClass}">
       ${COLUNAS_TABELA.map((c) => {
         const rawVal = r[c.key] ?? '';
         let cellHtml = valorCelula(r, c);
+        
+        // Inject sync icon next to status
+        if (c.key === 'status' && isSyncing) {
+          cellHtml += ' <i class="fas fa-sync sync-icon" title="Sincronizando com o servidor..."></i>';
+        }
+        
         if (isInlineEditMode && COLUNAS_EDITAVEIS.includes(c.key)) {
           cellHtml = `<div class="inline-edit-cell" data-col="${c.key}" data-raw="${String(rawVal).replace(/"/g, '&quot;')}" title="Clique para editar">${cellHtml}</div>`;
         }
@@ -867,20 +876,21 @@ function renderTabela() {
             refresh();
             return;
           }
-          const updated = enriquecerRegistro({ ...registro, [col]: newVal || null });
-          const index = registros.findIndex((x) => String(x.id) === String(id));
-          if (index !== -1) {
-            registros[index] = updated;
-          }
+          
           try {
+            const updated = enriquecerRegistro({ ...registro, [col]: newVal || null });
             const salvo = await salvarRegistro(updated);
-            const idx = registros.findIndex(r => String(r.id) === String(salvo.id));
-            if (idx !== -1) registros[idx] = salvo; else registros.push(salvo);
-            toast('Registro atualizado.', 'success');
+            
+            const index = registros.findIndex((x) => String(x.id) === String(id));
+            if (index !== -1) registros[index] = salvo;
+            else registros.push(salvo);
+            
+            toast('Alteração salva.', 'success');
           } catch (err) {
-            toast('Erro ao salvar: ' + err.message, 'error');
+            toast('Falha ao salvar: ' + err.message, 'error');
+          } finally {
+            refresh();
           }
-          refresh();
         };
 
         input.addEventListener('blur', salvarInline);
@@ -1158,6 +1168,13 @@ function abrirModal(id) {
 
   $('#btnExcluirModal').style.display = editando.id ? 'inline-flex' : 'none';
   $('#modalTitulo').textContent = id ? 'Editar registro' : 'Novo registro';
+  
+  const btnSalvar = $('#formRegistro').querySelector('button[type="submit"]');
+  if (btnSalvar) {
+    btnSalvar.disabled = false;
+    btnSalvar.textContent = 'Salvar';
+  }
+  
   $('#modal').classList.add('open');
 }
 
@@ -1195,13 +1212,21 @@ async function salvarForm(e) {
 
   try {
     const salvo = await salvarRegistro(payload);
-    const idx = registros.findIndex(r => String(r.id) === String(salvo.id));
-    if (idx !== -1) registros[idx] = salvo; else registros.push(salvo);
+    
+    // Atualizar registro no array local
+    if (editando && editando.id) {
+      const idx = registros.findIndex(r => String(r.id) === String(editando.id));
+      if (idx !== -1) registros[idx] = salvo;
+    } else {
+      registros.push(salvo);
+    }
+    
     $('#modal').classList.remove('open');
-    toast('Registro salvo com sucesso.', 'success');
+    toast('Registro salvo com sucesso!', 'success');
     renderFiltros();
     refresh();
   } catch (err) {
+    console.error("Erro no salvamento:", err);
     toast('Erro ao salvar: ' + err.message, 'error');
   } finally {
     if (btnSalvar) {

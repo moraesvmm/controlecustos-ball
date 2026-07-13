@@ -2139,3 +2139,23 @@ select#selectKpiLinha option {
   border-color: var(--gold, #d4af37);
   box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
 }
+
+/* ==========================================================
+   OPTIMISTIC UI (Sincronização em Background)
+   ========================================================== */
+.row-syncing td {
+  opacity: 0.6;
+  pointer-events: none;
+  background-color: rgba(255, 255, 255, 0.02) !important;
+}
+.sync-icon {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+  margin-left: 6px;
+  font-size: 0.9em;
+  color: var(--gold, #d4af37);
+  vertical-align: middle;
+}
+@keyframes spin { 
+  100% { transform: rotate(360deg); } 
+}
