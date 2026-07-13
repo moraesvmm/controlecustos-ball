@@ -2212,7 +2212,10 @@ $('#btnToggleChart')?.addEventListener('click', (e) => {
   if (isHidden) {
     container.classList.remove('hidden');
     e.target.textContent = 'Ocultar Gráfico';
-    // Se o gráfico precisar ser redesenhado para ajustar o tamanho, isso já deve ter sido feito na montagem, mas garantimos que está visível
+    // Trigger resize so ECharts recalculates its width when it becomes visible
+    setTimeout(() => {
+        window.dispatchEvent(new Event('resize'));
+    }, 10);
   } else {
     container.classList.add('hidden');
     e.target.textContent = 'Mostrar Gráfico';
