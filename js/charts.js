@@ -712,7 +712,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
         axisLabel: { color: tc.tickColor, ...CHART_FONT, rotate: periodos.length > 8 ? 35 : 0 },
         axisTick: { show: false },
         axisLine: { lineStyle: { color: tc.gridColor } },
-        boundaryGap: false
+        boundaryGap: values.length === 1 ? true : false
       },
       yAxis: {
         type: 'value',
@@ -720,17 +720,24 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
         splitLine: { lineStyle: { color: tc.gridColor, type: 'dashed', opacity: 0.5 } }
       },
       series: [{
-        type: 'line',
+        type: values.length === 1 ? 'bar' : 'line',
+        barWidth: '30%',
         data: values,
         smooth: 0.4,
         symbol: 'circle',
         symbolSize: 8,
         itemStyle: {
-          color: baseColor,
-          borderColor: '#1e293b',
-          borderWidth: 2,
+          color: values.length === 1 
+            ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: baseColor },
+                { offset: 1, color: cfg.gradArea[1].color }
+              ])
+            : baseColor,
+          borderColor: values.length === 1 ? 'transparent' : '#1e293b',
+          borderWidth: values.length === 1 ? 0 : 2,
           shadowColor: baseColor,
-          shadowBlur: 8
+          shadowBlur: 8,
+          borderRadius: values.length === 1 ? [6, 6, 0, 0] : 0
         },
         lineStyle: {
           width: 3,
