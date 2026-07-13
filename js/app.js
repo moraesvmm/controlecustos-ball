@@ -1262,22 +1262,45 @@ function atualizarBotaoEdicao() {
 
 async function init() {
   try {
-    try { window.fornecedoresContatosData = await getFornecedoresContatos(); } catch(e) { console.warn('Contacts table not ready'); }
-    preencherDatalistFornecedoresContatos();
-    registros = await carregarRegistros();
-    try {
-      const todosPreventiva = await carregarPreventiva();
+    // Dispara initIndicadores imediatamente para que os gráficos carreguem em paralelo com o banco
+    initIndicadores();
+    initConfiabilidade();
+
+    // Paraleliza todas as chamadas de banco de dados do sistema (ganho de tempo = soma dos tempos virando apenas o tempo da mais lenta)
+    const [
+      fornecedores,
+      regs,
+      preventivas,
+      custosGerais,
+      tarefas
+    ] = await Promise.allSettled([
+      getFornecedoresContatos(),
+      carregarRegistros(),
+      carregarPreventiva(),
+      getDadosCustoGeral(),
+      getTarefasDelegadas()
+    ]);
+
+    if (fornecedores.status === 'fulfilled') {
+      window.fornecedoresContatosData = fornecedores.value;
+      preencherDatalistFornecedoresContatos();
+    }
+
+    if (regs.status === 'fulfilled') registros = regs.value;
+
+    if (preventivas.status === 'fulfilled') {
+      const todosPreventiva = preventivas.value;
       registrosPreventiva = todosPreventiva.filter(r => r.setor !== 'frontend');
       registrosPreventivaFrontend = todosPreventiva.filter(r => r.setor === 'frontend');
-    } catch (e) { console.warn('Preventiva table not ready yet', e.message); }
-    try {
-      registrosCustoGeral = await getDadosCustoGeral();
-    } catch (e) { console.warn('Custo Geral table not ready yet', e.message); }
+    }
+
+    if (custosGerais.status === 'fulfilled') registrosCustoGeral = custosGerais.value;
 
     // Expor TUDO para o Copiloto poder buscar ordens de todos os módulos
     window._registrosGlobais = [...registros, ...(registrosCustoGeral || [])];
-    try {
-      tarefasDelegadas = await getTarefasDelegadas();
+
+    if (tarefas.status === 'fulfilled') {
+      tarefasDelegadas = tarefas.value;
       renderGestaoTarefas();
       renderMinhasTarefas();
       
@@ -1695,8 +1718,6 @@ async function init() {
     });
   });
 
-  initIndicadores();
-  initConfiabilidade();
   atualizarBotaoEdicao();
   showView('dashboard');
 }

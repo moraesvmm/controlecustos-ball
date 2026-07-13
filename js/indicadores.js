@@ -242,14 +242,32 @@ let presentationEvidencias = [];
 let currentSlideIndex = 0;
 async function carregarEAtualizarPainel() {
   try {
-    kpiDataBreakdowns = await apiRequest('kpi_breakdowns', 'GET') || [];
-    kpiDataOfensores = await apiRequest('kpi_maquinas_ofensoras', 'GET') || [];
-    const kpiAcoes = await apiRequest('kpi_plano_acoes', 'GET') || [];
+    const [
+      resBreakdowns,
+      resOfensores,
+      resAcoes,
+      resLinhas,
+      resDiario,
+      resCompliance,
+      resMtbf
+    ] = await Promise.all([
+      apiRequest('kpi_breakdowns', 'GET'),
+      apiRequest('kpi_maquinas_ofensoras', 'GET'),
+      apiRequest('kpi_plano_acoes', 'GET'),
+      apiRequest('kpi_linhas', 'GET'),
+      apiRequest('kpi_diario', 'GET'),
+      apiRequest('kpi_compliance', 'GET'),
+      apiRequest('kpi_mtbf', 'GET')
+    ]);
+
+    kpiDataBreakdowns = resBreakdowns || [];
+    kpiDataOfensores = resOfensores || [];
+    const kpiAcoes = resAcoes || [];
     
-    kpiDataLinhas = await apiRequest('kpi_linhas', 'GET') || [];
-    kpiDataDiario = await apiRequest('kpi_diario', 'GET') || [];
-    kpiDataCompliance = await apiRequest('kpi_compliance', 'GET') || [];
-    kpiDataMtbf = await apiRequest('kpi_mtbf', 'GET') || [];
+    kpiDataLinhas = resLinhas || [];
+    kpiDataDiario = resDiario || [];
+    kpiDataCompliance = resCompliance || [];
+    kpiDataMtbf = resMtbf || [];
     
     atualizarCardsFixos();
     popularSelectSemanas();
