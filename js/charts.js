@@ -606,63 +606,167 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
   const vMttr  = periodos.map(p => +avg(byPeriodo[p].mttr).toFixed(2));
   const vIndisp = periodos.map(p => +avg(byPeriodo[p].indisp).toFixed(2));
 
-  const barStyle = (r, g, b) => ({
-    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-      { offset: 0, color: `rgba(${r},${g},${b},0.92)` },
-      { offset: 1, color: `rgba(${r},${g},${b},0.35)` }
-    ]),
-    borderRadius: [6, 6, 0, 0]
-  });
+  // Configuração de Cores Premium (Neon)
+  const chartConfig = {
+    mtbf: {
+      color: '#10b981',
+      gradArea: [
+        { offset: 0, color: 'rgba(16, 185, 129, 0.4)' },
+        { offset: 1, color: 'rgba(16, 185, 129, 0.0)' }
+      ]
+    },
+    mttr: {
+      color: '#f59e0b',
+      gradArea: [
+        { offset: 0, color: 'rgba(245, 158, 11, 0.4)' },
+        { offset: 1, color: 'rgba(245, 158, 11, 0.0)' }
+      ]
+    },
+    indisp: {
+      color: '#ef4444',
+      gradArea: [
+        { offset: 0, color: 'rgba(239, 68, 68, 0.4)' },
+        { offset: 1, color: 'rgba(239, 68, 68, 0.0)' }
+      ]
+    }
+  };
 
-  function makeMarkLine(meta, unit = '') {
-    return {
-      silent: true,
-      symbol: 'none',
-      lineStyle: { type: 'dashed', color: '#f59e0b', width: 1.5 },
-      data: [{ yAxis: meta, label: { formatter: `Meta: ${meta}${unit}`, color: '#f59e0b', fontSize: 10 } }]
-    };
-  }
-
-  function buildChart(elId, values, metaVal, title, color, unit = '') {
+  function buildAdvancedChart(elId, values, metaVal, title, cfg, unit, isBiggerBetter) {
     const el = document.getElementById(elId);
     if (!el) return null;
     const inst = echarts.init(el);
+    
+    const baseColor = cfg.color;
+    
+    // Tooltip HTML customizado com distanciamento da meta
+    const tooltipFormatter = params => {
+      const p = params[0];
+      const val = p.value;
+      const diff = (val - metaVal).toFixed(2);
+      
+      let statusColor = tc.tickColor;
+      let statusIcon = '';
+      if (isBiggerBetter) {
+        statusColor = val >= metaVal ? '#10b981' : '#ef4444';
+        statusIcon = val >= metaVal ? '▲' : '▼';
+      } else {
+        statusColor = val <= metaVal ? '#10b981' : '#ef4444';
+        statusIcon = val <= metaVal ? '▼' : '▲';
+      }
+      
+      const diffText = diff > 0 ? `+${diff}` : `${diff}`;
+      
+      return `
+        <div style="padding: 6px;">
+          <div style="font-size: 11px; color: ${tc.tickColor}; margin-bottom: 4px; opacity: 0.8;">${p.name}</div>
+          <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;">
+            ${title}: ${val}${unit}
+          </div>
+          <div style="font-size: 12px; color: ${statusColor}; font-weight: 600;">
+            ${statusIcon} ${diffText}${unit} vs Meta
+          </div>
+        </div>
+      `;
+    };
+
+    // Zonas de segurança baseadas na meta
+    const goodColor = 'rgba(16, 185, 129, 0.07)';
+    const badColor  = 'rgba(239, 68, 68, 0.07)';
+    
+    let markArea = {};
+    if (isBiggerBetter) {
+      markArea = {
+        silent: true,
+        data: [
+          [ { yAxis: metaVal, itemStyle: { color: goodColor } }, { yAxis: 'max' } ],
+          [ { yAxis: 'min', itemStyle: { color: badColor } }, { yAxis: metaVal } ]
+        ]
+      };
+    } else {
+      markArea = {
+        silent: true,
+        data: [
+          [ { yAxis: 'min', itemStyle: { color: goodColor } }, { yAxis: metaVal } ],
+          [ { yAxis: metaVal, itemStyle: { color: badColor } }, { yAxis: 'max' } ]
+        ]
+      };
+    }
+
     inst.setOption({
+      animationDuration: 1500,
+      animationEasing: 'cubicOut',
       tooltip: {
         trigger: 'axis',
-        backgroundColor: tc.tooltipBg,
-        borderColor: tc.borderColor || '#334155',
-        textStyle: { color: tc.tooltipText || '#f1f5f9' },
-        formatter: params => {
-          const p = params[0];
-          return `<b>${p.name}</b><br/>${title}: <b>${p.value}${unit}</b>`;
-        }
+        backgroundColor: 'rgba(15, 23, 42, 0.90)',
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderWidth: 1,
+        padding: 10,
+        textStyle: { color: '#f1f5f9' },
+        formatter: tooltipFormatter,
+        extraCssText: 'backdrop-filter: blur(8px); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);'
       },
-      grid: { left: '8%', right: '5%', top: '12%', bottom: '12%', containLabel: false },
+      grid: { left: '12%', right: '8%', top: '18%', bottom: '12%', containLabel: false },
       xAxis: {
         type: 'category',
         data: periodos,
         axisLabel: { color: tc.tickColor, ...CHART_FONT, rotate: periodos.length > 8 ? 35 : 0 },
         axisTick: { show: false },
-        axisLine: { show: false }
+        axisLine: { lineStyle: { color: tc.gridColor } },
+        boundaryGap: false
       },
       yAxis: {
         type: 'value',
         axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: v => `${v}${unit}` },
-        splitLine: { lineStyle: { color: tc.gridColor } }
+        splitLine: { lineStyle: { color: tc.gridColor, type: 'dashed', opacity: 0.5 } }
       },
       series: [{
-        type: 'bar',
+        type: 'line',
         data: values,
-        itemStyle: barStyle(...color),
-        label: { show: true, position: 'top', fontSize: 10, color: tc.tickColor, formatter: p => `${p.value}${unit}` },
-        markLine: makeMarkLine(metaVal, unit)
+        smooth: 0.4,
+        symbol: 'circle',
+        symbolSize: 8,
+        itemStyle: {
+          color: baseColor,
+          borderColor: '#1e293b',
+          borderWidth: 2,
+          shadowColor: baseColor,
+          shadowBlur: 8
+        },
+        lineStyle: {
+          width: 3,
+          color: baseColor,
+          shadowColor: baseColor,
+          shadowBlur: 10
+        },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, cfg.gradArea)
+        },
+        label: { 
+          show: true, 
+          position: 'top', 
+          fontSize: 11, 
+          color: '#fff', 
+          fontWeight: 600,
+          formatter: p => `${p.value}${unit}`,
+          backgroundColor: 'rgba(0,0,0,0.4)',
+          padding: [3, 6],
+          borderRadius: 4
+        },
+        markLine: {
+          silent: true,
+          symbol: 'none',
+          lineStyle: { type: 'solid', color: tc.tickColor, width: 1, opacity: 0.7 },
+          label: { formatter: `Meta: ${metaVal}${unit}`, color: tc.tickColor, position: 'insideEndTop', fontSize: 10 },
+          data: [{ yAxis: metaVal }]
+        },
+        markArea: markArea
       }]
     });
     return inst;
   }
 
-  confiabCharts.mtbf  = buildChart('chartConfiabMtbf',  vMtbf,  metas.meta_mtbf_h,               'MTBF',             [52,  211, 153], 'h');
-  confiabCharts.mttr  = buildChart('chartConfiabMttr',  vMttr,  metas.meta_mttr_h,               'MTTR',             [251, 191, 36],  'h');
-  confiabCharts.indisp = buildChart('chartConfiabIndisp', vIndisp, metas.meta_indisponibilidade_pct, 'Indisponibilidade', [239, 68,  68],  '%');
+  confiabCharts.mtbf   = buildAdvancedChart('chartConfiabMtbf',   vMtbf,   metas.meta_mtbf_h,               'MTBF',              chartConfig.mtbf,   'h', true);
+  confiabCharts.mttr   = buildAdvancedChart('chartConfiabMttr',   vMttr,   metas.meta_mttr_h,               'MTTR',              chartConfig.mttr,   'h', false);
+  confiabCharts.indisp = buildAdvancedChart('chartConfiabIndisp', vIndisp, metas.meta_indisponibilidade_pct, 'Indisponibilidade', chartConfig.indisp, '%', false);
 }
+
