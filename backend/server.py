@@ -497,10 +497,6 @@ async def import_paradas(req: Request):
 
     conn = get_db()
     try:
-        # Inicia transação única: SSE só dispara UMA VEZ, ao final do commit,
-        # evitando que o frontend veja o banco vazio entre o DELETE e os INSERTs
-        conn.execute("BEGIN EXCLUSIVE")
-
         # 1. Limpa dados do ano importado
         conn.execute("DELETE FROM kpi_paradas_raw WHERE ano = ?", (ano,))
         conn.execute("DELETE FROM kpi_confiabilidade WHERE ano = ?", (ano,))
