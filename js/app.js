@@ -43,7 +43,7 @@ import { initImportPlanoMestre } from './import_plano_mestre.js?v=999';
 import { renderPrevisoes } from './previsoes.js';
 import { initAlertas, toggleAlertasPanel } from './alertas.js?v=999';
 import { initCopiloto } from './copiloto.js?v=999';
-import { initIndicadores } from './indicadores.js?v=3';
+import { initIndicadores, initConfiabilidade } from './indicadores.js?v=3';
 
 let registros = [];
 let registrosCustoGeral = [];
@@ -1696,6 +1696,7 @@ async function init() {
   });
 
   initIndicadores();
+  initConfiabilidade();
   atualizarBotaoEdicao();
   showView('dashboard');
 }

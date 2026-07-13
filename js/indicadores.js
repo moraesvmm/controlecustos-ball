@@ -1,4 +1,5 @@
 import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js?v=9';
+import { renderConfiabilidadeCharts, destroyConfiabCharts } from './charts.js?v=999';
 
 export async function initIndicadores() {
   const btnUploadKPI = document.getElementById('btnUploadKPI');
@@ -1013,4 +1014,283 @@ function prevSlide() {
     currentSlideIndex = presentationEvidencias.length - 1; // Loop invertido
   }
   renderSlide();
+}
+
+// ============================================================
+// MÓDULO: CONFIABILIDADE (MTBF / MTTR / INDISPONIBILIDADE)
+// ============================================================
+let _confiabPeriodo = 'MES';
+let _confiabLinha   = 'TODAS';
+let _confiabAno     = new Date().getFullYear();
+let _confiabMetas   = {};
+
+async function carregarConfiabilidade() {
+  try {
+    const params = new URLSearchParams({ periodo_tipo: _confiabPeriodo, ano: _confiabAno });
+    if (_confiabLinha !== 'TODAS') params.append('linha', _confiabLinha);
+    const resp = await fetch(`/api/kpi/confiabilidade?${params}`);
+    const dados = await resp.json();
+
+    const empty = document.getElementById('confiabEmpty');
+    const cards = document.getElementById('confiabCardsArea');
+    const chartsArea = document.querySelector('#kpi-view-confiabilidade > div:nth-child(3)');
+
+    if (!dados || dados.length === 0) {
+      if (empty) empty.style.display = 'block';
+      if (cards) cards.style.display = 'none';
+      if (chartsArea) chartsArea.style.display = 'none';
+      destroyConfiabCharts();
+      return;
+    }
+
+    if (empty) empty.style.display = 'none';
+    if (cards) cards.style.display = 'grid';
+    if (chartsArea) chartsArea.style.display = 'grid';
+
+    // Calcula médias para os cards de resumo
+    const avg = (arr, key) => arr.length ? arr.reduce((s, d) => s + (d[key] || 0), 0) / arr.length : 0;
+    const avgMtbf  = avg(dados, 'mtbf_h');
+    const avgMttr  = avg(dados, 'mttr_h');
+    const avgIndisp = avg(dados, 'indisponibilidade_pct');
+
+    // Metas (usa a da linha selecionada ou a primeira disponível)
+    const metaRef = _confiabLinha !== 'TODAS'
+      ? (_confiabMetas[_confiabLinha] || Object.values(_confiabMetas)[0] || {})
+      : (Object.values(_confiabMetas)[0] || {});
+    const metaMtbf  = metaRef.meta_mtbf_h || 4;
+    const metaMttr  = metaRef.meta_mttr_h || 0.5;
+    const metaIndisp = metaRef.meta_indisponibilidade_pct || 8;
+
+    // Atualiza cards
+    const setCard = (elId, val, meta, fmtFn, higherIsBetter) => {
+      const el = document.getElementById(elId);
+      if (el) el.textContent = fmtFn(val);
+      const varEl = document.getElementById(elId + 'Var');
+      if (varEl) {
+        const delta = ((val - meta) / meta * 100);
+        const good  = higherIsBetter ? delta >= 0 : delta <= 0;
+        varEl.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% vs meta`;
+        varEl.style.color = good ? '#10b981' : '#ef4444';
+      }
+    };
+    document.getElementById('cardConfiabMtbfMeta').textContent  = `Meta: ${metaMtbf}h`;
+    document.getElementById('cardConfiabMttrMeta').textContent  = `Meta: ${metaMttr}h`;
+    document.getElementById('cardConfiabIndispMeta').textContent = `Meta: ${metaIndisp}%`;
+    setCard('cardConfiabMtbf',  avgMtbf,  metaMtbf,  v => v.toFixed(2) + 'h',  true);
+    setCard('cardConfiabMttr',  avgMttr,  metaMttr,  v => v.toFixed(2) + 'h',  false);
+    setCard('cardConfiabIndisp', avgIndisp, metaIndisp, v => v.toFixed(2) + '%', false);
+
+    // Garante cor dos cards conforme situação
+    document.getElementById('cardConfiabMtbf').style.color  = avgMtbf  >= metaMtbf  ? '#10b981' : '#ef4444';
+    document.getElementById('cardConfiabMttr').style.color  = avgMttr  <= metaMttr  ? '#10b981' : '#ef4444';
+    document.getElementById('cardConfiabIndisp').style.color = avgIndisp <= metaIndisp ? '#10b981' : '#ef4444';
+
+    // Renderiza gráficos
+    renderConfiabilidadeCharts(dados, {
+      meta_mtbf_h: metaMtbf,
+      meta_mttr_h: metaMttr,
+      meta_indisponibilidade_pct: metaIndisp
+    }, _confiabLinha);
+
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+
+  } catch(e) {
+    console.error('Erro ao carregar confiabilidade:', e);
+  }
+}
+
+async function carregarMetasConfiabilidade() {
+  try {
+    const resp = await fetch('/api/kpi/metas-confiabilidade');
+    const lista = await resp.json();
+    _confiabMetas = {};
+    for (const m of lista) _confiabMetas[m.linha] = m;
+  } catch(e) { console.error('Erro ao carregar metas:', e); }
+}
+
+function abrirModalMetas() {
+  const modal = document.getElementById('modalMetasConfiab');
+  const form  = document.getElementById('metasConfiabForm');
+  if (!modal || !form) return;
+
+  const linhas = ['Linha 4','Linha 5','Linha 6','Linha 7','Linha 8','Linha 9'];
+  form.innerHTML = linhas.map(ln => {
+    const m = _confiabMetas[ln] || { meta_mtbf_h: 4, meta_mttr_h: 0.5, meta_indisponibilidade_pct: 8 };
+    return `
+      <div style="border:1px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:0.75rem;">
+        <div style="font-weight:600; color:var(--text-primary); margin-bottom:0.75rem; font-size:0.9rem;">${ln}</div>
+        <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:0.5rem;">
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">MTBF Alvo (h)</label>
+            <input type="number" step="0.1" min="0" class="meta-input" data-linha="${ln}" data-campo="meta_mtbf_h"
+              value="${m.meta_mtbf_h}" style="width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--text-primary); border-radius:6px; padding:6px 10px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">MTTR Alvo (h)</label>
+            <input type="number" step="0.01" min="0" class="meta-input" data-linha="${ln}" data-campo="meta_mttr_h"
+              value="${m.meta_mttr_h}" style="width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--text-primary); border-radius:6px; padding:6px 10px; font-size:0.9rem;">
+          </div>
+          <div>
+            <label style="font-size:0.75rem; color:var(--text-secondary); display:block; margin-bottom:2px;">Indisp. Alvo (%)</label>
+            <input type="number" step="0.1" min="0" max="100" class="meta-input" data-linha="${ln}" data-campo="meta_indisponibilidade_pct"
+              value="${m.meta_indisponibilidade_pct}" style="width:100%; background:var(--bg3); border:1px solid var(--border); color:var(--text-primary); border-radius:6px; padding:6px 10px; font-size:0.9rem;">
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+
+  modal.style.display = 'flex';
+}
+
+async function salvarMetasConfiabilidade() {
+  const inputs = document.querySelectorAll('.meta-input');
+  const byLinha = {};
+  inputs.forEach(inp => {
+    const ln = inp.dataset.linha;
+    const campo = inp.dataset.campo;
+    if (!byLinha[ln]) byLinha[ln] = { linha: ln };
+    byLinha[ln][campo] = parseFloat(inp.value) || 0;
+  });
+  const payload = Object.values(byLinha);
+  try {
+    const resp = await fetch('/api/kpi/metas-confiabilidade', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+    });
+    if (!resp.ok) throw new Error('Erro ao salvar metas');
+    await carregarMetasConfiabilidade();
+    document.getElementById('modalMetasConfiab').style.display = 'none';
+    carregarConfiabilidade();
+    if (window.Swal) Swal.fire({ icon: 'success', title: 'Metas salvas!', timer: 1500, showConfirmButton: false });
+  } catch(e) {
+    if (window.Swal) Swal.fire({ icon: 'error', title: 'Erro', text: e.message });
+  }
+}
+
+async function importarMGPRO(file) {
+  if (!file) return;
+  if (!window.XLSX) { alert('Biblioteca XLSX não carregada.'); return; }
+
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      const wb = XLSX.read(e.target.result, { type: 'array', cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false, dateNF: 'YYYY-MM-DD' });
+
+      if (!raw || raw.length < 2) { alert('Arquivo vazio ou sem linhas.'); return; }
+
+      // Detecta cabeçalho (procura linha com 'Grupos de Paradas')
+      let headerRow = 0;
+      for (let i = 0; i < Math.min(5, raw.length); i++) {
+        if (raw[i].some(c => String(c || '').includes('Grupos'))) { headerRow = i; break; }
+      }
+      const headers = raw[headerRow].map(h => String(h || '').trim());
+
+      // Detecta índices das colunas necessitárias
+      const iGrupo = headers.findIndex(h => h.includes('Grupos'));
+      const iLinha = headers.findIndex(h => h.toLowerCase() === 'linha');
+      const iData  = headers.findIndex(h => h.toLowerCase() === 'data');
+      const iDur   = headers.findIndex(h => h.toLowerCase().includes('ura'));
+
+      const rows = [];
+      let ano = new Date().getFullYear();
+      for (let i = headerRow + 1; i < raw.length; i++) {
+        const row = raw[i];
+        const grupo = String(row[iGrupo] || '').trim();
+        if (!grupo) continue;
+        const dataStr = String(row[iData] || '').slice(0, 10);
+        if (dataStr.length >= 4) {
+          const y = parseInt(dataStr.slice(0, 4));
+          if (y > 2020 && y < 2100) ano = y;
+        }
+        rows.push({
+          grupo,
+          linha: String(row[iLinha] || '').trim(),
+          data: dataStr,
+          duracao: String(row[iDur] || '0:0:0').trim()
+        });
+      }
+
+      if (rows.length === 0) { alert('Nenhuma linha de dados encontrada.'); return; }
+
+      const resp = await fetch('/api/import/paradas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rows, ano })
+      });
+      const result = await resp.json();
+      if (!resp.ok) throw new Error(result.detail || 'Erro no servidor');
+
+      if (window.Swal) {
+        Swal.fire({
+          icon: 'success',
+          title: 'Importado com sucesso!',
+          html: `<b>${result.importados}</b> registros de reparo processados para <b>${ano}</b>.`,
+          confirmButtonText: 'Ok'
+        });
+      }
+      // Atualiza o filtro de ano
+      const selAno = document.getElementById('selectConfiabAno');
+      if (selAno) {
+        if (![...selAno.options].find(o => o.value == ano)) {
+          selAno.insertAdjacentHTML('afterbegin', `<option value="${ano}">${ano}</option>`);
+        }
+        selAno.value = ano;
+        _confiabAno = ano;
+      }
+      await carregarConfiabilidade();
+    } catch(err) {
+      console.error(err);
+      if (window.Swal) Swal.fire({ icon: 'error', title: 'Erro na importação', text: err.message });
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+export function initConfiabilidade() {
+  // Botões toggle Mensal/Semanal
+  document.querySelectorAll('.btn-toggle-confiab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-toggle-confiab').forEach(b => {
+        b.style.background = 'transparent';
+        b.style.color = 'var(--text-secondary)';
+        b.style.fontWeight = '400';
+      });
+      btn.style.background  = 'var(--gold)';
+      btn.style.color       = '#000';
+      btn.style.fontWeight  = '600';
+      _confiabPeriodo = btn.dataset.periodo;
+      carregarConfiabilidade();
+    });
+  });
+
+  // Filtros
+  document.getElementById('selectConfiabLinha')?.addEventListener('change', e => {
+    _confiabLinha = e.target.value;
+    carregarConfiabilidade();
+  });
+  document.getElementById('selectConfiabAno')?.addEventListener('change', e => {
+    _confiabAno = parseInt(e.target.value);
+    carregarConfiabilidade();
+  });
+
+  // Import
+  document.getElementById('fileImportMGPRO')?.addEventListener('change', e => {
+    const f = e.target.files?.[0];
+    if (f) importarMGPRO(f);
+    e.target.value = '';
+  });
+
+  // Modal de metas
+  document.getElementById('btnConfiabMetas')?.addEventListener('click', abrirModalMetas);
+  document.getElementById('btnFecharMetasConfiab')?.addEventListener('click', () => {
+    document.getElementById('modalMetasConfiab').style.display = 'none';
+  });
+  document.getElementById('btnCancelarMetasConfiab')?.addEventListener('click', () => {
+    document.getElementById('modalMetasConfiab').style.display = 'none';
+  });
+  document.getElementById('btnSalvarMetasConfiab')?.addEventListener('click', salvarMetasConfiabilidade);
+
+  // Carrega
+  carregarMetasConfiabilidade().then(() => carregarConfiabilidade());
 }

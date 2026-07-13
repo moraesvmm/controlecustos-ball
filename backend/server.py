@@ -156,6 +156,54 @@ def get_db():
         )
     ''')
 
+    # Tabelas do módulo de Confiabilidade (MTBF/MTTR calculado do MGPRO)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_paradas_raw (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            linha TEXT,
+            grupo_parada TEXT,
+            data TEXT,
+            semana_iso INTEGER,
+            mes INTEGER,
+            ano INTEGER,
+            dur_min REAL
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_confiabilidade (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            linha TEXT,
+            periodo_tipo TEXT,
+            periodo_ref TEXT,
+            ano INTEGER,
+            n_falhas INTEGER,
+            tempo_parado_min REAL,
+            mtbf_h REAL,
+            mttr_h REAL,
+            indisponibilidade_pct REAL,
+            UNIQUE(linha, periodo_tipo, periodo_ref, ano)
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_metas_confiabilidade (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            linha TEXT UNIQUE,
+            meta_mtbf_h REAL,
+            meta_mttr_h REAL,
+            meta_indisponibilidade_pct REAL
+        )
+    ''')
+
+    # Inserir metas padrão se não existirem
+    linhas_padrao = ['Linha 4', 'Linha 5', 'Linha 6', 'Linha 7', 'Linha 8', 'Linha 9']
+    for ln in linhas_padrao:
+        conn.execute('''
+            INSERT OR IGNORE INTO kpi_metas_confiabilidade (linha, meta_mtbf_h, meta_mttr_h, meta_indisponibilidade_pct)
+            VALUES (?, ?, ?, ?)
+        ''', (ln, 4.0, 0.5, 8.0))
+
     conn.commit()
     return conn
 
@@ -403,6 +451,160 @@ async def proxy_groq(req: Request):
         return Response(content=e.read(), status_code=e.code, media_type="application/json")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ==========================================
+# MÓDULO CONFIABILIDADE: MTBF / MTTR
+# ==========================================
+
+@app.post("/api/import/paradas")
+async def import_paradas(req: Request):
+    """Recebe JSON com lista de registros do MGPRO já parseados no front (via SheetJS),
+    filtra grupos de reparo, calcula MTBF/MTTR/Indisponibilidade e salva no banco."""
+    import datetime, math
+    data = await req.json()
+    rows = data.get("rows", [])
+    ano = int(data.get("ano", datetime.datetime.now().year))
+
+    GRUPOS_REPARO = ['Reparos Mecânicos', 'Reparos Elétricos']
+    TEMPO_MES_MIN = 30 * 24 * 60   # 43200 min - 30 dias 24h
+    TEMPO_SEM_MIN = 7 * 24 * 60    # 10080 min - 7 dias 24h
+
+    def hms_to_min(s):
+        try:
+            parts = str(s).strip().split(':')
+            h, m, sec = int(parts[0]), int(parts[1]), float(parts[2])
+            return h * 60 + m + sec / 60
+        except:
+            return 0.0
+
+    def semana_iso(data_str):
+        try:
+            d = datetime.datetime.strptime(str(data_str)[:10], '%Y-%m-%d')
+            return d.isocalendar()[1]
+        except:
+            return 0
+
+    def mes_num(data_str):
+        try:
+            return int(str(data_str)[5:7])
+        except:
+            return 0
+
+    # Filtra apenas reparos
+    reparos = [r for r in rows if any(g in str(r.get('grupo', '')) for g in GRUPOS_REPARO)]
+    if not reparos:
+        raise HTTPException(status_code=400, detail="Nenhum registro de Reparos Mecânicos ou Elétricos encontrado no arquivo.")
+
+    conn = get_db()
+    try:
+        # 1. Limpa dados do ano importado
+        conn.execute("DELETE FROM kpi_paradas_raw WHERE ano = ?", (ano,))
+        conn.execute("DELETE FROM kpi_confiabilidade WHERE ano = ?", (ano,))
+
+        # 2. Insere raw
+        for r in reparos:
+            dur = hms_to_min(r.get('duracao', '0:0:0'))
+            sem = semana_iso(r.get('data', ''))
+            mes = mes_num(r.get('data', ''))
+            conn.execute(
+                "INSERT INTO kpi_paradas_raw (linha, grupo_parada, data, semana_iso, mes, ano, dur_min) VALUES (?,?,?,?,?,?,?)",
+                (r.get('linha', ''), r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur)
+            )
+
+        # 3. Calcula KPIs por Linha x Mês
+        rows_mes = conn.execute(
+            "SELECT linha, mes, COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, mes",
+            (ano,)
+        ).fetchall()
+        MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+        for r in rows_mes:
+            ln, mes, n, tp = r['linha'], r['mes'], r['n'], r['tp'] or 0
+            tf = max(TEMPO_MES_MIN - tp, 0)
+            mtbf = (tf / n / 60) if n > 0 else 0
+            mttr = (tp / n / 60) if n > 0 else 0
+            indisp = (tp / TEMPO_MES_MIN) * 100
+            per_ref = MESES[mes - 1] if 1 <= mes <= 12 else str(mes)
+            conn.execute('''
+                INSERT OR REPLACE INTO kpi_confiabilidade
+                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            ''', (ln, 'MES', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2)))
+
+        # 4. Calcula KPIs por Linha x Semana
+        rows_sem = conn.execute(
+            "SELECT linha, semana_iso, COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, semana_iso",
+            (ano,)
+        ).fetchall()
+        for r in rows_sem:
+            ln, sem, n, tp = r['linha'], r['semana_iso'], r['n'], r['tp'] or 0
+            tf = max(TEMPO_SEM_MIN - tp, 0)
+            mtbf = (tf / n / 60) if n > 0 else 0
+            mttr = (tp / n / 60) if n > 0 else 0
+            indisp = (tp / TEMPO_SEM_MIN) * 100
+            per_ref = f'S{sem:02d}'
+            conn.execute('''
+                INSERT OR REPLACE INTO kpi_confiabilidade
+                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct)
+                VALUES (?,?,?,?,?,?,?,?,?)
+            ''', (ln, 'SEMANA', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2)))
+
+        conn.commit()
+        total = len(reparos)
+        return {"status": "ok", "importados": total, "ano": ano}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/kpi/confiabilidade")
+def get_kpi_confiabilidade(periodo_tipo: str = 'MES', ano: int = None, linha: str = None):
+    import datetime
+    if not ano:
+        ano = datetime.datetime.now().year
+    conn = get_db()
+    try:
+        q = "SELECT * FROM kpi_confiabilidade WHERE periodo_tipo=? AND ano=?"
+        vals = [periodo_tipo, ano]
+        if linha and linha != 'TODAS':
+            q += " AND linha=?"
+            vals.append(linha)
+        q += " ORDER BY linha, periodo_ref"
+        rows = conn.execute(q, vals).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+@app.get("/api/kpi/metas-confiabilidade")
+def get_metas_confiabilidade():
+    conn = get_db()
+    try:
+        rows = conn.execute("SELECT * FROM kpi_metas_confiabilidade ORDER BY linha").fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+@app.post("/api/kpi/metas-confiabilidade")
+async def save_metas_confiabilidade(req: Request):
+    data = await req.json()  # lista de {linha, meta_mtbf_h, meta_mttr_h, meta_indisponibilidade_pct}
+    conn = get_db()
+    try:
+        for item in data:
+            conn.execute('''
+                INSERT INTO kpi_metas_confiabilidade (linha, meta_mtbf_h, meta_mttr_h, meta_indisponibilidade_pct)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(linha) DO UPDATE SET
+                    meta_mtbf_h=excluded.meta_mtbf_h,
+                    meta_mttr_h=excluded.meta_mttr_h,
+                    meta_indisponibilidade_pct=excluded.meta_indisponibilidade_pct
+            ''', (item['linha'], item['meta_mtbf_h'], item['meta_mttr_h'], item['meta_indisponibilidade_pct']))
+        conn.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
 
 @app.get("/api/prazo_ciente")
 def get_prazo_ciente(email: str):

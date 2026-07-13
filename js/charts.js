@@ -556,3 +556,113 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
     });
   });
 }
+
+// =====================================================
+// GRÁFICOS: CONFIABILIDADE — MTBF / MTTR / INDISP
+// =====================================================
+const confiabCharts = { mtbf: null, mttr: null, indisp: null };
+
+export function destroyConfiabCharts() {
+  ['mtbf', 'mttr', 'indisp'].forEach(k => {
+    if (confiabCharts[k] && !confiabCharts[k].isDisposed()) {
+      confiabCharts[k].dispose();
+      confiabCharts[k] = null;
+    }
+  });
+}
+
+window.addEventListener('resize', () => {
+  ['mtbf', 'mttr', 'indisp'].forEach(k => {
+    if (confiabCharts[k] && !confiabCharts[k].isDisposed()) confiabCharts[k].resize();
+  });
+});
+
+/**
+ * Renderiza os 3 gráficos de confiabilidade lado a lado.
+ * @param {Array}  dados   - Lista de {periodo_ref, mtbf_h, mttr_h, indisponibilidade_pct, linha}
+ * @param {Object} metas   - {meta_mtbf_h, meta_mttr_h, meta_indisponibilidade_pct} (média das linhas se múltiplas)
+ * @param {String} linha   - "TODAS" ou nome da linha (para legenda)
+ */
+export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
+  destroyConfiabCharts();
+
+  const tc = themeColors();
+
+  // Agrupa por periodo_ref (soma avg quando múltiplas linhas)
+  const byPeriodo = {};
+  for (const d of dados) {
+    if (!byPeriodo[d.periodo_ref]) {
+      byPeriodo[d.periodo_ref] = { mtbf: [], mttr: [], indisp: [] };
+    }
+    byPeriodo[d.periodo_ref].mtbf.push(d.mtbf_h);
+    byPeriodo[d.periodo_ref].mttr.push(d.mttr_h);
+    byPeriodo[d.periodo_ref].indisp.push(d.indisponibilidade_pct);
+  }
+
+  // Ordena períodos
+  const periodos = Object.keys(byPeriodo).sort();
+  const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
+  const vMtbf  = periodos.map(p => +avg(byPeriodo[p].mtbf).toFixed(2));
+  const vMttr  = periodos.map(p => +avg(byPeriodo[p].mttr).toFixed(2));
+  const vIndisp = periodos.map(p => +avg(byPeriodo[p].indisp).toFixed(2));
+
+  const barStyle = (r, g, b) => ({
+    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+      { offset: 0, color: `rgba(${r},${g},${b},0.92)` },
+      { offset: 1, color: `rgba(${r},${g},${b},0.35)` }
+    ]),
+    borderRadius: [6, 6, 0, 0]
+  });
+
+  function makeMarkLine(meta, unit = '') {
+    return {
+      silent: true,
+      symbol: 'none',
+      lineStyle: { type: 'dashed', color: '#f59e0b', width: 1.5 },
+      data: [{ yAxis: meta, label: { formatter: `Meta: ${meta}${unit}`, color: '#f59e0b', fontSize: 10 } }]
+    };
+  }
+
+  function buildChart(elId, values, metaVal, title, color, unit = '') {
+    const el = document.getElementById(elId);
+    if (!el) return null;
+    const inst = echarts.init(el);
+    inst.setOption({
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: tc.tooltipBg,
+        borderColor: tc.borderColor || '#334155',
+        textStyle: { color: tc.tooltipText || '#f1f5f9' },
+        formatter: params => {
+          const p = params[0];
+          return `<b>${p.name}</b><br/>${title}: <b>${p.value}${unit}</b>`;
+        }
+      },
+      grid: { left: '8%', right: '5%', top: '12%', bottom: '12%', containLabel: false },
+      xAxis: {
+        type: 'category',
+        data: periodos,
+        axisLabel: { color: tc.tickColor, ...CHART_FONT, rotate: periodos.length > 8 ? 35 : 0 },
+        axisTick: { show: false },
+        axisLine: { show: false }
+      },
+      yAxis: {
+        type: 'value',
+        axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: v => `${v}${unit}` },
+        splitLine: { lineStyle: { color: tc.gridColor } }
+      },
+      series: [{
+        type: 'bar',
+        data: values,
+        itemStyle: barStyle(...color),
+        label: { show: true, position: 'top', fontSize: 10, color: tc.tickColor, formatter: p => `${p.value}${unit}` },
+        markLine: makeMarkLine(metaVal, unit)
+      }]
+    });
+    return inst;
+  }
+
+  confiabCharts.mtbf  = buildChart('chartConfiabMtbf',  vMtbf,  metas.meta_mtbf_h,               'MTBF',             [52,  211, 153], 'h');
+  confiabCharts.mttr  = buildChart('chartConfiabMttr',  vMttr,  metas.meta_mttr_h,               'MTTR',             [251, 191, 36],  'h');
+  confiabCharts.indisp = buildChart('chartConfiabIndisp', vIndisp, metas.meta_indisponibilidade_pct, 'Indisponibilidade', [239, 68,  68],  '%');
+}
