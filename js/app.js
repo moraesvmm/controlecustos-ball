@@ -1080,8 +1080,8 @@ function abrirModalFluxoConsertos() {
             border-radius:8px; padding:6px 12px; cursor:pointer; font-size:0.85rem;">✕ Fechar</button>
         </div>
       </div>
-      <div style="position:relative; height:340px;">
-        <canvas id="chartFluxoConsertos"></canvas>
+      <div style="position:relative; height:340px; width:100%;">
+        <div id="chartFluxoConsertos" style="width: 100%; height: 100%;"></div>
       </div>
       <p id="fluxoHint" style="margin-top:0.75rem; font-size:0.75rem; color:var(--muted,#94a3b8); text-align:center;">
         💡 Clique nas barras para ver os registros detalhados · Barras amarelas = patrimônio exposto · Barras verdes = custo de reparo realizado
