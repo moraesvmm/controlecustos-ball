@@ -1,4 +1,4 @@
-import { getClient } from './db.js?v=46';
+import { getClient } from './db.js';
 import { GROQ_API_KEY } from './keys.js?v=1';
 import { agregarRecebidosPrevistos } from './logic.js?v=9';
 

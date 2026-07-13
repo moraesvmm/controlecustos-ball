@@ -14,14 +14,14 @@ import {
   normalizarNatureza,
   agregarFornecedores,
   calcularDiasFora
-} from './logic.js?v=999';
-import { initCalendario, updateCalendario } from './calendario.js?v=999';
+} from './logic.js';
+import { initCalendario, updateCalendario } from './calendario.js';
 import { 
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=999';
-import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js?v=999';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js';
+import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js';
 import {
   COLUNAS_TABELA,
   valorCelula,
@@ -29,21 +29,21 @@ import {
   toast,
   confirmar,
   fmtMoeda,
-} from './ui.js?v=999';
-import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=999';
-import { initExcelImport } from './import_excel.js?v=999';
+} from './ui.js';
+import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js';
+import { initExcelImport } from './import_excel.js';
 
-import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js?v=999';
+import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js';
 
-import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js?v=999';
-import { initExcelImportCustoGeral } from './import_custo_geral.js?v=999';
-import { COLUNAS_CUSTO_GERAL } from './ui.js?v=999';
-import { initPlanoMestre } from './plano_mestre.js?v=999';
-import { initImportPlanoMestre } from './import_plano_mestre.js?v=999';
+import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js';
+import { initExcelImportCustoGeral } from './import_custo_geral.js';
+import { COLUNAS_CUSTO_GERAL } from './ui.js';
+import { initPlanoMestre } from './plano_mestre.js';
+import { initImportPlanoMestre } from './import_plano_mestre.js';
 import { renderPrevisoes } from './previsoes.js';
-import { initAlertas, toggleAlertasPanel } from './alertas.js?v=999';
-import { initCopiloto } from './copiloto.js?v=999';
-import { initIndicadores, initConfiabilidade } from './indicadores.js?v=4';
+import { initAlertas, toggleAlertasPanel } from './alertas.js';
+import { initCopiloto } from './copiloto.js';
+import { initIndicadores, initConfiabilidade } from './indicadores.js';
 
 let registros = [];
 let registrosCustoGeral = [];
@@ -5526,7 +5526,7 @@ document.addEventListener('DOMContentLoaded', () => {
       window.budgetMetadata.responsaveis = userAreas;
 
       // Salvar no Supabase (merge: preserva ferramentaria, facilities, data_importacao da AOP)
-      import('./db.js?v=999').then(async (m) => {
+      import('./db.js').then(async (m) => {
         const supabase = m.getClient();
         await supabase.from('custo_geral').delete().eq('it_codigo', 'BUDGET_METADATA');
         await supabase.from('custo_geral').insert([{

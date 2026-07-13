@@ -1,4 +1,4 @@
-import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js?v=9';
+import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js';
 import { renderConfiabilidadeCharts, destroyConfiabCharts } from './charts.js?v=999';
 
 export async function initIndicadores() {

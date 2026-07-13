@@ -1,5 +1,5 @@
 // js/alertas.js — Módulo de Alertas de Tendência
-import { getClient } from './db.js?v=46';
+import { getClient } from './db.js';
 
 let alertasData = [];
 
