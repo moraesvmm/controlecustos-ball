@@ -1364,7 +1364,7 @@ async function init() {
           renderMinhasTarefas(true);
         }, 1000);
       }
-    } catch (e) { console.warn('Tarefas table not ready yet', e.message); }
+      }
   } catch (e) {
     $('#appStatus').textContent = 'Erro: ' + e.message;
     return;
