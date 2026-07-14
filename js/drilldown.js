@@ -146,10 +146,10 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
 
         const hasFoto = !!r.foto_url;
         const fotoHtml = `
-        <div class="drill-item-foto" data-id="${r.id}">
+        <div class="drill-item-foto" data-id="${r.id}" style="margin-bottom: 0.5rem;">
           ${hasFoto
             ? `<img src="${r.foto_url}" alt="Foto RC ${r.rc || ''}" loading="lazy" class="drill-foto-img" />`
-            : `<em class="drill-no-media">Nenhum registro de mídia</em>`
+            : `<em class="drill-no-media">Nenhum registro de imagem</em>`
           }
           <div class="drill-foto-actions">
             <label class="btn-ghost btn-sm drill-foto-upload-label">
@@ -157,6 +157,27 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
               <input type="file" accept="image/*" class="foto-input-hidden drill-foto-input" data-id="${r.id}" />
             </label>
             ${hasFoto ? `<button type="button" class="btn-ghost btn-sm btn-danger-text drill-foto-remove" data-id="${r.id}">Remover</button>` : ''}
+          </div>
+        </div>`;
+
+        const hasPdf = !!r.pdf_url;
+        const pdfHtml = `
+        <div class="drill-item-pdf" data-id="${r.id}" style="border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="background: rgba(239,68,68,0.1); color: #ef4444; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+              📄
+            </div>
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem; color: var(--text);">Porta-documentos</div>
+              <div style="font-size: 0.75rem; color: var(--muted);">${hasPdf ? 'Documento anexado' : 'Nenhum PDF vinculado'}</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            ${hasPdf ? `<a href="${r.pdf_url}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; border-color: var(--primary); color: var(--primary);">Visualizar</a>` : ''}
+            <label class="btn-ghost btn-sm" style="cursor:pointer; font-size: 0.75rem; padding: 0.3rem 0.6rem; color: var(--text-light); border: 1px solid var(--border); border-radius: 6px;">
+              ${hasPdf ? 'Substituir' : 'Anexar PDF'}
+              <input type="file" accept="application/pdf" class="pdf-input-hidden drill-pdf-input" data-id="${r.id}" style="display:none;" />
+            </label>
           </div>
         </div>`;
 
@@ -255,6 +276,7 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
           Última alteração por: <strong>${r.last_modified_by}</strong> em ${r.last_modified_at ? new Date(r.last_modified_at).toLocaleString('pt-BR') : '—'}
         </div>` : ''}
         ${fotoHtml}
+        ${pdfHtml}
       </article>`;
       })
       .join('');
@@ -290,7 +312,6 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
         const reader = new FileReader();
         reader.onload = () => {
           if (onSavePhotoCallback) {
-            // COMPRESSÃO NO FRONT-END
             const img = new Image();
             img.onload = () => {
               const canvas = document.createElement('canvas');
@@ -313,38 +334,43 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
               canvas.height = height;
               const ctx = canvas.getContext('2d');
               ctx.drawImage(img, 0, 0, width, height);
-              const compressedDataUrl = canvas.toDataURL('image/webp', 0.6); // 60% quality WEBP
-              onSavePhotoCallback(id, compressedDataUrl);
+              const compressedDataUrl = canvas.toDataURL('image/webp', 0.6);
+              onSavePhotoCallback(id, compressedDataUrl, 'foto');
             };
             img.src = reader.result;
           }
           const container = lista.querySelector(`.drill-item-foto[data-id="${id}"]`);
           if (container) {
-            const existingImg = container.querySelector('.drill-foto-img');
-            const placeholder = container.querySelector('.drill-no-media');
-            if (existingImg) {
-              existingImg.src = reader.result;
-            } else {
-              if (placeholder) placeholder.remove();
-              const img = document.createElement('img');
-              img.src = reader.result;
-              img.alt = 'Foto RC';
-              img.className = 'drill-foto-img';
-              img.loading = 'lazy';
-              container.prepend(img);
-            }
-            const actionsDiv = container.querySelector('.drill-foto-actions');
-            if (actionsDiv && !actionsDiv.querySelector('.drill-foto-remove')) {
-              const rmBtn = document.createElement('button');
-              rmBtn.type = 'button';
-              rmBtn.className = 'btn-ghost btn-sm btn-danger-text drill-foto-remove';
-              rmBtn.dataset.id = id;
-              rmBtn.textContent = 'Remover';
-              rmBtn.addEventListener('click', () => handleRemovePhoto(id, lista));
-              actionsDiv.appendChild(rmBtn);
-            }
-            const lbl = actionsDiv?.querySelector('.drill-foto-upload-label');
-            if (lbl) lbl.childNodes[0].textContent = '📷 Trocar foto';
+            container.innerHTML = `<div style="text-align:center; padding:1rem;"><div style="width:24px;height:24px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div><span style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;display:block;">Processando...</span></div>`;
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    });
+
+    lista.querySelectorAll('.drill-pdf-input').forEach((input) => {
+      input.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (file.type !== 'application/pdf') {
+          alert('Por favor, selecione apenas arquivos PDF.');
+          e.target.value = '';
+          return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          alert('PDF muito grande. Máximo 5 MB.');
+          e.target.value = '';
+          return;
+        }
+        const id = input.dataset.id;
+        const reader = new FileReader();
+        reader.onload = () => {
+          if (onSavePhotoCallback) {
+            onSavePhotoCallback(id, reader.result, 'pdf');
+          }
+          const container = lista.querySelector(`.drill-item-pdf[data-id="${id}"]`);
+          if (container) {
+            container.innerHTML = `<div style="text-align:center; width:100%;"><div style="width:24px;height:24px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div><span style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;display:block;">Salvando PDF...</span></div>`;
           }
         };
         reader.readAsDataURL(file);

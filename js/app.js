@@ -30,13 +30,14 @@ import {
   confirmar,
   fmtMoeda,
 } from './ui.js';
-import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js';
+import { abrirDrilldown, fecharDrilldown, setDrilldownEditHandler, setDrilldownPhotoHandler, setDrilldownViewHandler } from './drilldown.js?v=3';
 import { initExcelImport } from './import_excel.js';
 
 import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './import_excel_preventiva.js';
 
-import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF } from './pdf_report.js';
-import { initExcelImportCustoGeral } from './import_custo_geral.js';
+import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF, gerarChecklistRetomadaPDF } from './pdf_report.js?v=17';
+window.gerarChecklistRetomadaPDF = gerarChecklistRetomadaPDF;
+import { initExcelImportCustoGeral } from './import_custo_geral.js?v=6';
 import { COLUNAS_CUSTO_GERAL } from './ui.js';
 import { initPlanoMestre } from './plano_mestre.js';
 import { initImportPlanoMestre } from './import_plano_mestre.js';
@@ -83,6 +84,7 @@ let viewAtual = 'dashboard';
 let editando = null;
 let linhaSelecionadaId = null;
 let fotoUrlAtual = null;
+let pdfUrlAtual = null;
 let isInlineEditMode = false;
 let isAppInitialized = false;
 let machines = [];
@@ -1169,6 +1171,35 @@ function abrirModal(id) {
   $('#btnExcluirModal').style.display = editando.id ? 'inline-flex' : 'none';
   $('#modalTitulo').textContent = id ? 'Editar registro' : 'Novo registro';
   
+  // Mídia (Foto)
+  fotoUrlAtual = editando.foto_url || null;
+  const fotoPreview = $('#fotoPreview');
+  const fotoPlaceholder = $('#fotoPlaceholder');
+  const btnRemoverFoto = $('#btnRemoverFoto');
+  if (fotoUrlAtual) {
+    fotoPreview.src = fotoUrlAtual;
+    fotoPreview.style.display = 'block';
+    if (fotoPlaceholder) fotoPlaceholder.style.display = 'none';
+    if (btnRemoverFoto) btnRemoverFoto.style.display = 'inline-block';
+  } else {
+    fotoPreview.src = '';
+    fotoPreview.style.display = 'none';
+    if (fotoPlaceholder) fotoPlaceholder.style.display = 'block';
+    if (btnRemoverFoto) btnRemoverFoto.style.display = 'none';
+  }
+
+  // Mídia (PDF)
+  pdfUrlAtual = editando.pdf_url || null;
+  const pdfPlaceholder = $('#pdfPlaceholder');
+  const btnRemoverPdf = $('#btnRemoverPdf');
+  if (pdfUrlAtual) {
+    if (pdfPlaceholder) pdfPlaceholder.textContent = 'PDF Anexado';
+    if (btnRemoverPdf) btnRemoverPdf.style.display = 'inline-block';
+  } else {
+    if (pdfPlaceholder) pdfPlaceholder.textContent = 'Nenhum PDF selecionado';
+    if (btnRemoverPdf) btnRemoverPdf.style.display = 'none';
+  }
+
   const btnSalvar = $('#formRegistro').querySelector('button[type="submit"]');
   if (btnSalvar) {
     btnSalvar.disabled = false;
@@ -1203,6 +1234,8 @@ async function salvarForm(e) {
     previsao_entrega: f.previsao_entrega.value || null,
     data_recebimento: f.data_recebimento.value || null,
     comentario: f.comentario.value,
+    foto_url: fotoUrlAtual,
+    pdf_url: pdfUrlAtual,
   };
   const btnSalvar = $('#formRegistro').querySelector('button[type="submit"]');
   if (btnSalvar) {
@@ -1438,17 +1471,23 @@ async function init() {
       if (tr) tr.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 300);
   });
-  setDrilldownPhotoHandler(async (id, dataUrl) => {
+  setDrilldownPhotoHandler(async (id, dataUrl, tipoMedia = 'foto') => {
     const r = registros.find((x) => String(x.id) === String(id));
     if (!r) return;
     try {
-      const salvo = await salvarRegistro({ ...r, foto_url: dataUrl });
+      const payload = { ...r };
+      if (tipoMedia === 'pdf') {
+        payload.pdf_url = dataUrl;
+      } else {
+        payload.foto_url = dataUrl;
+      }
+      const salvo = await salvarRegistro(payload);
       const idx = registros.findIndex(x => String(x.id) === String(salvo.id));
       if (idx !== -1) registros[idx] = salvo;
-      toast('Mídia da RC atualizada.', 'success');
+      toast(`Mídia da RC atualizada (${tipoMedia.toUpperCase()}).`, 'success');
       refresh();
     } catch (err) {
-      toast('Erro ao atualizar mídia: ' + err.message, 'error');
+      toast(`Erro ao atualizar ${tipoMedia}: ` + err.message, 'error');
     }
   });
 
@@ -1694,6 +1733,15 @@ async function init() {
   $('#btnExportarLinhaExcelFE')?.addEventListener('click', handleExportExcelLinha);
   $('#btnExportarLinhaPDF')?.addEventListener('click', handleExportPDFLinha);
   $('#btnExportarLinhaPDFFE')?.addEventListener('click', handleExportPDFLinha);
+
+  $('#btnExportarRetomadaPDF')?.addEventListener('click', () => {
+  if (typeof window.getDadosFiltradosRL05 !== 'function') {
+    alert('O módulo Retomada L05 não está pronto. Abra a seção e tente novamente.');
+    return;
+  }
+  const dados = window.getDadosFiltradosRL05();
+  gerarChecklistRetomadaPDF(dados);
+});
   $('#btnLimparFiltros').addEventListener('click', () => {
     filtros = { natureza: 'TODOS', status: 'TODOS', criticidade: 'TODOS', linha: 'TODOS', maquina: 'TODOS', fornecedor: 'TODOS', busca: '' };
     document.querySelectorAll('.filters select, .filters input').forEach((el) => {
@@ -1715,6 +1763,79 @@ async function init() {
     if (f?.item_id) f.item_id.value = proximoItemId(registros, f.natureza.value);
   });
   $('#formRegistro').addEventListener('submit', salvarForm);
+  
+  // Handlers para Foto e PDF na modal de criação
+  $('#inputFoto')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Imagem muito grande. Máximo 2 MB.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+        const max_size = 800;
+        if (width > height) {
+          if (width > max_size) { height *= max_size / width; width = max_size; }
+        } else {
+          if (height > max_size) { width *= max_size / height; height = max_size; }
+        }
+        canvas.width = width; canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        fotoUrlAtual = canvas.toDataURL('image/webp', 0.6);
+        $('#fotoPreview').src = fotoUrlAtual;
+        $('#fotoPreview').style.display = 'block';
+        $('#fotoPlaceholder').style.display = 'none';
+        $('#btnRemoverFoto').style.display = 'inline-block';
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  $('#btnRemoverFoto')?.addEventListener('click', () => {
+    fotoUrlAtual = null;
+    $('#fotoPreview').src = '';
+    $('#fotoPreview').style.display = 'none';
+    $('#fotoPlaceholder').style.display = 'block';
+    $('#btnRemoverFoto').style.display = 'none';
+    $('#inputFoto').value = '';
+  });
+
+  $('#inputPdf')?.addEventListener('change', (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') {
+      alert('Por favor, selecione apenas arquivos PDF.');
+      e.target.value = '';
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('PDF muito grande. Máximo 5 MB.');
+      e.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      pdfUrlAtual = reader.result;
+      $('#pdfPlaceholder').textContent = 'PDF Anexado';
+      $('#btnRemoverPdf').style.display = 'inline-block';
+    };
+    reader.readAsDataURL(file);
+  });
+  $('#btnRemoverPdf')?.addEventListener('click', () => {
+    pdfUrlAtual = null;
+    $('#pdfPlaceholder').textContent = 'Nenhum PDF selecionado';
+    $('#btnRemoverPdf').style.display = 'none';
+    $('#inputPdf').value = '';
+  });
+
   $('#drillFechar').addEventListener('click', fecharDrilldown);
   $('#drillOverlay').addEventListener('click', fecharDrilldown);
 
@@ -3229,11 +3350,17 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('.btn-detalhes-prev')) {
     const bar = e.target.closest('.row-action-bar');
     if (bar) {
-      const view = bar.closest('.view');
+      // Find the closest wrapper (view, or table-scroll-main, or rl05-wrapper)
+      let view = bar.closest('.view') || bar.closest('#view-planos-manutencao-frontend') || bar.parentElement;
       if (view) {
         const selectedTr = view.querySelector('tbody tr.row-selected');
         if (selectedTr) {
-          selectedTr.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+          const btnViewDetails = selectedTr.querySelector('button[title="Ver Detalhes"]') || selectedTr.querySelector('button[title="Ver detalhes"]');
+          if (btnViewDetails) {
+            btnViewDetails.click();
+          } else {
+            selectedTr.dispatchEvent(new MouseEvent('dblclick', { bubbles: true, cancelable: true }));
+          }
         }
       }
     }
@@ -4688,7 +4815,7 @@ function renderTabelaCustoGeral() {
   // --- FIM DOS CÁLCULOS DO BUDGET ---
 
   function renderChartsCustoGeral(todosRegistros, budgetMensal) {
-    if (!window.Chart) return;
+    if (!window.echarts) return;
     
     // 1. Processar dados para Gráfico de Evolução (Agrupado por Mês e Área)
     let mesesArr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
@@ -4700,7 +4827,7 @@ function renderTabelaCustoGeral() {
     let ccMap = {};
     
     for (let r of todosRegistros) {
-      if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA') continue;
+      if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA' || r.it_codigo === 'DIFF_METADATA') continue;
       
       let custo = Number(r.custo_do_mes) || 0;
       if (custo === 0) continue;
@@ -4731,140 +4858,123 @@ function renderTabelaCustoGeral() {
     // --- Renderizar Gráfico de Evolução (Misto) ---
     const ctxEvolucao = document.getElementById('chartEvolucaoCustos');
     if (ctxEvolucao) {
-      if (chartEvolucaoCustoGeralInst) chartEvolucaoCustoGeralInst.destroy();
-      
+      let chartEvolucao = echarts.getInstanceByDom(ctxEvolucao) || echarts.init(ctxEvolucao);
       let budgetLine = new Array(12).fill(budgetMensal);
       
-      chartEvolucaoCustoGeralInst = new Chart(ctxEvolucao, {
-        type: 'bar',
-        data: {
-          labels: mesesArr,
-          datasets: [
-            {
-              type: 'line',
-              label: 'Budget (Meta Mensal)',
-              data: budgetLine,
-              borderColor: 'rgba(255, 255, 255, 0.6)',
-              borderWidth: 2,
-              borderDash: [5, 5],
-              fill: false,
-              tension: 0.4,
-              pointRadius: 0,
-              pointHoverRadius: 4
-            },
-            {
-              label: 'Manutenção',
-              data: dadosManut,
-              backgroundColor: '#3b82f6',
-              borderRadius: 4,
-              stack: 'Stack 0',
-            },
-            {
-              label: 'Ferramentaria',
-              data: dadosFerram,
-              backgroundColor: '#8b5cf6',
-              borderRadius: 4,
-              stack: 'Stack 0',
-            },
-            {
-              label: 'Facilities',
-              data: dadosFacil,
-              backgroundColor: '#10b981',
-              borderRadius: 4,
-              stack: 'Stack 0',
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: { color: '#a1a1aa', font: { family: 'Inter, sans-serif' } },
-              position: 'bottom'
-            },
-            tooltip: {
-              mode: 'index',
-              intersect: false,
-              callbacks: {
-                label: function(context) {
-                  let label = context.dataset.label || '';
-                  if (label) label += ': ';
-                  if (context.parsed.y !== null) label += fmtMoeda(context.parsed.y);
-                  return label;
-                }
-              }
-            }
-          },
-          scales: {
-            x: {
-              stacked: true,
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { color: '#a1a1aa' }
-            },
-            y: {
-              stacked: true,
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { 
-                color: '#a1a1aa',
-                callback: function(value) { return 'R$ ' + (value/1000).toFixed(0) + 'k'; }
-              }
-            }
+      let optionEvolucao = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: function(params) {
+            let res = params[0].axisValue + '<br/>';
+            params.forEach(p => {
+              res += p.marker + p.seriesName + ': R$ ' + p.value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '<br/>';
+            });
+            return res;
           }
-        }
-      });
+        },
+        legend: {
+          data: ['Budget (Meta Mensal)', 'Manutenção', 'Ferramentaria', 'Facilities'],
+          bottom: 0,
+          textStyle: { color: '#a1a1aa' }
+        },
+        grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+        xAxis: [
+          {
+            type: 'category',
+            data: mesesArr,
+            axisLabel: { color: '#a1a1aa' }
+          }
+        ],
+        yAxis: [
+          {
+            type: 'value',
+            axisLabel: {
+              color: '#a1a1aa',
+              formatter: function(val) { return 'R$ ' + (val/1000).toFixed(0) + 'k'; }
+            },
+            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        ],
+        series: [
+          {
+            name: 'Budget (Meta Mensal)',
+            type: 'line',
+            data: budgetLine,
+            itemStyle: { color: '#ffffff' },
+            lineStyle: { type: 'dashed', width: 2, opacity: 0.6 },
+            symbol: 'none'
+          },
+          {
+            name: 'Manutenção',
+            type: 'bar',
+            stack: 'Total',
+            data: dadosManut,
+            itemStyle: { color: '#3b82f6', borderRadius: [0, 0, 0, 0] }
+          },
+          {
+            name: 'Ferramentaria',
+            type: 'bar',
+            stack: 'Total',
+            data: dadosFerram,
+            itemStyle: { color: '#8b5cf6', borderRadius: [0, 0, 0, 0] }
+          },
+          {
+            name: 'Facilities',
+            type: 'bar',
+            stack: 'Total',
+            data: dadosFacil,
+            itemStyle: { color: '#10b981', borderRadius: [4, 4, 0, 0] }
+          }
+        ]
+      };
+      chartEvolucao.setOption(optionEvolucao);
     }
 
     // --- Renderizar Gráfico de Estratificação por C.C. ---
     const ctxCC = document.getElementById('chartEstratificacaoCC');
     if (ctxCC) {
-      if (chartEstratificacaoCCIst) chartEstratificacaoCCIst.destroy();
+      let chartCC = echarts.getInstanceByDom(ctxCC) || echarts.init(ctxCC);
       
       // Pegar top 10 maiores C.C.s
       let ccArray = Object.keys(ccMap).map(key => ({ nome: key, valor: ccMap[key] }));
       ccArray.sort((a, b) => b.valor - a.valor);
       ccArray = ccArray.slice(0, 10);
+      ccArray.reverse(); // ECharts desenha de baixo para cima
       
-      chartEstratificacaoCCIst = new Chart(ctxCC, {
-        type: 'bar',
-        data: {
-          labels: ccArray.map(item => item.nome),
-          datasets: [{
-            label: 'Custo Realizado (Acumulado)',
-            data: ccArray.map(item => item.valor),
-            backgroundColor: 'rgba(59, 130, 246, 0.7)',
-            borderColor: '#3b82f6',
-            borderWidth: 1,
-            borderRadius: 4
-          }]
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: function(context) { return fmtMoeda(context.parsed.x); }
-              }
-            }
-          },
-          scales: {
-            x: {
-              grid: { color: 'rgba(255,255,255,0.05)' },
-              ticks: { 
-                color: '#a1a1aa',
-                callback: function(value) { return 'R$ ' + (value/1000).toFixed(0) + 'k'; }
-              }
-            },
-            y: {
-              grid: { display: false },
-              ticks: { color: '#a1a1aa', font: { size: 10 } }
-            }
+      let optionCC = {
+        tooltip: {
+          trigger: 'axis',
+          axisPointer: { type: 'shadow' },
+          formatter: function(params) {
+            let p = params[0];
+            return p.name + '<br/>' + p.marker + 'Custo Realizado: R$ ' + p.value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
           }
-        }
-      });
+        },
+        grid: { left: '3%', right: '4%', bottom: '5%', top: '5%', containLabel: true },
+        xAxis: {
+          type: 'value',
+          axisLabel: {
+            color: '#a1a1aa',
+            formatter: function(val) { return 'R$ ' + (val/1000).toFixed(0) + 'k'; }
+          },
+          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
+        },
+        yAxis: {
+          type: 'category',
+          data: ccArray.map(item => item.nome),
+          axisLabel: { color: '#a1a1aa', fontSize: 10, width: 100, overflow: 'truncate' }
+        },
+        series: [
+          {
+            name: 'Custo Realizado',
+            type: 'bar',
+            data: ccArray.map(item => item.valor),
+            itemStyle: { color: '#3b82f6', borderRadius: [0, 4, 4, 0] }
+          }
+        ]
+      };
+      chartCC.setOption(optionCC);
     }
 
     // --- Processar dados para Radar (Técnico x Linha) ---
@@ -4873,7 +4983,7 @@ function renderTabelaCustoGeral() {
     let relacao = {}; // { tecnico: { linha: custo } }
     
     for (let r of todosRegistros) {
-      if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA') continue;
+      if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA' || r.it_codigo === 'DIFF_METADATA') continue;
       let custo = Number(r.custo_cc) || 0;
       if (custo === 0) continue;
       
@@ -4892,64 +5002,71 @@ function renderTabelaCustoGeral() {
     let topLinhas = Object.keys(linhaMap).map(k => ({nome: k, val: linhaMap[k]})).sort((a,b) => b.val - a.val).slice(0, 5).map(x => x.nome);
     let topTecnicos = Object.keys(tecnicoMap).map(k => ({nome: k, val: tecnicoMap[k]})).sort((a,b) => b.val - a.val).slice(0, 5).map(x => x.nome);
     
-    const colorsRadar = [
-      { bg: 'rgba(59, 130, 246, 0.2)', border: '#3b82f6' }, // Blue
-      { bg: 'rgba(139, 92, 246, 0.2)', border: '#8b5cf6' }, // Purple
-      { bg: 'rgba(16, 185, 129, 0.2)', border: '#10b981' }, // Emerald
-      { bg: 'rgba(245, 158, 11, 0.2)', border: '#f59e0b' }, // Amber
-      { bg: 'rgba(239, 68, 68, 0.2)', border: '#ef4444' }   // Red
-    ];
+    const colorsRadar = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
     
     let radarDatasets = topTecnicos.map((tec, i) => {
       let data = topLinhas.map(l => (relacao[tec] && relacao[tec][l]) ? relacao[tec][l] : 0);
       return {
-        label: tec.split(' ')[0], // Pega só o primeiro nome para a legenda não ficar gigante
-        data: data,
-        backgroundColor: colorsRadar[i % colorsRadar.length].bg,
-        borderColor: colorsRadar[i % colorsRadar.length].border,
-        pointBackgroundColor: colorsRadar[i % colorsRadar.length].border,
-        borderWidth: 2,
-        pointRadius: 3,
-        pointHoverRadius: 5
+        name: tec.split(' ')[0], // Pega só o primeiro nome
+        value: data,
+        itemStyle: { color: colorsRadar[i % colorsRadar.length] },
+        lineStyle: { width: 2 }
       };
     });
 
     const ctxRadar = document.getElementById('chartRadarTecnicos');
     if (ctxRadar) {
-      if (chartRadarTecnicosInst) chartRadarTecnicosInst.destroy();
+      let chartRadar = echarts.getInstanceByDom(ctxRadar) || echarts.init(ctxRadar);
       
-      let radarLabels = topLinhas.map(l => l.length > 15 ? l.substring(0, 15) + '...' : l);
-      
-      chartRadarTecnicosInst = new Chart(ctxRadar, {
-        type: 'radar',
-        data: {
-          labels: radarLabels,
-          datasets: radarDatasets
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: '#a1a1aa', font: { size: 10 }, boxWidth: 10, padding: 8 }
-            },
-            tooltip: {
-              callbacks: {
-                label: function(context) { return context.dataset.label + ': ' + fmtMoeda(context.parsed.r); }
-              }
-            }
-          },
-          scales: {
-            r: {
-              angleLines: { color: 'rgba(255,255,255,0.1)' },
-              grid: { color: 'rgba(255,255,255,0.1)' },
-              pointLabels: { color: '#e4e4e7', font: { size: 10, family: 'Inter' } },
-              ticks: { display: false } // Ocultar os números feios do fundo da teia
-            }
-          }
-        }
+      // Calculate max for radar axis (max cost per line)
+      let maxCustos = topLinhas.map(l => {
+          let maxTecn = 0;
+          topTecnicos.forEach(tec => {
+              if(relacao[tec] && relacao[tec][l] > maxTecn) maxTecn = relacao[tec][l];
+          });
+          return maxTecn;
       });
+      let maxGlobal = Math.max(...maxCustos) || 1;
+      
+      let radarLabels = topLinhas.map(l => {
+         return { name: l.length > 15 ? l.substring(0, 15) + '...' : l, max: maxGlobal * 1.1 };
+      });
+      
+      let optionRadar = {
+        tooltip: {
+          trigger: 'item',
+          formatter: function(params) {
+            let res = params.name + '<br/>';
+            for (let i = 0; i < params.value.length; i++) {
+               res += topLinhas[i] + ': R$ ' + params.value[i].toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '<br/>';
+            }
+            return res;
+          }
+        },
+        legend: {
+          data: radarDatasets.map(d => d.name),
+          bottom: 0,
+          textStyle: { color: '#a1a1aa', fontSize: 10 }
+        },
+        radar: {
+          indicator: radarLabels.length ? radarLabels : [{name:'N/A', max:1}],
+          splitNumber: 4,
+          axisName: { color: '#e4e4e7', fontSize: 10, fontFamily: 'Inter' },
+          splitArea: { show: false },
+          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
+          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+        },
+        series: [
+          {
+            type: 'radar',
+            data: radarDatasets,
+            symbol: 'circle',
+            symbolSize: 4,
+            areaStyle: { opacity: 0.2 }
+          }
+        ]
+      };
+      chartRadar.setOption(optionRadar);
     }
   }
 

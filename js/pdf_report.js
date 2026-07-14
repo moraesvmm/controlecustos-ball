@@ -1,4 +1,4 @@
-import { fmtMoeda, loadScript } from './ui.js';
+import { fmtMoeda, loadScript, toast } from './ui.js';
 import { agregarFornecedores } from './logic.js';
 
 // Estilos injetados para o PDF corporativo
@@ -929,3 +929,142 @@ export async function gerarChecklistPlanoMestrePDF(atividades, maquinasArray) {
   }
 }
 
+export async function gerarChecklistRetomadaPDF(atividades) {
+  try {
+    await loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js');
+  } catch (e) {}
+  if (typeof html2pdf === 'undefined') {
+    alert('A biblioteca de PDF não foi carregada.');
+    return;
+  }
+
+  if (atividades.length === 0) {
+    alert('Nenhuma atividade filtrada para exportar.');
+    return;
+  }
+
+  const porMaquina = {};
+  atividades.forEach(a => {
+    const maq = a.maquina || 'Sem Máquina';
+    if (!porMaquina[maq]) porMaquina[maq] = [];
+    porMaquina[maq].push(a);
+  });
+
+  const maquinas = Object.keys(porMaquina).sort();
+  const container = document.createElement('div');
+  container.className = 'pdf-report-container';
+
+  let htmlContent = `
+    ${getPDFStyles()}
+    <style>
+      .pdf-report-container { width: 710px !important; }
+      .machine-section { margin-bottom: 30px; page-break-inside: auto; }
+      .machine-header { page-break-after: avoid; break-after: avoid; }
+      .chk-table { margin-bottom: 20px; width: 100%; border-collapse: collapse; }
+      .chk-table th, .chk-table td { border: 1px solid #e2e8f0; padding: 8px 10px; font-size: 11px; }
+      .chk-table th { background: #f8fafc; color: #334155; font-weight: 600; text-transform: uppercase; }
+      .chk-table tr { page-break-inside: avoid; break-inside: avoid; }
+      .signature-block { display: flex; justify-content: space-between; margin-top: 50px; page-break-inside: avoid; }
+      .signature-line { width: 30%; border-top: 1px solid #cbd5e1; text-align: center; padding-top: 5px; font-size: 11px; color: #475569; }
+      .fill-box { display: inline-block; height: 18px; border-bottom: 1px solid #64748b; margin-left: 2px; }
+      .text-center { text-align: center; }
+    </style>
+    ${buildHeader('Checklist - Retomada Linha 05')}
+  `;
+
+  maquinas.forEach(maq => {
+    let totalHh = 0;
+    porMaquina[maq].forEach(a => {
+      totalHh += parseFloat(a.duracao) || 0;
+    });
+
+    htmlContent += `
+      <div class="machine-section">
+      <div class="machine-header pdf-section-title" style="margin-top: 25px; margin-bottom: 5px; color: #1e293b; border-bottom: 2px solid #3b82f6; display: flex; justify-content: space-between; align-items: baseline;">
+        <span>MÁQUINA: ${maq}</span>
+        <span style="font-size: 11px; font-weight: normal; color: #64748b;">
+          Total H-H Estimado: ${totalHh.toFixed(1)}h
+        </span>
+      </div>
+      <table class="chk-table" style="margin-bottom: 5px;">
+        <thead>
+          <tr>
+            <th style="width: 8%;">OS</th>
+            <th style="width: 32%;">ATIVIDADE / DESCRIÇÃO</th>
+            <th style="width: 15%;">PROF. / HH</th>
+            <th style="width: 15%; text-align:center;">% EXEC. REAL</th>
+            <th style="width: 15%; text-align:center;">VISTO</th>
+            <th style="width: 15%; text-align:center;">DATA</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    porMaquina[maq].forEach((a, idx) => {
+      const borderStyle = idx === 0 ? 'border-top: 2px solid #cbd5e1;' : 'border-top: 1px solid #e2e8f0;';
+      const osText = a.os || '-';
+      const descricaoSafe = (a.descricao || '-').replace(/\r/g, '').replace(/\n/g, '<br>');
+      const prof = a.profissional || 'N/A';
+      const hh = a.duracao ? a.duracao + 'h' : '-';
+
+      htmlContent += `
+        <tr style="${borderStyle}">
+          <td style="text-align: center; font-size: 9px; font-weight: bold;">${osText}</td>
+          <td style="vertical-align: top;">
+            <div style="font-size: 10px; font-weight: 600;">${descricaoSafe}</div>
+            <div style="font-size: 9px; color: #64748b; margin-top: 3px;">Previsto no Sistema: ${a.perc_execucao || 0}%</div>
+          </td>
+          <td style="vertical-align: middle;">
+            <div style="font-weight: 600;">${prof}</div>
+            <div style="font-size: 9px; color: #64748b;">Est: ${hh}</div>
+          </td>
+          <td style="vertical-align: middle; text-align: center; white-space: nowrap;">
+            <span style="color:#94a3b8; font-size: 10px;">[</span>
+            <span class="fill-box" style="width:30px;"></span>
+            <span style="color:#94a3b8; font-size: 10px;">%]</span>
+          </td>
+          <td style="vertical-align: middle; text-align: center;">
+            <span class="fill-box" style="width:60px;"></span>
+          </td>
+          <td style="vertical-align: middle; text-align: center;">
+            <span style="color:#94a3b8; font-size: 10px;">__/__/____</span>
+          </td>
+        </tr>
+      `;
+    });
+
+    htmlContent += `
+        </tbody>
+      </table>
+      </div>
+    `;
+  });
+
+  htmlContent += `
+    <div class="signature-block">
+      <div class="signature-line">Assinatura do Técnico / Executante</div>
+      <div class="signature-line">Assinatura do Supervisor</div>
+      <div class="signature-line">Data de Entrega</div>
+    </div>
+  `;
+
+  container.innerHTML = htmlContent;
+
+  const opt = {
+    margin:       0.4,
+    filename:     'Checklist_Retomada_L05.pdf',
+    image:        { type: 'jpeg', quality: 1.0 },
+    html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' },
+    pagebreak:    { mode: ['css', 'legacy'] }
+  };
+
+  try {
+    toast('Gerando PDF...', 'info');
+    await html2pdf().set(opt).from(container.outerHTML).save();
+    toast('PDF gerado com sucesso!', 'success');
+  } catch (err) {
+    console.error('Erro na exportacao PDF Retomada L05:', err);
+    toast('Erro ao gerar PDF: ' + err.message, 'error');
+  }
+}

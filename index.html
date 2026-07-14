@@ -1423,7 +1423,7 @@
          PLANO MESTRE
          ===================================================== -->
     <div id="view-plano-mestre" class="view">
-      <div class="panel" style="padding: 2rem; max-width: 1200px; margin: 2rem auto;">
+      <div class="panel" style="padding: 2rem; width: 98%; max-width: 1800px; margin: 2rem auto;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
           <div>
             <h3 style="margin:0 0 0.25rem 0;">Plano Mestre de Manutenção</h3>
@@ -1553,33 +1553,37 @@
               <!-- KPI Cards -->
               <div class="rl05-kpi-grid">
                 <div class="rl05-kpi-card">
-                  <div class="rl05-kpi-label">Total</div>
-                  <div class="rl05-kpi-value" id="rl05-kpi-total" style="color: var(--text);">—</div>
+                  <div class="rl05-kpi-label">TOTAL</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-total">—</div>
                 </div>
-                <div class="rl05-kpi-card" style="border-color: rgba(16,185,129,0.2); background: rgba(16,185,129,0.05);">
-                  <div class="rl05-kpi-label" style="color: #10b981;">✅ Concluídas</div>
-                  <div class="rl05-kpi-value" id="rl05-kpi-concluidos" style="color: #10b981;">—</div>
+                <div class="rl05-kpi-card">
+                  <div class="rl05-kpi-label"><span style="color: #10b981; font-size: 0.5rem; margin-right: 6px;">●</span>CONCLUÍDAS</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-concluidos">—</div>
                 </div>
-                <div class="rl05-kpi-card" style="border-color: rgba(245,158,11,0.2); background: rgba(245,158,11,0.05);">
-                  <div class="rl05-kpi-label" style="color: #f59e0b;">🔄 Em Execução</div>
-                  <div class="rl05-kpi-value" id="rl05-kpi-execucao" style="color: #f59e0b;">—</div>
+                <div class="rl05-kpi-card">
+                  <div class="rl05-kpi-label"><span style="color: #f59e0b; font-size: 0.5rem; margin-right: 6px;">●</span>EM EXECUÇÃO</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-execucao">—</div>
                 </div>
-                <div class="rl05-kpi-card" style="border-color: rgba(148,163,184,0.15);">
-                  <div class="rl05-kpi-label">Pendentes</div>
-                  <div class="rl05-kpi-value" id="rl05-kpi-pendentes" style="color: var(--muted);">—</div>
+                <div class="rl05-kpi-card">
+                  <div class="rl05-kpi-label"><span style="color: #94a3b8; font-size: 0.5rem; margin-right: 6px;">●</span>PENDENTES</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-pendentes">—</div>
                 </div>
-                <div class="rl05-kpi-card" style="border-color: rgba(99,102,241,0.2); background: rgba(99,102,241,0.04);">
-                  <div class="rl05-kpi-label" style="color: #818cf8;">HH Estimado</div>
-                  <div class="rl05-kpi-value" id="rl05-kpi-hh" style="color: #818cf8;">—</div>
+                <div class="rl05-kpi-card">
+                  <div class="rl05-kpi-label"><span style="color: #818cf8; font-size: 0.5rem; margin-right: 6px;">●</span>HH ESTIMADO</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-hh">—</div>
                 </div>
-                <div class="rl05-kpi-card" style="border-color: rgba(56,189,248,0.2); background: rgba(56,189,248,0.04);">
-                  <div class="rl05-kpi-label" style="color: #38bdf8;">Máquinas</div>
-                  <div class="rl05-kpi-value" id="rl05-kpi-maquinas" style="color: #38bdf8;">—</div>
+                <div class="rl05-kpi-card">
+                  <div class="rl05-kpi-label"><span style="color: #f472b6; font-size: 0.5rem; margin-right: 6px;">●</span>HH RESTANTE</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-hh-rest">—</div>
+                </div>
+                <div class="rl05-kpi-card">
+                  <div class="rl05-kpi-label">MÁQUINAS</div>
+                  <div class="rl05-kpi-value" id="rl05-kpi-maquinas">—</div>
                 </div>
               </div>
 
               <!-- Filters -->
-              <div class="rl05-filters">
+              <div class="rl05-filters" style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                 <input type="search" class="rl05-filter-input" placeholder="🔍  Buscar por descrição, profissional, OS..." style="flex: 1; min-width: 280px;"
                        oninput="rl05FiltroBusca(this.value)">
                 <select class="rl05-filter-input" id="rl05-filter-maquina" onchange="rl05FiltroMaquina(this.value)" style="min-width: 160px;">
@@ -1591,10 +1595,29 @@
                   <option value="EM EXECUÇÃO">🔄 Em Execução</option>
                   <option value="">— Pendentes</option>
                 </select>
+                <button type="button" class="btn btn-outline" id="btnExportarRetomadaPDF" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(239,68,68,0.4); color: #ef4444; height: 38px;">
+                  <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                  Gerar Checklist (PDF)
+                </button>
+              </div>
+
+              <!-- Action Bar RL05 -->
+              <div class="row-action-bar hidden" id="rowActionBarRL05" aria-live="polite" style="margin: 1.5rem 2rem 0 2rem;">
+                <div class="row-action-info">
+                  <span class="row-action-label" id="rowActionLabelRL05">Linha selecionada</span>
+                  <span class="row-action-hint">Duplo clique na linha para ver todos os detalhes no drilldown</span>
+                </div>
+                <div class="row-action-buttons">
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnRowDetalheRL05">Ver detalhes</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnRowEditarRL05">Editar</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnRowDuplicarRL05">Duplicar</button>
+                  <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnRowExcluirRL05">Excluir</button>
+                  <button type="button" class="btn btn-ghost btn-sm" id="btnRowLimparSelRL05">✕</button>
+                </div>
               </div>
 
               <!-- Grouped table body -->
-              <div style="padding: 1.5rem 2rem 2rem;">
+              <div id="rl05-table-container" style="padding: 1.5rem 2rem 2rem; max-height: 75vh; overflow-y: auto; overflow-x: hidden;">
                 <!-- Populated by JS -->
               </div>
 
@@ -2252,6 +2275,27 @@
             </div>
           </div>
         </div>
+        <div class="form-section">
+          <h3>Anexo de Documento (PDF)</h3>
+          <div class="foto-upload-area" style="background: rgba(0,0,0,0.15); border: 1px dashed var(--border);">
+            <div id="pdfPreviewWrap" class="foto-preview-wrap" style="min-height: auto; padding: 1rem; flex-direction: row; justify-content: space-between; align-items: center; border: none; background: transparent;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="background: rgba(239,68,68,0.1); color: #ef4444; width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem;">📄</div>
+                <div>
+                  <div style="font-weight: 600; font-size: 0.9rem; color: var(--text);">Porta-documentos</div>
+                  <div style="font-size: 0.75rem; color: var(--muted);" id="pdfPlaceholder">Nenhum PDF selecionado</div>
+                </div>
+              </div>
+              <div class="foto-upload-actions" style="margin-top: 0;">
+                <label class="btn btn-ghost btn-sm foto-upload-label" style="border: 1px solid var(--border);">
+                  Anexar PDF
+                  <input type="file" accept="application/pdf" id="inputPdf" class="foto-input-hidden" />
+                </label>
+                <button type="button" class="btn btn-ghost btn-sm btn-danger-text" id="btnRemoverPdf" style="display:none">Remover</button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="form-section calc-section">
           <h3>Campos calculados (somente leitura)</h3>
           <div class="calc-preview" id="calcPreview"></div>
@@ -2496,7 +2540,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=1002"></script>
+  <script type="module" src="js/app.js?v=49"></script>
 
   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
   <div class="modal-overlay" id="modalEditarAtividadePM">
@@ -2680,7 +2724,35 @@ Segue abaixo itens para verificação de atraso.</textarea>
     </div>
   </div>
 
-  <script src="js/retomada_l05.js?v=2"></script>
+  <!-- Modal Edição RL05 (Substitui Swal.fire) -->
+  <div class="modal-overlay" id="modalEditarAtividadeRL05">
+    <div class="modal modal-lg" style="max-width:600px; width:95%; max-height:90vh; overflow-y:auto;">
+      <header class="modal-header">
+        <h2 id="modalAtivTituloRL05">Editar Atividade — Retomada L05</h2>
+        <button type="button" class="btn-icon" id="btnFecharModalAtividadeRL05" aria-label="Fechar">✕</button>
+      </header>
+      <form id="formEditarAtividadeRL05">
+        <input type="hidden" id="editAtivIdRL05" />
+        <div class="form-section">
+          <h3>Detalhes da Atividade</h3>
+          <div class="form-grid">
+            <label class="full"><span>Descrição da Atividade</span>
+              <textarea id="editAtivDescRL05" rows="3" style="width:100%;background:var(--surface,#1e2a45);color:var(--text,#f1f5f9);border:1px solid var(--border,rgba(255,255,255,0.12));border-radius:6px;padding:0.5rem;font-family:'DM Sans',sans-serif;font-size:0.875rem;resize:vertical;" placeholder="Descrição da atividade"></textarea>
+            </label>
+            <label><span>Máquina</span><input type="text" id="editAtivMaquinaRL05" placeholder="Ex: CONIFICADORA" /></label>
+            <label><span>Profissional</span><input type="text" id="editAtivProfissionalRL05" placeholder="Nome do responsável" /></label>
+            <label><span>H-H Previsto (Horas)</span><input type="number" id="editAtivDuracaoRL05" step="0.5" min="0" placeholder="Ex: 5.0" /></label>
+          </div>
+        </div>
+        <footer class="modal-header" style="justify-content:flex-end; gap:0.75rem; border-top:1px solid var(--border); border-bottom:none; padding:1rem 1.5rem; margin-top:1.5rem;">
+          <button type="button" class="btn btn-ghost" id="btnCancelarModalAtividadeRL05">Cancelar</button>
+          <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
+        </footer>
+      </form>
+    </div>
+  </div>
+
+  <script src="js/retomada_l05.js?v=10"></script>
   <script>
     (function() {
       function tryInit() {

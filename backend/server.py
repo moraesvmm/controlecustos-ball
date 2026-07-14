@@ -491,12 +491,18 @@ async def insert_record(table: str, req: Request):
             for row_data in rows_to_insert:
                 if "id" not in row_data or not row_data["id"]:
                     row_data["id"] = str(uuid.uuid4())
-                if "created_at" not in row_data:
+                # Get table columns to avoid injecting non-existent columns
+                cursor_info = conn.execute(f"PRAGMA table_info({table})")
+                table_cols = [col[1] for col in cursor_info.fetchall()]
+                
+                if "created_at" not in row_data and "created_at" in table_cols:
                     row_data["created_at"] = datetime.now().isoformat()
-                if "last_modified_at" not in row_data or not row_data["last_modified_at"]:
+                if ("last_modified_at" not in row_data or not row_data["last_modified_at"]) and "last_modified_at" in table_cols:
                     row_data["last_modified_at"] = datetime.now().isoformat()
                 
-                keys = list(row_data.keys())
+                # Remove any keys that are not in the table
+                keys = [k for k in row_data.keys() if k in table_cols]
+                
                 cols = ", ".join(keys)
                 vals = ", ".join(["?"] * len(keys))
                 query = f"INSERT INTO {table} ({cols}) VALUES ({vals})"
@@ -537,11 +543,27 @@ async def update_record(table: str, req: Request):
     def _do_update():
         conn = get_db()
         try:
-            if "last_modified_at" not in data:
+            # Get table columns to avoid injecting non-existent columns
+            cursor_info = conn.execute(f"PRAGMA table_info({table})")
+            table_cols = [col[1] for col in cursor_info.fetchall()]
+            
+            if "last_modified_at" not in data and "last_modified_at" in table_cols:
                 from datetime import datetime
                 data["last_modified_at"] = datetime.now().isoformat()
             
-            set_clause = ", ".join([f"{k} = ?" for k in data.keys()])
+            # Remove any keys that are not in the table
+            keys = [k for k in data.keys() if k in table_cols]
+            
+            # Re-build values based on the filtered keys
+            values = [data[k] for k in keys]
+            
+            # Re-append query param values (e.g. eq.id=123) for WHERE clause
+            for k, v in req.query_params.items():
+                if v.startswith("eq."):
+                    values.append(v.replace("eq.", ""))
+                    break
+            
+            set_clause = ", ".join([f"{k} = ?" for k in keys])
             query = f"UPDATE {table} SET {set_clause}{where_clause}"
             conn.execute(query, values)
             conn.commit()

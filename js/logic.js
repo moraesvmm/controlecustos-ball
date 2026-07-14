@@ -179,6 +179,12 @@ export function enriquecerRegistro(row) {
     mes_referencia: calcularMesReferencia(row),
     maquina_linha: calcularMaquinaLinha(row),
     dias_fora: calcularDiasFora(row),
+    foto_url: (typeof row.foto_url === 'string' && row.foto_url.includes('|||PDF|||')) 
+      ? (row.foto_url.split('|||PDF|||')[0] || null) 
+      : (typeof row.foto_url === 'string' && row.foto_url.startsWith('data:application/pdf') ? null : row.foto_url),
+    pdf_url: (typeof row.foto_url === 'string' && row.foto_url.includes('|||PDF|||')) 
+      ? (row.foto_url.split('|||PDF|||')[1] || null) 
+      : (typeof row.foto_url === 'string' && row.foto_url.startsWith('data:application/pdf') ? row.foto_url : (row.pdf_url || null)),
   };
 }
 

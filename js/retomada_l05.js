@@ -46,9 +46,18 @@
     const pendentes  = total - concluidos - emExec;
     const hhTotal    = dados.reduce((s, r) => s + (parseFloat(r.duracao) || 0), 0);
     const hhFeito    = dados.filter(r => r.status === 'CONCLUÍDO').reduce((s, r) => s + (parseFloat(r.duracao) || 0), 0);
+    
+    // Cálculo do HH Restante baseado na % de execução de cada atividade
+    let hhRestante = 0;
+    dados.forEach(r => {
+      const d = parseFloat(r.duracao) || 0;
+      const p = parseFloat(r.perc_execucao) || 0;
+      hhRestante += d - (d * (p / 100));
+    });
+
     const percGeral  = total ? Math.round((concluidos / total) * 100) : 0;
     const maquinas   = [...new Set(dados.map(r => r.maquina))].filter(Boolean).length;
-    return { total, concluidos, emExec, pendentes, hhTotal, hhFeito, percGeral, maquinas };
+    return { total, concluidos, emExec, pendentes, hhTotal, hhFeito, hhRestante, percGeral, maquinas };
   }
 
   // -------------- Filtros -----------------
@@ -70,7 +79,7 @@
     // Target the inner container (the last div inside rl05-body)
     const bodyEl = document.getElementById('rl05-body');
     if (!bodyEl) return;
-    const container = bodyEl.querySelector('div:last-child');
+    const container = document.getElementById('rl05-table-container');
     if (!container) return;
 
     const filtrados = dadosFiltrados();
@@ -84,6 +93,7 @@
     if (kEl('rl05-kpi-execucao'))   kEl('rl05-kpi-execucao').textContent = kpis.emExec;
     if (kEl('rl05-kpi-pendentes'))  kEl('rl05-kpi-pendentes').textContent = kpis.pendentes;
     if (kEl('rl05-kpi-hh'))         kEl('rl05-kpi-hh').textContent = kpis.hhTotal.toFixed(0) + 'h';
+    if (kEl('rl05-kpi-hh-rest'))    kEl('rl05-kpi-hh-rest').textContent = kpis.hhRestante.toFixed(1) + 'h';
     if (kEl('rl05-kpi-maquinas'))   kEl('rl05-kpi-maquinas').textContent = kpis.maquinas;
 
     // Atualizar barra de progresso geral
@@ -132,17 +142,21 @@
         <!-- Cabeçalho da Máquina -->
         <div style="background: ${col.bg}; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; user-select: none;"
              onclick="this.closest('.rl05-group').querySelector('.rl05-group-body').classList.toggle('rl05-collapsed')">
-          <div style="display: flex; align-items: center; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
             <span style="background: ${col.border}; color: #fff; font-weight: 700; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.05em;">${maquina}</span>
             <span style="font-weight: 600; font-size: 0.95rem; color: ${col.text};">${rows.length} atividade${rows.length !== 1 ? 's' : ''}</span>
-            <span style="font-size: 0.8rem; color: var(--muted);">· ${mKpis.concluidos} concluída${mKpis.concluidos !== 1 ? 's' : ''} · ${mKpis.hhTotal.toFixed(0)}h estimadas</span>
+            <span style="font-size: 0.8rem; color: var(--muted);">· ${mKpis.concluidos} concluída${mKpis.concluidos !== 1 ? 's' : ''}</span>
+            <span style="font-size: 0.8rem; color: #818cf8; background: rgba(99,102,241,0.1); padding: 2px 6px; border-radius: 4px;">Est: ${mKpis.hhTotal.toFixed(1)}h</span>
+            <span style="font-size: 0.8rem; color: #f472b6; background: rgba(236,72,153,0.1); padding: 2px 6px; border-radius: 4px;">Restam: ${mKpis.hhRestante.toFixed(1)}h</span>
           </div>
-          <div style="display: flex; align-items: center; gap: 1rem;">
-            <!-- Mini progress bar -->
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
             <div style="width: 120px; background: rgba(0,0,0,0.2); border-radius: 50px; height: 6px; overflow: hidden;">
               <div style="height: 100%; width: ${mPerc}%; background: ${mPerc === 100 ? '#10b981' : mPerc > 0 ? '#f59e0b' : '#334155'}; border-radius: 50px; transition: width 0.5s;"></div>
             </div>
             <span style="font-size: 0.85rem; font-weight: 600; color: ${mPerc === 100 ? '#10b981' : mPerc > 0 ? '#f59e0b' : 'var(--muted)'}; min-width: 35px; text-align: right;">${mPerc}%</span>
+            <button type="button" onclick="event.stopPropagation(); window.rl05ExportSectionPDF('${maquina}');" title="Exportar somente ${maquina}" style="background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: inherit; padding: 4px 8px; border-radius: 999px; font-size: 0.78rem; display: inline-flex; align-items: center; gap: 0.25rem; cursor: pointer;">
+              <span style="font-size: 0.92rem; line-height: 1;">📄</span>
+            </button>
             <span style="color: var(--muted); font-size: 1.1rem; transition: transform 0.2s;">▾</span>
           </div>
         </div>
@@ -152,14 +166,14 @@
           <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
               <thead>
-                <tr style="background: rgba(0,0,0,0.15); border-bottom: 1px solid rgba(255,255,255,0.06);">
-                  <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; width: 55px;">ID</th>
-                  <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500;">Descrição</th>
-                  <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; width: 90px;">H-H</th>
-                  <th style="padding: 0.75rem 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; width: 120px;">Profissional</th>
-                  <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; width: 80px;">OS</th>
-                  <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; width: 220px;">% Execução</th>
-                  <th style="padding: 0.75rem 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; width: 130px;">Status</th>
+                <tr style="background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.06);">
+                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 55px; border-bottom: 1px solid rgba(255,255,255,0.08);">ID</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.08);">Descrição</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 90px; border-bottom: 1px solid rgba(255,255,255,0.08);">H-H</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 120px; border-bottom: 1px solid rgba(255,255,255,0.08);">Profissional</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 80px; border-bottom: 1px solid rgba(255,255,255,0.08);">OS</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 220px; border-bottom: 1px solid rgba(255,255,255,0.08);">% Execução</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 130px; border-bottom: 1px solid rgba(255,255,255,0.08);">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -177,7 +191,8 @@
         if (e.key === 'Enter') { e.target.blur(); }
         if (e.key === 'Escape') { e.target.value = e.target.dataset.original; e.target.blur(); }
       });
-      el.addEventListener('change', function() {
+      el.addEventListener('change', function(e) {
+        e.stopPropagation();
         const id = parseInt(this.dataset.id);
         let val = parseFloat(this.value);
         if (isNaN(val) || val < 0) val = 0;
@@ -185,6 +200,7 @@
         this.value = val;
         salvarPerc(id, val, this);
       });
+      el.addEventListener('click', e => e.stopPropagation());
     });
 
     // Attach range listeners
@@ -201,13 +217,16 @@
           bar.style.background = pct >= 100 ? '#10b981' : pct > 0 ? '#f59e0b' : '#334155';
         }
       });
-      el.addEventListener('change', function() {
+      el.addEventListener('change', function(e) {
+        // impede de clicar na linha
+        e.stopPropagation();
         const id = parseInt(this.dataset.id);
         const val = parseFloat(this.value);
         const numInput = document.querySelector(`.rl05-perc-input[data-id="${id}"]`);
         if (numInput) numInput.value = val;
         salvarPerc(id, val, this);
       });
+      el.addEventListener('click', e => e.stopPropagation());
     });
 
     // Attach OS listeners
@@ -216,10 +235,12 @@
         if (e.key === 'Enter') { e.target.blur(); }
         if (e.key === 'Escape') { e.target.value = e.target.dataset.original; e.target.blur(); }
       });
-      el.addEventListener('change', function() {
+      el.addEventListener('change', function(e) {
+        e.stopPropagation();
         const id = parseInt(this.dataset.id);
         salvarOS(id, this.value, this);
       });
+      el.addEventListener('click', e => e.stopPropagation());
     });
   }
 
@@ -254,23 +275,25 @@
       : (r.descricao || '—');
 
     return `
-    <tr data-id="${r.id}" style="background: ${rowBg}; border-left: ${rowBorderLeft}; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s;"
-        onmouseenter="this.style.background='rgba(255,255,255,0.03)'"
-        onmouseleave="this.style.background='${rowBg}'">
-      <td style="padding: 0.875rem 1rem; color: var(--muted); font-family: monospace; font-size: 0.8rem; font-weight: 600;">#${r.id}</td>
-      <td style="padding: 0.875rem 1rem; max-width: 380px;">
-        <div title="${(r.descricao || '').replace(/"/g, '&quot;')}" style="line-height: 1.5; color: ${isConcluido ? 'var(--muted)' : 'var(--text)'}; text-decoration: ${isConcluido ? 'none' : 'none'};">${descTruncated}</div>
+    <tr class="rl05-table-row" data-id="${r.id}" style="background: ${rowBg}; border-left: ${rowBorderLeft}; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s; cursor: pointer;"
+        onclick="this.closest('.rl05-group-body').querySelectorAll('.rl05-table-row').forEach(tr => tr.style.backgroundColor=''); window.selecionarLinhaRL05('${r.id}')"
+        ondblclick="window.abrirDetalheRL05('${r.id}')"
+        onmouseenter="if(!this.classList.contains('rl05-selected')) this.style.background='rgba(255,255,255,0.03)'"
+        onmouseleave="if(!this.classList.contains('rl05-selected')) this.style.background='${rowBg}'">
+      <td style="padding: 1.15rem 1rem; color: var(--muted); font-family: monospace; font-size: 0.8rem; font-weight: 600;">#${r.id}</td>
+      <td style="padding: 1.15rem 1rem; max-width: 380px;">
+        <div title="${(r.descricao || '').replace(/"/g, '&quot;')}" style="line-height: 1.5; color: ${isConcluido ? 'var(--muted)' : '#ffffff'}; font-weight: ${isConcluido ? '400' : '500'}; font-size: 0.875rem;">${descTruncated}</div>
       </td>
-      <td style="padding: 0.875rem 1rem; text-align: center; color: var(--muted); font-size: 0.85rem;">${r.duracao ? r.duracao + 'h' : '—'}</td>
-      <td style="padding: 0.875rem 1rem; color: var(--text); font-size: 0.85rem; font-weight: 500;">${r.profissional || '—'}</td>
-      <td style="padding: 0.875rem 1rem; text-align: center;">
+      <td style="padding: 1.15rem 1rem; text-align: center; color: var(--muted); font-size: 0.85rem;">${r.duracao ? r.duracao + 'h' : '—'}</td>
+      <td style="padding: 1.15rem 1rem; color: var(--muted); font-size: 0.8rem;">${r.profissional || '—'}</td>
+      <td style="padding: 1.15rem 1rem; text-align: center;">
         <input type="text" class="rl05-os-input" data-id="${r.id}" data-original="${r.os || ''}"
           value="${r.os || ''}" placeholder="—"
           style="width: 70px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--muted); padding: 3px 6px; text-align: center; font-family: monospace; font-size: 0.8rem; outline: none; transition: all 0.2s;"
           onfocus="this.style.borderColor='rgba(56,189,248,0.5)'; this.style.color='var(--text)';"
           onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.color='var(--muted)';">
       </td>
-      <td style="padding: 0.875rem 1rem;">
+      <td style="padding: 1.15rem 1rem;">
         <div style="display: flex; flex-direction: column; gap: 6px;">
           <!-- Slider + número -->
           <div style="display: flex; align-items: center; gap: 8px;">
@@ -289,7 +312,7 @@
           </div>
         </div>
       </td>
-      <td style="padding: 0.875rem 1rem; text-align: center;" id="rl05-status-${r.id}">${statusBadge}</td>
+      <td style="padding: 1.15rem 1rem; text-align: center;" id="rl05-status-${r.id}">${statusBadge}</td>
     </tr>`;
   }
 
@@ -322,6 +345,7 @@
       if (inputEl) inputEl.value = inputEl.dataset.original || '';
     } finally {
       if (tr) tr.style.opacity = '1';
+      render(); // Força re-renderização
     }
   }
   async function salvarPerc(id, val, inputEl) {
@@ -390,6 +414,7 @@
       if (inputEl) inputEl.value = inputEl.dataset.original || 0;
     } finally {
       if (tr) tr.style.opacity = '1';
+      render(); // Força re-renderização para garantir a exibição correta
     }
   }
 
@@ -484,48 +509,55 @@
   };
 
   // -------------- Import via UI -----------------
+  async function parseRetomadaExcel(file) {
+    if (!window.XLSX) throw new Error('Biblioteca XLSX não carregada.');
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data);
+    const ws = wb.Sheets['Planilha2'];
+    if (!ws) throw new Error('Aba "Planilha2" não encontrada no arquivo.');
+    const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+    const atividades = [];
+    for (let i = 4; i < raw.length; i++) {
+      const row = raw[i];
+      if (!row[0]) continue;
+      const stRaw = String(row[7] || '').toUpperCase();
+      let status = null;
+      if (stRaw.includes('CONCLU')) status = 'CONCLUÍDO';
+      else if (stRaw.includes('EXECU')) status = 'EM EXECUÇÃO';
+      let perc = parseFloat(row[5]) || 0;
+      if (perc >= 100) { perc = 100; status = 'CONCLUÍDO'; }
+      else if (perc > 0 && !status) status = 'EM EXECUÇÃO';
+      atividades.push({
+        id: parseInt(row[0]),
+        maquina: String(row[1] || '').trim(),
+        descricao: String(row[2] || '').trim().replace(/\n/g, ' | '),
+        duracao: parseFloat(row[3]) || null,
+        profissional: String(row[4] || '').trim(),
+        perc_execucao: perc,
+        os: row[6] ? String(row[6]).trim() : null,
+        status: status,
+      });
+    }
+    return atividades;
+  }
+
+  async function enviarImportRetomada(atividades) {
+    const resp = await fetch('http://127.0.0.1:8080/api/retomada_l05/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(atividades)
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    return await resp.json();
+  }
+
   window.rl05ImportExcel = async function(file) {
-    if (!window.XLSX) { if (window.toast) window.toast('Biblioteca XLSX não carregada.', 'error'); return; }
     const btn = document.getElementById('rl05-btn-import');
     if (btn) { btn.disabled = true; btn.textContent = 'Importando...'; }
 
     try {
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data);
-      const ws = wb.Sheets['Planilha2'];
-      if (!ws) throw new Error('Aba "Planilha2" não encontrada no arquivo.');
-      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
-      // Row 3 = header (index 3), data from index 4
-      const atividades = [];
-      for (let i = 4; i < raw.length; i++) {
-        const row = raw[i];
-        if (!row[0]) continue;
-        const stRaw = String(row[7] || '').toUpperCase();
-        let status = null;
-        if (stRaw.includes('CONCLU')) status = 'CONCLUÍDO';
-        else if (stRaw.includes('EXECU')) status = 'EM EXECUÇÃO';
-        let perc = parseFloat(row[5]) || 0;
-        if (perc >= 100) { perc = 100; status = 'CONCLUÍDO'; }
-        else if (perc > 0 && !status) status = 'EM EXECUÇÃO';
-        atividades.push({
-          id: parseInt(row[0]),
-          maquina: String(row[1] || '').trim(),
-          descricao: String(row[2] || '').trim().replace(/\n/g, ' | '),
-          duracao: parseFloat(row[3]) || null,
-          profissional: String(row[4] || '').trim(),
-          perc_execucao: perc,
-          os: row[6] ? String(row[6]).trim() : null,
-          status: status,
-        });
-      }
-
-      const resp = await fetch('http://127.0.0.1:8080/api/retomada_l05/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(atividades)
-      });
-      if (!resp.ok) throw new Error(await resp.text());
-      const result = await resp.json();
+      const atividades = await parseRetomadaExcel(file);
+      const result = await enviarImportRetomada(atividades);
       _dados = [];
       _carregado = false;
       await carregar();
@@ -536,6 +568,16 @@
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '📁 Atualizar Excel'; }
     }
+  };
+
+  window.rl05ExportSectionPDF = function(maquina) {
+    const dados = dadosFiltrados().filter((a) => String(a.maquina || '').toUpperCase() === String(maquina || '').toUpperCase());
+    if (dados.length === 0) {
+      if (window.toast) window.toast(`Nenhuma atividade filtrada para ${maquina}.`, 'error');
+      else alert(`Nenhuma atividade filtrada para ${maquina}.`);
+      return;
+    }
+    gerarChecklistRetomadaPDF(dados);
   };
 
   // -------------- CSS do Módulo -----------------
@@ -576,26 +618,31 @@
         transition: max-height 0.5s ease, opacity 0.3s ease;
       }
       #rl05-content.open {
-        max-height: 9000px;
+        max-height: 50000px;
         opacity: 1;
       }
       .rl05-kpi-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        gap: 1rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0;
         padding: 1.5rem 2rem;
         border-bottom: 1px solid rgba(255,255,255,0.06);
+        background: transparent;
       }
       .rl05-kpi-card {
-        background: rgba(255,255,255,0.03);
-        border: 1px solid rgba(255,255,255,0.07);
-        border-radius: 12px;
-        padding: 1rem 1.25rem;
-        transition: transform 0.2s, box-shadow 0.2s;
+        flex: 1;
+        min-width: 120px;
+        background: transparent;
+        border: none;
+        border-right: 1px solid rgba(255,255,255,0.08);
+        border-radius: 0;
+        padding: 0.5rem 1.5rem;
+        transition: opacity 0.2s;
       }
-      .rl05-kpi-card:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.2); }
-      .rl05-kpi-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 500; margin-bottom: 0.4rem; }
-      .rl05-kpi-value { font-size: 1.75rem; font-weight: 700; line-height: 1; }
+      .rl05-kpi-card:last-child { border-right: none; }
+      .rl05-kpi-card:hover { opacity: 0.8; }
+      .rl05-kpi-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; margin-bottom: 0.4rem; display: flex; align-items: center; }
+      .rl05-kpi-value { font-size: 1.85rem; font-weight: 300; line-height: 1; color: var(--text); }
       .rl05-filters {
         display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;
         padding: 1rem 2rem;
@@ -624,12 +671,219 @@
     document.head.appendChild(style);
   }
 
+  // -------------- Action Bar & Drilldown -----------------
+  let linhaSelecionadaId = null;
+
+  window.selecionarLinhaRL05 = function(id) {
+    linhaSelecionadaId = id;
+    document.querySelectorAll('.rl05-table-row').forEach(tr => tr.classList.remove('row-selected', 'rl05-selected'));
+    const tr = document.querySelector(`.rl05-table-row[data-id="${id}"]`);
+    if (tr) {
+      tr.classList.add('row-selected', 'rl05-selected');
+      // Adicionar estilo inline de destaque temporário, além da classe
+      tr.style.backgroundColor = 'rgba(56, 189, 248, 0.15)';
+    }
+
+    const bar = document.getElementById('rowActionBarRL05');
+    if (bar) {
+      bar.classList.remove('hidden');
+      document.getElementById('rowActionLabelRL05').textContent = `Atividade #${id} selecionada`;
+    }
+  }
+
+  // HTML Modal Logic
+  const fecharModalRL05 = () => document.getElementById('modalEditarAtividadeRL05')?.classList.remove('open');
+  document.getElementById('btnFecharModalAtividadeRL05')?.addEventListener('click', fecharModalRL05);
+  document.getElementById('btnCancelarModalAtividadeRL05')?.addEventListener('click', fecharModalRL05);
+  document.getElementById('modalEditarAtividadeRL05')?.addEventListener('click', (e) => { 
+    if (e.target === document.getElementById('modalEditarAtividadeRL05')) fecharModalRL05(); 
+  });
+
+  window.abrirModalRL05 = function(id) {
+    const r = _dados.find(x => String(x.id) === String(id));
+    if (!r) return;
+
+    document.getElementById('modalAtivTituloRL05').textContent = `Editar Atividade #${r.id}`;
+    document.getElementById('editAtivIdRL05').value = r.id;
+    document.getElementById('editAtivDescRL05').value = r.descricao || '';
+    document.getElementById('editAtivMaquinaRL05').value = r.maquina || '';
+    document.getElementById('editAtivProfissionalRL05').value = r.profissional || '';
+    document.getElementById('editAtivDuracaoRL05').value = r.duracao || '';
+
+    document.getElementById('modalEditarAtividadeRL05').classList.add('open');
+  };
+
+  window.abrirDetalheRL05 = function(id) {
+    const r = _dados.find(x => String(x.id) === String(id));
+    if (!r) return;
+    
+    // Select the row visually
+    window.selecionarLinhaRL05(id);
+
+    const panel = document.getElementById('drillPanel');
+    const overlay = document.getElementById('drillOverlay');
+    if (!panel) return;
+
+    const tituloTruncado = r.descricao && r.descricao.length > 60 ? r.descricao.substring(0, 57) + '...' : (r.descricao || 'Retomada L05');
+    document.getElementById('drillTitulo').textContent = tituloTruncado;
+    document.getElementById('drillSubtitulo').textContent = `${r.maquina || 'Geral'} · Retomada L05`;
+    
+    const stats = [
+      { label: 'Duração', value: r.duracao ? r.duracao + 'h' : '—' },
+      { label: 'Profissional', value: r.profissional || '—' },
+      { label: 'OS', value: r.os || '—' },
+      { label: 'Status', value: r.status || '—' },
+      { label: '% Execução', value: r.execucao_pct != null ? r.execucao_pct + '%' : '0%' }
+    ];
+    document.getElementById('drillStats').innerHTML = stats.map(s =>
+      `<div class="drill-stat"><span>${s.label}</span><strong>${s.value}</strong></div>`
+    ).join('');
+    
+    document.getElementById('drillInsight').style.display = 'none';
+    const desc = r.descricao || 'Não informado';
+
+    const formatCards = (text) => {
+      const safeText = String(text || '');
+      if (!safeText || safeText.trim() === '') return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">Não informado</p>`;
+      const steps = safeText.split(/\n/).map(s => s.trim().replace(/^[-–]/, '').trim()).filter(s => s.length > 1);
+      if (steps.length === 0) return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">${safeText}</p>`;
+      return steps.map((step, idx) => `
+        <div style="background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+          <span style="background: rgba(212, 175, 55, 0.15); color: var(--primary); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; flex-shrink: 0; border: 1px solid rgba(212, 175, 55, 0.3);">${idx + 1}</span>
+          <span style="font-size: 0.95rem; line-height: 1.5; color: var(--text); padding-top: 2px;">${step}</span>
+        </div>
+      `).join('');
+    };
+
+    const descHTML = formatCards(desc);
+
+    document.getElementById('drillLista').innerHTML = `
+      <article class="drill-item" style="padding:1.5rem;background:transparent;border:none;">
+        <h4 style="margin-top:0;color:var(--text);margin-bottom:1rem;font-size:1.05rem;display:flex;align-items:center;gap:0.5rem;">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          Descrição da Atividade
+        </h4>
+        ${descHTML}
+        
+        <div class="drill-item-actions" style="margin-top:2rem;">
+          <button type="button" class="btn-primary" onclick="abrirModalRL05('${r.id}');fecharDrilldown();" style="width:100%;">✏️ Editar Atividade</button>
+        </div>
+      </article>`;
+      
+    panel.classList.add('open');
+    overlay.classList.add('open');
+  };
+
+  document.getElementById('formEditarAtividadeRL05')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = document.getElementById('editAtivIdRL05').value;
+    const formValues = {
+      descricao: document.getElementById('editAtivDescRL05').value.trim(),
+      maquina: document.getElementById('editAtivMaquinaRL05').value.trim(),
+      profissional: document.getElementById('editAtivProfissionalRL05').value.trim(),
+      duracao: parseFloat(document.getElementById('editAtivDuracaoRL05').value) || null
+    };
+
+    try {
+      const resp = await fetch(`http://127.0.0.1:8080/api/retomada_l05/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formValues)
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      fecharModalRL05();
+      carregarRegistros();
+      Swal.fire({ icon: 'success', title: 'Salvo!', timer: 1500, showConfirmButton: false, background: '#1e293b', color: '#f8fafc' });
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Erro ao salvar', text: err.message, background: '#1e293b', color: '#f8fafc' });
+    }
+  });
+
+  window.excluirRL05 = async function(id) {
+    const r = _dados.find(x => String(x.id) === String(id));
+    if (!r) return;
+    const { isConfirmed } = await Swal.fire({
+      title: 'Tem certeza?',
+      text: `Deseja excluir a atividade #${r.id}? Isso não pode ser desfeito.`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sim, Excluir',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#ef4444',
+      background: '#1e293b',
+      color: '#f8fafc',
+      customClass: { popup: 'swal-minimalist' }
+    });
+
+    if (isConfirmed) {
+      try {
+        const resp = await fetch(`http://127.0.0.1:8080/api/retomada_l05/${id}`, { method: 'DELETE' });
+        if (!resp.ok) throw new Error(await resp.text());
+        carregarRegistros();
+        Swal.fire({ icon: 'success', title: 'Excluído!', timer: 1500, showConfirmButton: false, background: '#1e293b', color: '#f8fafc' });
+      } catch (err) {
+        console.error(err);
+        Swal.fire({ icon: 'error', title: 'Erro ao excluir', text: err.message, background: '#1e293b', color: '#f8fafc' });
+      }
+    }
+  };
+
+  window.duplicarRL05 = async function(id) {
+    const r = _dados.find(x => String(x.id) === String(id));
+    if (!r) return;
+    try {
+      const novo = { ...r };
+      delete novo.id; // O back-end vai gerar um novo
+      const resp = await fetch(`http://127.0.0.1:8080/api/retomada_l05`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify([novo])
+      });
+      if (!resp.ok) throw new Error(await resp.text());
+      carregarRegistros();
+      Swal.fire({ icon: 'success', title: 'Duplicado!', timer: 1500, showConfirmButton: false, background: '#1e293b', color: '#f8fafc' });
+    } catch (err) {
+      console.error(err);
+      Swal.fire({ icon: 'error', title: 'Erro ao duplicar', text: err.message, background: '#1e293b', color: '#f8fafc' });
+    }
+  };
+
+  function setupActionBar() {
+    const btnDetalhe = document.getElementById('btnRowDetalheRL05');
+    if (btnDetalhe) btnDetalhe.onclick = () => { if (linhaSelecionadaId) window.abrirDetalheRL05(linhaSelecionadaId); };
+    
+    const btnEditar = document.getElementById('btnRowEditarRL05');
+    if (btnEditar) btnEditar.onclick = () => { if (linhaSelecionadaId) window.abrirModalRL05(linhaSelecionadaId); };
+    
+    const btnDuplicar = document.getElementById('btnRowDuplicarRL05');
+    if (btnDuplicar) btnDuplicar.onclick = () => { if (linhaSelecionadaId) window.duplicarRL05(linhaSelecionadaId); };
+    
+    const btnExcluir = document.getElementById('btnRowExcluirRL05');
+    if (btnExcluir) btnExcluir.onclick = () => { if (linhaSelecionadaId) window.excluirRL05(linhaSelecionadaId); };
+
+    const btnLimpar = document.getElementById('btnRowLimparSelRL05');
+    if (btnLimpar) {
+      btnLimpar.onclick = () => {
+        linhaSelecionadaId = null;
+        document.querySelectorAll('.rl05-table-row').forEach(tr => {
+           tr.classList.remove('row-selected', 'rl05-selected');
+           tr.style.backgroundColor = '';
+        });
+        const bar = document.getElementById('rowActionBarRL05');
+        if (bar) bar.classList.add('hidden');
+      };
+    }
+  }
+
   // -------------- Init -----------------
   function init() {
     injectCSS();
+    setupActionBar();
   }
 
-  // Expose init
+  // Expose init and methods
   window.initRetomadaL05 = init;
+  window.getDadosFiltradosRL05 = dadosFiltrados;
 
 })();

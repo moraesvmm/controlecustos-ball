@@ -352,8 +352,23 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           // Apaga o DIFF do mês anterior
           await supabase.from('custo_geral').delete().eq('it_codigo', 'DIFF_METADATA');
 
-          for (let i = 0; i < records.length; i += 100) {
-            const { error: insErr } = await supabase.from('custo_geral').insert(records.slice(i, i + 100));
+          // FILTRO SEGURO DE COLUNAS
+          const validColumns = [
+            'cod_estabel', 'cod_depos', 'it_codigo', 'descricao_codigo', 'grupo', 'ct_codigo', 'descricao_conta', 'dt_trans', 'mes', 'esp_docto',
+            'especdoc', 'tipo_trans', 'ent_sai', 'quantidade', 'un', 'numero_ordem', 'nro_docto', 'linha', 'cod_emitente', 'descricao_emitente',
+            'solicitante', 'nome_solicitante', 'nat_operacao', 'material', 'ggf', 'valor_mob', 'valor_tt', 'quant_tt_ajustado', 'custo_do_mes',
+            'custo_mes_anterior', 'custo_de_entrada', 'sc_codigo', 'descricao_db'
+          ];
+          const cleanRecords = records.map(r => {
+            const cleanObj = {};
+            for (const key of validColumns) {
+              if (r[key] !== undefined) cleanObj[key] = r[key];
+            }
+            return cleanObj;
+          });
+
+          for (let i = 0; i < cleanRecords.length; i += 100) {
+            const { error: insErr } = await supabase.from('custo_geral').insert(cleanRecords.slice(i, i + 100));
             if (insErr) throw insErr;
           }
 
@@ -413,8 +428,23 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
           if (oldBudgetData) { delete oldBudgetData.id; toInsert.push(oldBudgetData); }
           if (budgetData) toInsert.push({ it_codigo: 'BUDGET_METADATA', descricao_codigo: JSON.stringify(budgetData), numero_ordem: '0', quantidade: 0, custo_do_mes: 0 });
 
-          for (let i = 0; i < toInsert.length; i += 100) {
-            const { error: insErr } = await supabase.from('custo_geral').insert(toInsert.slice(i, i + 100));
+          // FILTRO SEGURO DE COLUNAS: Garante que objetos não contenham chaves que a tabela custo_geral não possui (como last_modified_at herdado por proxy/cache)
+          const validColumns = [
+            'cod_estabel', 'cod_depos', 'it_codigo', 'descricao_codigo', 'grupo', 'ct_codigo', 'descricao_conta', 'dt_trans', 'mes', 'esp_docto',
+            'especdoc', 'tipo_trans', 'ent_sai', 'quantidade', 'un', 'numero_ordem', 'nro_docto', 'linha', 'cod_emitente', 'descricao_emitente',
+            'solicitante', 'nome_solicitante', 'nat_operacao', 'material', 'ggf', 'valor_mob', 'valor_tt', 'quant_tt_ajustado', 'custo_do_mes',
+            'custo_mes_anterior', 'custo_de_entrada', 'sc_codigo', 'descricao_db'
+          ];
+          const cleanToInsert = toInsert.map(r => {
+            const cleanObj = {};
+            for (const key of validColumns) {
+              if (r[key] !== undefined) cleanObj[key] = r[key];
+            }
+            return cleanObj;
+          });
+
+          for (let i = 0; i < cleanToInsert.length; i += 100) {
+            const { error: insErr } = await supabase.from('custo_geral').insert(cleanToInsert.slice(i, i + 100));
             if (insErr) throw insErr;
           }
 
@@ -448,7 +478,8 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
 
       } catch (err) {
         console.error(err);
-        toast(`Erro: ${err.message}`, 'error');
+        const msg = err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
+        toast(`Erro: ${msg}`, 'error');
         fileFinanceiro.value = '';
       }
     });

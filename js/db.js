@@ -1,5 +1,5 @@
 import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA } from './config.js?v=3';
-import { enriquecerRegistro, normalizarNatureza } from './logic.js?v=9';
+import { enriquecerRegistro, normalizarNatureza } from './logic.js?v=10';
 
 let supabaseClient = null;
 
@@ -177,6 +177,15 @@ export async function carregarRegistros() {
 }
 
 export async function salvarRegistro(registro) {
+  let combinedMedia = null;
+  if (registro.foto_url && registro.pdf_url) {
+    combinedMedia = registro.foto_url + "|||PDF|||" + registro.pdf_url;
+  } else if (registro.foto_url) {
+    combinedMedia = registro.foto_url;
+  } else if (registro.pdf_url) {
+    combinedMedia = "|||PDF|||" + registro.pdf_url;
+  }
+
   const payload = {
     sinal: registro.sinal,
     item_id: registro.item_id,
@@ -198,7 +207,7 @@ export async function salvarRegistro(registro) {
     data_recebimento: registro.data_recebimento,
     nota_retorno: registro.nota_retorno || null,
     comentario: registro.comentario,
-    foto_url: registro.foto_url || null,
+    foto_url: combinedMedia,
   };
 
   if (!USE_LOCAL_DATA) {
@@ -343,21 +352,12 @@ export async function carregarPreventiva() {
 }
 
 export async function salvarPreventiva(registro) {
-  const payload = {
-    identificador: registro.identificador,
-    maquina: registro.maquina,
-    material: registro.material,
-    plano_padrao: registro.plano_padrao,
-    duracao_horas: registro.duracao_horas,
-    hh_mec: registro.hh_mec,
-    hh_eletrico: registro.hh_eletrico,
-    resp_fabrica: registro.resp_fabrica,
-    resp_manutencao: registro.resp_manutencao,
-    status_auditoria: registro.status_auditoria,
-    previsao_custos: registro.previsao_custos,
-    atividades_descricoes: registro.atividades_descricoes || [],
-    programacao: registro.programacao || {}
-  };
+  const payload = { ...registro };
+  delete payload.id;
+  delete payload.descricao;
+  
+  if (!payload.atividades_descricoes) payload.atividades_descricoes = [];
+  if (!payload.programacao) payload.programacao = {};
 
   const user = await getCurrentUser();
   if (user && user.user_metadata && user.user_metadata.username) {
@@ -365,14 +365,13 @@ export async function salvarPreventiva(registro) {
   }
 
   const client = getClient();
-  delete payload.descricao;
   if (registro.id) {
     const { data, error } = await client.from('preventiva_registros').update(payload).eq('id', registro.id).select().single();
-    if (error) throw error;
+    if (error) throw new Error(error.message || JSON.stringify(error));
     return data;
   }
   const { data, error } = await client.from('preventiva_registros').insert(payload).select().single();
-  if (error) throw error;
+  if (error) throw new Error(error.message || JSON.stringify(error));
   return data;
 }
 
@@ -565,13 +564,27 @@ export async function getDadosCustoGeral() {
     mapDatasul[d.numero_ordem] = d.solicitante;
   }
 
+  // Normaliza a string de área para corrigir corrupção de encoding Windows-1252 → SQLite
+  // O caractere 'Ç' vira U+FFFD (replacement char) quando o Excel é lido com encoding errado.
+  // Detectamos pelo conteúdo parcial e retornamos sempre a string canônica correta.
+  function normalizeArea(area) {
+    if (!area) return null;
+    const u = area.toUpperCase().replace(/\uFFFD/g, '').replace(/[^A-Z]/g, '');
+    if (u.includes('MANUT'))  return 'MANUTENÇÃO';
+    if (u.includes('FERRAM') || u.includes('FERRAM')) {
+      return u.includes('ARIA') ? 'FERRAMENTARIA' : 'FERRAMENTAS';
+    }
+    if (u.includes('FACIL'))  return 'FACILITIES';
+    return area; // mantém original se não reconhecer
+  }
+
   // 4. Montar mapa Colaboradores: cod_req (lowercase) → { nome, area, cc, area_cc, turno }
   const mapColaboradores = {};
   for (const c of dataColab) {
     if (c.cod_req) {
       mapColaboradores[c.cod_req.toLowerCase()] = {
         nome: c.nome,
-        area: c.area,
+        area: normalizeArea(c.area), // ← corrige encoding corrompido na origem
         cc: c.cc,
         area_cc: c.area_cc,
         turno: c.turno,
@@ -641,8 +654,10 @@ export async function getDadosCustoGeral() {
     // Se a area já existir no banco (edição manual), ela tem precedência!
     row.area = row.area || colab?.area || null;
     if (!colab && row.it_codigo) {
+        // Fallback por prefixo do it_codigo (igual ao Excel do Financeiro Datasul):
+        // UCM* = Manutenção | SER* = Serviço (Manutenção) | demais = OUTROS
         const prefix = row.it_codigo.toUpperCase();
-        if (prefix.startsWith('UCMAN') || prefix.startsWith('SER')) {
+        if (prefix.startsWith('UCM') || prefix.startsWith('SER')) {
             row.area = 'MANUTENÇÃO';
         } else {
             row.area = 'OUTROS';
@@ -664,17 +679,13 @@ export async function getDadosCustoGeral() {
         row.carater = 'IGNORADO WZF';
     }
 
+    // Fórmula 7: check = IF(area == "OUTROS", "OUTROS", area & " - " & carater)
     if (row.area) {
       row.check = row.area === 'OUTROS' ? 'OUTROS' : `${row.area} - ${row.carater}`;
     }
 
     // PROCV 6: cc = VLOOKUP(solicitante, COLABORADORES, "area_cc")
     row.cc = row.cc || colab?.area_cc || null;
-
-    // Fórmula 7: check = IF(area == "OUTROS", "OUTROS", area & " - " & carater)
-    if (row.area) {
-      row.check = row.area === 'OUTROS' ? 'OUTROS' : `${row.area} - ${row.carater}`;
-    }
 
     // Fórmula 8: custo_cc = SUM(custo_do_mes, custo_mes_anterior, custo_de_entrada)
     row.custo_cc = (Number(row.custo_do_mes) || 0) + (Number(row.custo_mes_anterior) || 0) + (Number(row.custo_de_entrada) || 0);
