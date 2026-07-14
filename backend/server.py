@@ -648,6 +648,7 @@ async def import_paradas(req: Request):
     data = await req.json()
     rows = data.get("rows", [])
     ano = int(data.get("ano", datetime.datetime.now().year))
+    file_mes = data.get("mes")
 
     GRUPOS_REPARO = ['Reparos Mecânicos', 'Reparos Elétricos']
     TEMPO_MES_MIN = 30 * 24 * 60   # 43200 min - 30 dias 24h
@@ -689,7 +690,7 @@ async def import_paradas(req: Request):
         for r in reparos:
             dur = hms_to_min(r.get('duracao', '0:0:0'))
             sem = semana_iso(r.get('data', ''))
-            mes = mes_num(r.get('data', ''))
+            mes = int(file_mes) if file_mes else mes_num(r.get('data', ''))
             conn.execute(
                 "INSERT INTO kpi_paradas_raw (linha, grupo_parada, data, semana_iso, mes, ano, dur_min) VALUES (?,?,?,?,?,?,?)",
                 (r.get('linha', ''), r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur)

@@ -1226,12 +1226,19 @@ async function importarMGPRO(file) {
 
       const rows = [];
       let ano = new Date().getFullYear();
+      let mes_override = null;
+      const match = file.name.match(/(\d{4})-(\d{2})/);
+      if (match) {
+        ano = parseInt(match[1]);
+        mes_override = parseInt(match[2]);
+      }
+
       for (let i = headerRow + 1; i < raw.length; i++) {
         const row = raw[i];
         const grupo = String(row[iGrupo] || '').trim();
         if (!grupo) continue;
         const dataStr = String(row[iData] || '').slice(0, 10);
-        if (dataStr.length >= 4) {
+        if (!match && dataStr.length >= 4) {
           const y = parseInt(dataStr.slice(0, 4));
           if (y > 2020 && y < 2100) ano = y;
         }
@@ -1248,7 +1255,7 @@ async function importarMGPRO(file) {
       const resp = await fetch('/api/import/paradas', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rows, ano })
+        body: JSON.stringify({ rows, ano, mes: mes_override })
       });
       const result = await resp.json();
       if (!resp.ok) throw new Error(result.detail || 'Erro no servidor');
