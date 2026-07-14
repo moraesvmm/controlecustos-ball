@@ -163,22 +163,7 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
         const hasPdf = !!r.pdf_url;
         const pdfHtml = `
         <div class="drill-item-pdf" data-id="${r.id}" style="border: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2); border-radius: 8px; padding: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
-          <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="background: rgba(239,68,68,0.1); color: #ef4444; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
-              📄
-            </div>
-            <div>
-              <div style="font-weight: 600; font-size: 0.9rem; color: var(--text);">Porta-documentos</div>
-              <div style="font-size: 0.75rem; color: var(--muted);">${hasPdf ? 'Documento anexado' : 'Nenhum PDF vinculado'}</div>
-            </div>
-          </div>
-          <div style="display: flex; gap: 0.5rem; align-items: center;">
-            ${hasPdf ? `<a href="${r.pdf_url}" target="_blank" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; border-color: var(--primary); color: var(--primary);">Visualizar</a>` : ''}
-            <label class="btn-ghost btn-sm" style="cursor:pointer; font-size: 0.75rem; padding: 0.3rem 0.6rem; color: var(--text-light); border: 1px solid var(--border); border-radius: 6px;">
-              ${hasPdf ? 'Substituir' : 'Anexar PDF'}
-              <input type="file" accept="application/pdf" class="pdf-input-hidden drill-pdf-input" data-id="${r.id}" style="display:none;" />
-            </label>
-          </div>
+          ${window.gerarPdfInnerHtml ? window.gerarPdfInnerHtml(r.id, hasPdf) : ''}
         </div>`;
 
         if (meta.isPlanoMestre) {
@@ -364,13 +349,33 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
         }
         const id = input.dataset.id;
         const reader = new FileReader();
-        reader.onload = () => {
-          if (onSavePhotoCallback) {
-            onSavePhotoCallback(id, reader.result, 'pdf');
-          }
+        reader.onload = async () => {
           const container = lista.querySelector(`.drill-item-pdf[data-id="${id}"]`);
           if (container) {
             container.innerHTML = `<div style="text-align:center; width:100%;"><div style="width:24px;height:24px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div><span style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;display:block;">Salvando PDF...</span></div>`;
+          }
+          if (onSavePhotoCallback) {
+            try { await onSavePhotoCallback(id, reader.result, 'pdf'); } catch(e){}
+          }
+          // Restore the UI for the PDF container
+          if (container) {
+            container.innerHTML = window.gerarPdfInnerHtml ? window.gerarPdfInnerHtml(id, true) : '';
+            // Re-bind listener to the new input
+            const newInput = container.querySelector('.drill-pdf-input');
+            if (newInput) {
+              newInput.addEventListener('change', (ev) => {
+                const newFile = ev.target.files?.[0];
+                if (newFile) {
+                  const newReader = new FileReader();
+                  newReader.onload = async () => {
+                     container.innerHTML = `<div style="text-align:center; width:100%;"><div style="width:24px;height:24px;border:2px solid var(--primary);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto;"></div><span style="font-size:0.8rem;color:var(--muted);margin-top:0.5rem;display:block;">Salvando PDF...</span></div>`;
+                     try { await onSavePhotoCallback(id, newReader.result, 'pdf'); } catch(e){}
+                     container.innerHTML = window.gerarPdfInnerHtml ? window.gerarPdfInnerHtml(id, true) : '';
+                  };
+                  newReader.readAsDataURL(newFile);
+                }
+              });
+            }
           }
         };
         reader.readAsDataURL(file);
@@ -411,6 +416,47 @@ export function fecharDrilldown() {
   document.getElementById('drillPanel')?.classList.remove('open');
   document.getElementById('drillOverlay')?.classList.remove('open');
 }
+
+window.gerarPdfInnerHtml = function(id, hasPdf) {
+  return `
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="background: rgba(239,68,68,0.1); color: #ef4444; width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem;">
+              📄
+            </div>
+            <div>
+              <div style="font-weight: 600; font-size: 0.9rem; color: var(--text);">Porta-documentos</div>
+              <div style="font-size: 0.75rem; color: var(--muted);">${hasPdf ? 'Documento anexado' : 'Nenhum PDF vinculado'}</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            ${hasPdf ? `<button type="button" onclick="window.abrirPdfPorId('${id}')" class="btn btn-outline btn-sm" style="font-size: 0.75rem; padding: 0.3rem 0.6rem; border-color: var(--primary); color: var(--primary);">Visualizar</button>` : ''}
+            <label class="btn-ghost btn-sm" style="cursor:pointer; font-size: 0.75rem; padding: 0.3rem 0.6rem; color: var(--text-light); border: 1px solid var(--border); border-radius: 6px;">
+              ${hasPdf ? 'Substituir' : 'Anexar PDF'}
+              <input type="file" accept="application/pdf" class="pdf-input-hidden drill-pdf-input" data-id="${id}" style="display:none;" />
+            </label>
+          </div>
+  `;
+}
+
+window.abrirPdfPorId = function(id) {
+  const r = window._registrosGlobais?.find(x => String(x.id) === String(id));
+  if (!r || !r.pdf_url) return;
+  try {
+    const parts = r.pdf_url.split(',');
+    if (parts.length < 2) return;
+    const bstr = atob(parts[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while(n--) { u8arr[n] = bstr.charCodeAt(n); }
+    const blob = new Blob([u8arr], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank');
+  } catch (err) {
+    console.error('Erro ao processar PDF:', err);
+    if(window.toast) window.toast('Erro ao processar arquivo PDF.', 'error');
+  }
+}
+
 window.fecharDrilldown = fecharDrilldown;
 function fecharDrilldown_old() {
   document.getElementById('drillPanel')?.classList.remove('open');
