@@ -705,6 +705,16 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
     inst.setOption({
       animationDuration: 1500,
       animationEasing: 'cubicOut',
+      toolbox: {
+        show: true,
+        right: '2%',
+        top: '2%',
+        feature: {
+          magicType: { type: ['line', 'bar'], title: { line: 'Gráfico de Linha', bar: 'Gráfico de Barras' } },
+          saveAsImage: { title: 'Salvar Imagem', name: title.replace(/[^a-zA-Z0-9]/g, '_') }
+        },
+        iconStyle: { borderColor: tc.tickColor, borderWidth: 1.5 }
+      },
       tooltip: {
         trigger: 'axis',
         backgroundColor: 'rgba(15, 23, 42, 0.90)',
@@ -715,7 +725,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
         formatter: tooltipFormatter,
         extraCssText: 'backdrop-filter: blur(8px); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);'
       },
-      grid: { left: '12%', right: '8%', top: '18%', bottom: tooManyPoints ? '22%' : '12%', containLabel: false },
+      grid: { left: '12%', right: '8%', top: '22%', bottom: tooManyPoints ? '22%' : '12%', containLabel: false },
       dataZoom: tooManyPoints ? [
         { type: 'slider', show: true, bottom: '2%', height: 16, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.05)', fillerColor: 'rgba(255,255,255,0.1)', handleSize: '100%', textStyle: { color: tc.tickColor } },
         { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true }
@@ -741,17 +751,15 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
         symbol: 'circle',
         symbolSize: 8,
         itemStyle: {
-          color: values.length === 1 
-            ? new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                { offset: 0, color: baseColor },
-                { offset: 1, color: cfg.gradArea[1].color }
-              ])
-            : baseColor,
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: baseColor },
+            { offset: 1, color: cfg.gradArea[1].color }
+          ]),
           borderColor: values.length === 1 ? 'transparent' : '#1e293b',
           borderWidth: values.length === 1 ? 0 : 2,
           shadowColor: baseColor,
           shadowBlur: 8,
-          borderRadius: values.length === 1 ? [6, 6, 0, 0] : 0
+          borderRadius: [6, 6, 0, 0]
         },
         lineStyle: {
           width: 3,
