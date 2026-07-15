@@ -422,11 +422,34 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             if (delErr) throw delErr;
           }
 
-          // INSERT dos novos + metadados
+          // INSERT dos novos
           const toInsert = [...paraInserir];
-          if (forecastData) { delete forecastData.id; toInsert.push(forecastData); }
-          if (oldBudgetData) { delete oldBudgetData.id; toInsert.push(oldBudgetData); }
-          if (budgetData) toInsert.push({ it_codigo: 'BUDGET_METADATA', descricao_codigo: JSON.stringify(budgetData), numero_ordem: '0', quantidade: 0, custo_do_mes: 0 });
+          
+          // Nota: Em modo Diff, os metadados (BUDGET_METADATA, FORECAST_METADATA) não são apagados.
+          // Portanto, se quisermos atualizar o BUDGET, precisaríamos fazer um UPDATE.
+          // Por ora, a lógica principal de UPDATE do budget já insere/atualiza antes ou não precisa.
+          // Se precisar atualizar o BUDGET ou FORECAST no diff, devemos fazer um UPDATE / UPSERT.
+          if (forecastData || budgetData) {
+              const upsertData = [];
+              if (forecastData) { delete forecastData.id; upsertData.push(forecastData); }
+              
+              if (budgetData) {
+                  // Re-cria o merge para upsert seguro
+                  const merged = { ...window.budgetMetadata, ...budgetData };
+                  if (window.budgetMetadata?.total_manual != null) {
+                      merged.manutencao = window.budgetMetadata.total_manual;
+                      merged.total = window.budgetMetadata.total_manual;
+                  }
+                  upsertData.push({
+                      it_codigo: 'BUDGET_METADATA', 
+                      descricao_codigo: JSON.stringify(merged), 
+                      numero_ordem: '0', quantidade: 0, custo_do_mes: 0
+                  });
+              }
+              if (upsertData.length > 0) {
+                  await supabase.from('custo_geral').upsert(upsertData, { onConflict: 'it_codigo' });
+              }
+          }
 
           // FILTRO SEGURO DE COLUNAS: Garante que objetos não contenham chaves que a tabela custo_geral não possui (como last_modified_at herdado por proxy/cache)
           const validColumns = [

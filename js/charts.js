@@ -560,10 +560,10 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
 // =====================================================
 // GRÁFICOS: CONFIABILIDADE — MTBF / MTTR / INDISP
 // =====================================================
-const confiabCharts = { mtbf: null, mttr: null, indisp: null };
+const confiabCharts = { mtbf: null, mttr: null, indisp: null, mtta: null };
 
 export function destroyConfiabCharts() {
-  ['mtbf', 'mttr', 'indisp'].forEach(k => {
+  ['mtbf', 'mttr', 'indisp', 'mtta'].forEach(k => {
     if (confiabCharts[k] && !confiabCharts[k].isDisposed()) {
       confiabCharts[k].dispose();
       confiabCharts[k] = null;
@@ -572,7 +572,7 @@ export function destroyConfiabCharts() {
 }
 
 window.addEventListener('resize', () => {
-  ['mtbf', 'mttr', 'indisp'].forEach(k => {
+  ['mtbf', 'mttr', 'indisp', 'mtta'].forEach(k => {
     if (confiabCharts[k] && !confiabCharts[k].isDisposed() && confiabCharts[k].getDom().clientWidth > 0) confiabCharts[k].resize();
   });
 });
@@ -592,11 +592,12 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
   const byPeriodo = {};
   for (const d of dados) {
     if (!byPeriodo[d.periodo_ref]) {
-      byPeriodo[d.periodo_ref] = { mtbf: [], mttr: [], indisp: [] };
+      byPeriodo[d.periodo_ref] = { mtbf: [], mttr: [], indisp: [], mtta: [] };
     }
     byPeriodo[d.periodo_ref].mtbf.push(d.mtbf_h);
     byPeriodo[d.periodo_ref].mttr.push(d.mttr_h);
     byPeriodo[d.periodo_ref].indisp.push(d.indisponibilidade_pct);
+    byPeriodo[d.periodo_ref].mtta.push(d.mtta_m || 0);
   }
 
   // Ordena períodos (cronológico para meses, alfabético para semanas S01)
@@ -612,6 +613,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
   const vMtbf  = periodos.map(p => +avg(byPeriodo[p].mtbf).toFixed(2));
   const vMttr  = periodos.map(p => +avg(byPeriodo[p].mttr).toFixed(2));
   const vIndisp = periodos.map(p => +avg(byPeriodo[p].indisp).toFixed(2));
+  const vMtta = periodos.map(p => +avg(byPeriodo[p].mtta).toFixed(2));
 
   // Configuração de Cores Premium (Neon)
   const chartConfig = {
@@ -634,6 +636,13 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
       gradArea: [
         { offset: 0, color: 'rgba(239, 68, 68, 0.4)' },
         { offset: 1, color: 'rgba(239, 68, 68, 0.0)' }
+      ]
+    },
+    mtta: {
+      color: '#8b5cf6',
+      gradArea: [
+        { offset: 0, color: 'rgba(139, 92, 246, 0.4)' },
+        { offset: 1, color: 'rgba(139, 92, 246, 0.0)' }
       ]
     }
   };
@@ -815,6 +824,6 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
 
   confiabCharts.mtbf   = buildAdvancedChart('chartConfiabMtbf',   vMtbf,   metas.meta_mtbf_h,               'MTBF',              chartConfig.mtbf,   'h', true);
   confiabCharts.mttr   = buildAdvancedChart('chartConfiabMttr',   vMttr,   metas.meta_mttr_h,               'MTTR',              chartConfig.mttr,   'h', false);
-  confiabCharts.indisp = buildAdvancedChart('chartConfiabIndisp', vIndisp, metas.meta_indisponibilidade_pct, 'Indisponibilidade', chartConfig.indisp, '%', false);
+  confiabCharts.indisp = buildAdvancedChart('chartConfiabIndisp', vIndisp, metas.meta_indisponibilidade_pct || 8, 'Indisponibilidade', chartConfig.indisp, '%', false);
+  confiabCharts.mtta = buildAdvancedChart('chartMtta', vMtta, metas.meta_mtta_m || 30, 'MTTA', chartConfig.mtta, 'm', false);
 }
-

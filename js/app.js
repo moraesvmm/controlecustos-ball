@@ -1053,6 +1053,9 @@ function showView(name) {
   if (t && titles[name]) t.textContent = titles[name];
 
   refresh();
+
+  // Force ECharts to resize after the view is displayed
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
 }
 
 // =====================================================

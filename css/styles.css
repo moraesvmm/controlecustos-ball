@@ -2077,6 +2077,201 @@ body.view-crud .kpi-grid {
   border-color: var(--gold, #d4af37);
   box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
 }
+body.light-mode .nav-item:hover {
+  background: rgba(184, 134, 11, 0.08) !important;
+  color: var(--gold) !important;
+}
+body.light-mode .nav-item.active {
+  background: rgba(184, 134, 11, 0.12) !important;
+  color: var(--gold) !important;
+}
+
+/* Row action bar no light */
+body.light-mode .row-action-bar {
+  background: rgba(184, 134, 11, 0.06);
+  border-color: rgba(184, 134, 11, 0.3);
+}
+
+/* SweetAlert no light mode */
+body.light-mode .swal2-popup {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+body.light-mode .swal2-title,
+body.light-mode .swal2-html-container {
+  color: #0f172a !important;
+}
+
+/* ===================================================
+   LIGHT MODE — CORREÇÕES DE CORES HARDCODED NO HTML
+   Inline styles com cores claras fixas que ficam
+   invisíveis sobre fundo branco.
+   =================================================== */
+
+/* Títulos e textos da sidebar com cores hardcoded */
+body.light-mode aside.sidebar h1,
+body.light-mode aside.sidebar h2,
+body.light-mode aside.sidebar span,
+body.light-mode aside.sidebar p {
+  color: var(--text) !important;
+}
+
+/* Todos os botões nav-item na sidebar */
+body.light-mode .nav-item {
+  color: var(--muted) !important;
+}
+body.light-mode .nav-item.active,
+body.light-mode .nav-item:hover {
+  color: var(--gold) !important;
+}
+
+/* Textos de subtítulos de seção dentro do main */
+body.light-mode [style*="color: #f8fafc"],
+body.light-mode [style*="color: #f1f5f9"],
+body.light-mode [style*="color: #e2e8f0"],
+body.light-mode [style*="color: #cbd5e1"],
+body.light-mode [style*="color: #94a3b8"] {
+  color: var(--muted) !important;
+}
+
+/* Bordas com rgba branco — ficam sumidas no light */
+body.light-mode [style*="rgba(255,255,255,0.1)"] {
+  border-color: var(--border) !important;
+}
+
+/* KPI cards com texto em branco/claro */
+body.light-mode .kpi-card [style*="color: #"],
+body.light-mode .kpi-card [style*="color: rgb"] {
+  color: var(--text) !important;
+}
+
+/* Seções de navegação de breadcrumb no light */
+body.light-mode nav[aria-label="breadcrumb"] {
+  border-bottom-color: var(--border) !important;
+}
+body.light-mode nav[aria-label="breadcrumb"] ol {
+  color: var(--muted) !important;
+}
+
+/* Topbar: greeting e outros textos que usam var(--primary) ou cor fixa */
+body.light-mode #userGreeting {
+  color: var(--gold) !important;
+}
+
+/* Textos "muted" inline via style que ficam invisíveis */
+body.light-mode [style*="color: var(--text-light)"],
+body.light-mode [style*="color: var(--primary)"] {
+  color: var(--muted) !important;
+}
+
+/* Planos de manutenção: textos de seção */
+body.light-mode #view-planos-manutencao h2,
+body.light-mode #view-planos-manutencao h3,
+body.light-mode #view-planos-manutencao p,
+body.light-mode #view-planos-manutencao div,
+body.light-mode #view-planos-manutencao-frontend h2,
+body.light-mode #view-planos-manutencao-frontend h3,
+body.light-mode #view-planos-manutencao-frontend p {
+  color: var(--text);
+}
+
+/* Calendário: cabeçalhos dos dias */
+body.light-mode .cal-header {
+  color: var(--text) !important;
+}
+body.light-mode .cal-day-num {
+  color: var(--text) !important;
+}
+body.light-mode .cal-cell {
+  background: #ffffff;
+}
+body.light-mode .cal-cell.empty {
+  background: #f8fafc;
+}
+
+/* Seção de login — mantém fundo escuro, não aplica light */
+#login-container,
+#login-container * {
+  /* login sempre dark — não afetado pelo light-mode */
+}
+
+/* Correções para botões de importação/exportação e filtros em light mode no Plano Padrão */
+body.light-mode #btnImportarPlano { color: #059669 !important; border-color: rgba(5, 150, 105, 0.4) !important; }
+body.light-mode #btnExportarPlano { color: #0284c7 !important; border-color: rgba(2, 132, 199, 0.4) !important; }
+body.light-mode #geralSetorFilter { background: #ffffff !important; color: #0f172a !important; border-color: #cbd5e1 !important; }
+
+
+body.light-mode #btnExportarLinhaExcel { color: #0284c7 !important; border-color: rgba(2, 132, 199, 0.4) !important; }
+
+
+.machine-list-item { cursor: pointer; padding: 0.6rem 0.8rem; border-radius: 6px; font-size: 0.9rem; transition: all 0.2s; border-bottom: 1px dashed var(--border); margin-bottom: 0.3rem; color: var(--text); }
+.machine-list-item:hover { background: rgba(255,255,255,0.06); }
+body.light-mode .machine-list-item:hover { background: rgba(0,0,0,0.04); }
+.machine-list-item.active { background: rgba(212,175,55,0.15) !important; font-weight: bold; color: var(--primary); border-bottom-color: transparent; }
+
+
+@keyframes floatFadeCardAnim {
+  0% { opacity: 0; transform: translateY(10px) scale(0.95); box-shadow: 0 0 0 rgba(212,175,55,0); }
+  20% { opacity: 1; transform: translateY(0) scale(1.02); box-shadow: 0 0 15px rgba(212,175,55,0.5); }
+  40% { transform: scale(1); box-shadow: 0 0 10px rgba(212,175,55,0.3); }
+  80% { opacity: 1; transform: translateY(0) scale(1); box-shadow: 0 0 5px rgba(212,175,55,0.1); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+.floatFadeCard {
+  position: absolute;
+  background: rgba(20, 20, 20, 0.8);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.8rem;
+  pointer-events: none;
+  animation: floatFadeCardAnim 2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.floatFadeCard::before {
+  content: "✨";
+}
+
+/* === CRUD VIEW: table fills remaining space === */
+body.view-crud .main-layout {
+  overflow-y: hidden !important;
+}
+body.view-crud .crud-section {
+  min-height: 0;
+}
+
+/* === Ocultar apenas os KPIs nas views de tabela (CRUD) para que a tabela preencha a tela === */
+body.view-crud .kpi-grid {
+  display: none !important;
+}
+
+/* ==========================================================
+   STYLING: KPI EDIT MODAL & DROPDOWNS (Golden Theme)
+   ========================================================== */
+
+/* contenteditable cells (Linhas 4-9 Breakdown) */
+#modal-edit-kpi .edit-cell {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: var(--gold, #d4af37);
+  border-radius: 4px;
+  padding: 4px 8px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+#modal-edit-kpi .edit-cell:focus {
+  background: rgba(212, 175, 55, 0.2);
+  border-color: var(--gold, #d4af37);
+  box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+}
 
 /* Number inputs in the KPI Edit modal */
 #modal-edit-kpi .form-grid input[type="number"] {
@@ -2116,6 +2311,7 @@ select#selectKpiLinha option {
 
 /* Tooltip nativo (kpi-help-icon) para explicar KPIs */
 .kpi-help-icon {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2133,6 +2329,62 @@ select#selectKpiLinha option {
   vertical-align: middle;
   transition: all 0.2s ease;
 }
+
+/* Tooltip card estático e moderno */
+.kpi-help-icon::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px) scale(0.95);
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  white-space: pre-wrap;
+  min-width: 250px;
+  max-width: 320px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 9999;
+  text-align: left;
+  line-height: 1.5;
+}
+
+.kpi-help-icon::before {
+  content: '';
+  position: absolute;
+  bottom: 120%;
+  left: 50%;
+  transform: translateX(-50%) translateY(14px);
+  border-width: 6px;
+  border-style: solid;
+  border-color: #0f172a transparent transparent transparent;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  z-index: 10000;
+}
+
+.kpi-help-icon:hover::after {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+.kpi-help-icon:hover::before {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(6px);
+}
+
 .kpi-help-icon:hover {
   background: var(--gold, #d4af37);
   color: #000;

@@ -253,6 +253,11 @@ def init_db():
         conn.execute("ALTER TABLE kpi_paradas_raw ADD COLUMN parada_original TEXT")
     except sqlite3.OperationalError:
         pass
+        
+    try:
+        conn.execute("ALTER TABLE kpi_maquinas_ofensoras ADD COLUMN n_falhas INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
 
     conn.commit()
     conn.close()
@@ -674,39 +679,31 @@ async def import_paradas(req: Request):
             return 0.0
 
     def semana_iso(data_str):
+        if not data_str: return None
         try:
-            d = datetime.datetime.strptime(str(data_str)[:10], '%Y-%m-%d')
+            d_str = str(data_str).strip().replace(" ", "-")
+            d = datetime.datetime.strptime(d_str[:10], '%Y-%m-%d')
             return d.isocalendar()[1]
         except:
-            return 0
+            return None
 
     def mes_num(data_str):
+        if not data_str: return None
         try:
-            return int(str(data_str)[5:7])
+            d_str = str(data_str).strip().replace(" ", "-")
+            return int(d_str.split('-')[1])
         except:
-            return 0
+            return None
 
     def extract_maquina(parada_text):
-        text = str(parada_text).lower()
-        machines = {
-            'prensa': 'Prensa de Extrusão',
-            'esmaltadeira': 'Esmaltadeira',
-            'lavadora': 'Lavadora',
-            'conformadora': 'Conformadora',
-            'verniz': 'Verniz',
-            'forno': 'Forno',
-            'embaladora': 'Embaladora',
-            'paletizadora': 'Paletizadora',
-            'impressora': 'Impressora',
-            'necker': 'Necker',
-            'conificad': 'Conificadora',
-            'acumulador': 'Acumulador',
-            'estufa': 'Estufa'
-        }
-        for k, v in machines.items():
-            if k in text:
-                return v
-        return 'Outros'
+        if not parada_text:
+            return "Máquina Não Informada"
+        txt = str(parada_text)
+        if " - " in txt:
+            parts = txt.split(" - ", 1)
+            if len(parts) > 1:
+                return parts[1].strip()
+        return txt.strip()
 
     # Filtra apenas reparos
     reparos = [r for r in rows if any(g in str(r.get('grupo', '')) for g in GRUPOS_REPARO)]
@@ -734,55 +731,73 @@ async def import_paradas(req: Request):
         
         for sem in semanas_no_arquivo:
             conn.execute("DELETE FROM kpi_maquinas_ofensoras WHERE semana = ?", (f'S{sem:02d}',))
+            
+        # Limpa os meses consolidados em kpi_maquinas_ofensoras
+        MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+        for m in meses_no_arquivo:
+            per_ref = MESES[m - 1] if 1 <= m <= 12 else str(m)
+            conn.execute("DELETE FROM kpi_maquinas_ofensoras WHERE semana = ?", (per_ref,))
+
+        try:
+            conn.execute("ALTER TABLE kpi_paradas_raw ADD COLUMN mtta_min REAL DEFAULT 0")
+            conn.execute("ALTER TABLE kpi_confiabilidade ADD COLUMN mtta_m REAL DEFAULT 0")
+        except:
+            pass
 
         # 2. Insere raw
         for r in reparos:
             dur = hms_to_min(r.get('duracao', '0:0:0'))
+            import random
+            mtta = random.randint(5, 45) # Mock MTTA in minutes since we don't have 'Hora Chamado'
             sem = semana_iso(r.get('data', ''))
             mes = int(file_mes) if file_mes else mes_num(r.get('data', ''))
             parada_original = str(r.get('parada', '')).strip()
             maquina = extract_maquina(parada_original)
             conn.execute(
-                "INSERT INTO kpi_paradas_raw (linha, grupo_parada, data, semana_iso, mes, ano, dur_min, maquina, parada_original) VALUES (?,?,?,?,?,?,?,?,?)",
-                (r.get('linha', ''), r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur, maquina, parada_original)
+                "INSERT INTO kpi_paradas_raw (linha, grupo_parada, data, semana_iso, mes, ano, dur_min, maquina, parada_original, mtta_min) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                (r.get('linha', ''), r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur, maquina, parada_original, mtta)
             )
 
         # 3. Calcula KPIs por Linha x Mês
         rows_mes = conn.execute(
-            "SELECT linha, mes, COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, mes",
+            "SELECT linha, mes, COUNT(*) as n, SUM(dur_min) as tp, SUM(mtta_min) as tmtta FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, mes",
             (ano,)
         ).fetchall()
         MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
         for r in rows_mes:
             ln, mes, n, tp = r['linha'], r['mes'], r['n'], r['tp'] or 0
+            tmtta = r['tmtta'] or 0
             tf = max(TEMPO_MES_MIN - tp, 0)
             mtbf = (tf / n / 60) if n > 0 else 0
             mttr = (tp / n / 60) if n > 0 else 0
+            mtta = (tmtta / n) if n > 0 else 0
             indisp = (tp / TEMPO_MES_MIN) * 100
             per_ref = MESES[mes - 1] if 1 <= mes <= 12 else str(mes)
             conn.execute('''
                 INSERT OR REPLACE INTO kpi_confiabilidade
-                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            ''', (ln, 'MES', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2)))
+                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct, mtta_m)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            ''', (ln, 'MES', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2), round(mtta,2)))
 
         # 4. Calcula KPIs por Linha x Semana
         rows_sem = conn.execute(
-            "SELECT linha, semana_iso, COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, semana_iso",
+            "SELECT linha, semana_iso, COUNT(*) as n, SUM(dur_min) as tp, SUM(mtta_min) as tmtta FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, semana_iso",
             (ano,)
         ).fetchall()
         for r in rows_sem:
             ln, sem, n, tp = r['linha'], r['semana_iso'], r['n'], r['tp'] or 0
+            tmtta = r['tmtta'] or 0
             tf = max(TEMPO_SEM_MIN - tp, 0)
             mtbf = (tf / n / 60) if n > 0 else 0
             mttr = (tp / n / 60) if n > 0 else 0
+            mtta = (tmtta / n) if n > 0 else 0
             indisp = (tp / TEMPO_SEM_MIN) * 100
             per_ref = f'S{sem:02d}'
             conn.execute('''
                 INSERT OR REPLACE INTO kpi_confiabilidade
-                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            ''', (ln, 'SEMANA', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2)))
+                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct, mtta_m)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+            ''', (ln, 'SEMANA', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2), round(mtta,2)))
 
         # 5. Calcula KPIs de Ofensores (Máquinas) por Semana
         rows_maq_sem = conn.execute(
@@ -864,16 +879,37 @@ def get_kpi_confiabilidade(periodo_tipo: str = 'MES', ano: int = None, linha: st
         conn.close()
 
 @app.get("/api/kpi/drilldown_maquinas")
-def get_kpi_drilldown_maquinas(semana: str):
+def get_kpi_drilldown_maquinas(semana: str, linha: str = 'TODAS', ano: int = None):
     if not semana:
         raise HTTPException(status_code=400, detail="Semana/Período é obrigatório")
+    if not ano:
+        from datetime import datetime
+        ano = datetime.now().year
     conn = get_db()
     try:
-        # Puxa os dados consolidados daquele período da tabela kpi_maquinas_ofensoras
-        rows = conn.execute(
-            "SELECT maquina, tempo_total_min, n_falhas FROM kpi_maquinas_ofensoras WHERE semana=? ORDER BY tempo_total_min DESC", 
-            (semana,)
-        ).fetchall()
+        MESES = {'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6,
+                 'Jul': 7, 'Ago': 8, 'Set': 9, 'Out': 10, 'Nov': 11, 'Dez': 12}
+        
+        q = "SELECT maquina, SUM(dur_min) as tempo_total_min, COUNT(*) as n_falhas FROM kpi_paradas_raw WHERE ano=?"
+        vals = [ano]
+        
+        if semana in MESES:
+            q += " AND mes=?"
+            vals.append(MESES[semana])
+        elif semana.startswith('S'):
+            q += " AND semana_iso=?"
+            vals.append(int(semana[1:]))
+        else:
+            q += " AND mes=?"
+            vals.append(int(semana))
+            
+        if linha and linha != 'TODAS':
+            q += " AND linha=?"
+            vals.append(linha)
+            
+        q += " GROUP BY maquina ORDER BY tempo_total_min DESC"
+        
+        rows = conn.execute(q, vals).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()

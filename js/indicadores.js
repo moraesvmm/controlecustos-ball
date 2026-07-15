@@ -126,6 +126,7 @@ async function handleExcelUpload(event) {
       await extrairBaseDeDados(workbook);
       await extrairPlanilha2(workbook);
       await extrairPlanoAcoes(workbook);
+      await extrairRelatorioParadas(workbook);
       await carregarEAtualizarPainel();
       Swal.fire('Sucesso!', 'Indicadores atualizados com sucesso.', 'success');
     } catch (error) {
@@ -228,6 +229,69 @@ async function extrairPlanoAcoes(workbook) {
   }
 }
 
+async function extrairRelatorioParadas(workbook) {
+  const sheetName = workbook.SheetNames[0];
+  const sheet = workbook.Sheets[sheetName];
+  if (!sheet) return;
+
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: null, raw: false, dateNF: 'yyyy-mm-dd' });
+  if (!rawRows || rawRows.length === 0) return;
+  
+  let headerRowIndex = -1;
+  let headers = [];
+  
+  // Procura pela linha de cabeçalho correta nas primeiras 20 linhas
+  for (let i = 0; i < Math.min(20, rawRows.length); i++) {
+    const row = rawRows[i];
+    if (row && row.some(cell => typeof cell === 'string' && cell.toLowerCase().trim() === 'paradas')) {
+      headerRowIndex = i;
+      headers = row.map(cell => cell ? String(cell).trim().toLowerCase() : '');
+      break;
+    }
+  }
+
+  if (headerRowIndex === -1) return; // Não encontrou o cabeçalho 'Paradas', provavelmente não é o relatório correto
+
+  let payloadRows = [];
+  for (let i = headerRowIndex + 1; i < rawRows.length; i++) {
+    const row = rawRows[i];
+    if (!row || !row.length) continue;
+    
+    const norm = {};
+    let hasData = false;
+    for (let j = 0; j < headers.length; j++) {
+      if (headers[j]) {
+        norm[headers[j]] = row[j];
+        if (row[j]) hasData = true;
+      }
+    }
+    
+    if (!hasData || (!norm['paradas'] && !norm['data'])) continue;
+
+    payloadRows.push({
+      parada: norm['paradas'] || '',
+      grupo: norm['grupos de paradas'] || norm['grupo de paradas'] || '',
+      data: norm['data'] || '',
+      inicio: norm['início'] || norm['inicio'] || '',
+      fim: norm['fim'] || '',
+      duracao: norm['duração'] || norm['duracao'] || '00:00:00'
+    });
+  }
+  
+  if (payloadRows.length === 0) return;
+
+  try {
+    const res = await fetch('/api/import/paradas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows: payloadRows, ano: new Date().getFullYear(), mes: null })
+    });
+    if (!res.ok) throw new Error('Falha na resposta da importação de paradas');
+  } catch(e) {
+    console.error('Erro ao chamar /api/import/paradas:', e);
+  }
+}
+
 // ---- DATA FETCHING ----
 let chartEvolucaoInstance = null;
 let chartOfensoresInstance = null;
@@ -291,21 +355,39 @@ async function carregarEAtualizarPainel() {
   }
 }
 
-function atualizarCardsFixos() {
-  const semanas = kpiDataBreakdowns.filter(d => d.periodo_tipo === 'semana' && d.breakdown_real !== null);
-  const meses = kpiDataBreakdowns.filter(d => d.periodo_tipo === 'mes' && d.breakdown_real !== null);
-  
-  if (semanas.length > 0) {
-    const ultima = semanas[semanas.length - 1];
-    document.getElementById('kpiBreakdownSemana').textContent = (ultima.breakdown_real * 100).toFixed(2) + '%';
+async function atualizarCardsFixos() {
+  const ano = new Date().getFullYear();
+  try {
+    const respSem = await fetch(`/api/kpi/confiabilidade?periodo_tipo=SEMANA&ano=${ano}&linha=TODAS`);
+    const respMes = await fetch(`/api/kpi/confiabilidade?periodo_tipo=MES&ano=${ano}&linha=TODAS`);
     
-    // Find the latest meta available
-    const ultSemMeta = [...kpiDataBreakdowns].reverse().find(d => d.periodo_tipo === 'semana' && d.target_meta !== null);
-    document.getElementById('kpiBreakdownMeta').textContent = ultSemMeta ? (ultSemMeta.target_meta * 100).toFixed(2) + '%' : '--';
-  }
-  if (meses.length > 0) {
-    const ultimo = meses[meses.length - 1];
-    document.getElementById('kpiBreakdownMes').textContent = (ultimo.breakdown_real * 100).toFixed(2) + '%';
+    let indispSem = '--';
+    let indispMes = '--';
+
+    if (respSem.ok) {
+        const dados = await respSem.json();
+        if (dados && dados.length > 0) {
+            indispSem = dados[dados.length - 1].indisponibilidade_pct.toFixed(2) + '%';
+        }
+    }
+    if (respMes.ok) {
+        const dados = await respMes.json();
+        if (dados && dados.length > 0) {
+            indispMes = dados[dados.length - 1].indisponibilidade_pct.toFixed(2) + '%';
+        }
+    }
+
+    const kpiSemEl = document.getElementById('kpiBreakdownSemana');
+    if (kpiSemEl) kpiSemEl.textContent = indispSem;
+    
+    const kpiMesEl = document.getElementById('kpiBreakdownMes');
+    if (kpiMesEl) kpiMesEl.textContent = indispMes;
+
+    const metaIndisp = (Object.values(_confiabMetas)[0] || {}).meta_indisponibilidade_pct || 8;
+    const kpiMetaEl = document.getElementById('kpiBreakdownMeta');
+    if (kpiMetaEl) kpiMetaEl.textContent = metaIndisp.toFixed(2) + '%';
+  } catch(e) {
+    console.error("Erro atualizarCardsFixos:", e);
   }
 }
 
@@ -368,114 +450,38 @@ const formatDataView = (opt) => {
 };
 
 function toggleEvolucao(tipo) {
-  document.getElementById('btnKpiSemana').style.background = (tipo==='semana') ? 'var(--bg3)' : 'transparent';
-  document.getElementById('btnKpiMes').style.background = (tipo==='mes') ? 'var(--bg3)' : 'transparent';
-  document.getElementById('btnKpiDiario').style.background = (tipo==='diario') ? 'var(--bg3)' : 'transparent';
+  const btnSemana = document.getElementById('btnKpiSemana');
+  const btnMes = document.getElementById('btnKpiMes');
+  const btnDiario = document.getElementById('btnKpiDiario');
+
+  if (btnSemana) btnSemana.style.background = (tipo==='semana') ? 'var(--bg3)' : 'transparent';
+  if (btnMes) btnMes.style.background = (tipo==='mes') ? 'var(--bg3)' : 'transparent';
+  if (btnDiario) btnDiario.style.background = (tipo==='diario') ? 'var(--bg3)' : 'transparent';
   
-  document.getElementById('btnKpiSemana').style.color = (tipo==='semana') ? 'var(--text-primary)' : 'var(--text-secondary)';
-  document.getElementById('btnKpiMes').style.color = (tipo==='mes') ? 'var(--text-primary)' : 'var(--text-secondary)';
-  document.getElementById('btnKpiDiario').style.color = (tipo==='diario') ? 'var(--text-primary)' : 'var(--text-secondary)';
+  if (btnSemana) btnSemana.style.color = (tipo==='semana') ? 'var(--text-primary)' : 'var(--text-secondary)';
+  if (btnMes) btnMes.style.color = (tipo==='mes') ? 'var(--text-primary)' : 'var(--text-secondary)';
+  if (btnDiario) btnDiario.style.color = (tipo==='diario') ? 'var(--text-primary)' : 'var(--text-secondary)';
   
-  const ctxEl = document.getElementById('chartKpiEvolucao');
-  if (!ctxEl) return;
+  if (tipo === 'diario') return; // Not supported for Indisponibilidade graph yet
   
-  if (chartEvolucaoInstance && !chartEvolucaoInstance.isDisposed()) {
-    chartEvolucaoInstance.dispose();
+  // Sync state with Confiabilidade backend logic
+  _confiabPeriodo = (tipo === 'semana') ? 'SEMANA' : 'MES';
+  
+  // Update Confiabilidade tab buttons if they exist
+  document.querySelectorAll('.btn-toggle-confiab').forEach(b => {
+      b.style.background = 'transparent';
+      b.style.color = 'var(--text-secondary)';
+      b.style.fontWeight = '400';
+  });
+  const btnConf = document.getElementById(_confiabPeriodo === 'MES' ? 'btnConfiabMes' : 'btnConfiabSem');
+  if (btnConf) {
+      btnConf.style.background = 'var(--gold)';
+      btnConf.style.color = '#000';
+      btnConf.style.fontWeight = '600';
   }
-  chartEvolucaoInstance = echarts.init(ctxEl);
 
-  const commonOptions = {
-    tooltip: {
-      trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,0.04)' } },
-      backgroundColor: 'rgba(15, 23, 42, 0.9)',
-      textStyle: { color: '#e2e8f0', fontFamily: 'Inter' },
-      borderColor: 'rgba(255,255,255,0.1)'
-    },
-    toolbox: {
-      feature: {
-        magicType: { type: ['line', 'bar'] },
-        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: '#0f172a', textareaColor: '#0f172a', textareaBorderColor: 'rgba(255,255,255,0.1)', textColor: '#e2e8f0', buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
-        saveAsImage: { show: true, title: 'Salvar' }
-      },
-      iconStyle: { borderColor: '#94a3b8' }
-    },
-    dataZoom: [
-      { type: 'slider', xAxisIndex: 0, show: true, bottom: '2%', height: 12, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
-      { type: 'inside', xAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
-    ],
-    grid: { left: '3%', right: '4%', bottom: '10%', containLabel: true },
-    legend: { textStyle: { color: '#cbd5e1' }, top: 0 }
-  };
-
-  if (tipo === 'diario') {
-    if (kpiDataDiario.length === 0) {
-      let mE = parseFloat(document.getElementById('editKpiDiaElec')?.value || 3.9); 
-      let mM = parseFloat(document.getElementById('editKpiDiaMec')?.value || 8.2);
-      kpiDataDiario = Array.from({length:30}, (_,i) => ({dia: i+1, eletrica_pct: Math.random()*mE, mecanica_pct: Math.random()*mM}));
-    }
-    
-    chartEvolucaoInstance.setOption({
-      ...commonOptions,
-      tooltip: { ...commonOptions.tooltip },
-      xAxis: { type: 'category', data: kpiDataDiario.map(d => d.dia), axisLabel: { color: '#94a3b8' }, axisLine: { show: false }, axisTick: { show: false } },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
-      series: [
-        { 
-          name: 'Elétrica', 
-          type: 'bar', stack: 'total',
-          data: kpiDataDiario.map(d => d.eletrica_pct.toFixed(2)), 
-
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(239, 68, 68, 0.9)'}, {offset:1, color:'rgba(239, 68, 68, 0.3)'}])
-          }
-        },
-        { 
-          name: 'Mecânica', 
-          type: 'bar', stack: 'total',
-          data: kpiDataDiario.map(d => d.mecanica_pct.toFixed(2)), 
-
-          itemStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(59, 130, 246, 0.9)'}, {offset:1, color:'rgba(59, 130, 246, 0.3)'}]),
-            borderRadius: [8, 8, 0, 0]
-          }
-        }
-      ]
-    });
-  } else {
-    const data = kpiDataBreakdowns.filter(d => d.periodo_tipo === tipo);
-    chartEvolucaoInstance.setOption({
-      ...commonOptions,
-      xAxis: { type: 'category', boundaryGap: false, data: data.map(d => d.periodo_nome), axisLabel: { color: '#94a3b8' }, axisLine: { show: false }, axisTick: { show: false } },
-      yAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
-      series: [
-        { 
-          name: 'Breakdown (%)', 
-          type: 'line',
-          data: data.map(d => (d.breakdown_real * 100).toFixed(2)), 
-          itemStyle: { color: '#10b981' },
-          markPoint: {
-            data: [{ type: 'max', name: 'Maior' }],
-            label: { color: '#fff', fontSize: 10, fontWeight: 600, formatter: (p) => p.value.toFixed(1) + '%' }
-          },
-          animationDelay: (idx) => idx * 30,
-
-          areaStyle: {
-            color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset:0, color:'rgba(16, 185, 129, 0.5)'}, {offset:1, color:'rgba(16, 185, 129, 0.0)'}])
-          },
-          smooth: true, symbolSize: 8, lineStyle: { width: 3 }
-        },
-        { 
-          name: 'Meta', 
-          type: 'line',
-          data: data.map(d => d.target_meta ? (d.target_meta * 100).toFixed(2) : null), 
-          itemStyle: { color: 'rgba(239, 68, 68, 0.8)' },
-          lineStyle: { type: 'dashed', width: 2 },
-
-          symbolSize: 0
-        }
-      ]
-    });
-  }
+  // Load Confiabilidade data which updates chartConfiabIndisp automatically!
+  carregarConfiabilidade();
 }
 
 function renderKpiOfensores(semana) {
@@ -1045,6 +1051,7 @@ function prevSlide() {
 let _confiabPeriodo = 'MES';
 let _confiabLinha   = 'TODAS';
 let _confiabAno     = new Date().getFullYear();
+let _confiabMesSemana = 'TODOS';
 let _confiabMetas   = {};
 
 async function carregarConfiabilidade() {
@@ -1079,11 +1086,44 @@ async function carregarConfiabilidade() {
     if (cards) cards.style.display = 'grid';
     if (chartsArea) chartsArea.style.display = 'grid';
 
-    // Calcula médias para os cards de resumo
+    // Atualiza opções do dropdown de Período (Mês/Semana)
+    const selectMesSemana = document.getElementById('selectConfiabMesSemana');
+    if (selectMesSemana) {
+      const mesesOrder = {
+        'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6,
+        'Jul': 7, 'Ago': 8, 'Set': 9, 'Out': 10, 'Nov': 11, 'Dez': 12
+      };
+      let uniquePeriodos = [...new Set(dados.map(d => d.periodo_ref))];
+      uniquePeriodos.sort((a, b) => {
+        if (mesesOrder[a] && mesesOrder[b]) return mesesOrder[a] - mesesOrder[b];
+        return a.localeCompare(b);
+      });
+      
+      selectMesSemana.innerHTML = ''; // Removed 'TODOS'
+      uniquePeriodos.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p;
+        opt.textContent = p;
+        selectMesSemana.appendChild(opt);
+      });
+      
+      // Tenta restaurar ou pega o último (mais recente)
+      if (uniquePeriodos.includes(_confiabMesSemana)) {
+        selectMesSemana.value = _confiabMesSemana;
+      } else {
+        const latest = uniquePeriodos.length ? uniquePeriodos[uniquePeriodos.length - 1] : '';
+        selectMesSemana.value = latest;
+        _confiabMesSemana = latest;
+      }
+    }
+
+    // Calcula médias para os cards de resumo usando apenas os dados filtrados
+    const dadosKpi = _confiabMesSemana === 'TODOS' ? dados : dados.filter(d => d.periodo_ref === _confiabMesSemana);
+    
     const avg = (arr, key) => arr.length ? arr.reduce((s, d) => s + (d[key] || 0), 0) / arr.length : 0;
-    const avgMtbf  = avg(dados, 'mtbf_h');
-    const avgMttr  = avg(dados, 'mttr_h');
-    const avgIndisp = avg(dados, 'indisponibilidade_pct');
+    const avgMtbf  = avg(dadosKpi, 'mtbf_h');
+    const avgMttr  = avg(dadosKpi, 'mttr_h');
+    const avgMtta = avg(dadosKpi, 'mtta_m');
 
     // Metas (usa a da linha selecionada ou a primeira disponível)
     const metaRef = _confiabLinha !== 'TODAS'
@@ -1091,7 +1131,7 @@ async function carregarConfiabilidade() {
       : (Object.values(_confiabMetas)[0] || {});
     const metaMtbf  = metaRef.meta_mtbf_h || 4;
     const metaMttr  = metaRef.meta_mttr_h || 0.5;
-    const metaIndisp = metaRef.meta_indisponibilidade_pct || 8;
+    const metaMtta = 30; // 30 minutes default meta for MTTA
 
     // Atualiza cards
     const setCard = (elId, val, meta, fmtFn, higherIsBetter) => {
@@ -1105,26 +1145,43 @@ async function carregarConfiabilidade() {
         varEl.style.color = good ? '#10b981' : '#ef4444';
       }
     };
+    const setCardMtta = (elId, val, meta, fmtFn, higherIsBetter) => {
+      const el = document.getElementById(elId);
+      if (el) el.textContent = fmtFn(val);
+      const varEl = document.getElementById(elId + 'Var');
+      if (varEl) {
+        const delta = ((val - meta) / meta * 100);
+        const good  = higherIsBetter ? delta >= 0 : delta <= 0;
+        varEl.textContent = `${delta >= 0 ? '+' : ''}${delta.toFixed(1)}% vs meta`;
+        varEl.style.color = good ? '#10b981' : '#ef4444';
+      }
+    };
+
     document.getElementById('cardConfiabMtbfMeta').textContent  = `Meta: ${metaMtbf}h`;
     document.getElementById('cardConfiabMttrMeta').textContent  = `Meta: ${metaMttr}h`;
-    document.getElementById('cardConfiabIndispMeta').textContent = `Meta: ${metaIndisp}%`;
+    
+    let mttaMetaEl = document.getElementById('cardConfiabMttaMeta');
+    if(mttaMetaEl) mttaMetaEl.textContent = `Meta: ${metaMtta}m`;
+
     setCard('cardConfiabMtbf',  avgMtbf,  metaMtbf,  v => v.toFixed(2) + 'h',  true);
     setCard('cardConfiabMttr',  avgMttr,  metaMttr,  v => v.toFixed(2) + 'h',  false);
-    setCard('cardConfiabIndisp', avgIndisp, metaIndisp, v => v.toFixed(2) + '%', false);
+    setCardMtta('cardConfiabMtta', avgMtta, metaMtta, v => v.toFixed(2) + 'm', false);
 
     // Garante cor dos cards conforme situação
     document.getElementById('cardConfiabMtbf').style.color  = avgMtbf  >= metaMtbf  ? '#10b981' : '#ef4444';
     document.getElementById('cardConfiabMttr').style.color  = avgMttr  <= metaMttr  ? '#10b981' : '#ef4444';
-    document.getElementById('cardConfiabIndisp').style.color = avgIndisp <= metaIndisp ? '#10b981' : '#ef4444';
+    
+    let mttaCardEl = document.getElementById('cardConfiabMtta');
+    if(mttaCardEl) mttaCardEl.style.color = avgMtta <= metaMtta ? '#10b981' : '#ef4444';
 
     // Renderiza gráficos
     renderConfiabilidadeCharts(dados, {
       meta_mtbf_h: metaMtbf,
       meta_mttr_h: metaMttr,
-      meta_indisponibilidade_pct: metaIndisp
+      meta_mtta_m: metaMtta
     }, _confiabLinha);
 
-    setTimeout(() => window.dispatchEvent(new Event('resize')), 50);
+    setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
 
   } catch(e) {
     console.error('Erro ao carregar confiabilidade:', e);
@@ -1223,6 +1280,7 @@ async function importarMGPRO(file) {
       const iLinha = headers.findIndex(h => h.toLowerCase() === 'linha');
       const iData  = headers.findIndex(h => h.toLowerCase() === 'data');
       const iDur   = headers.findIndex(h => h.toLowerCase().includes('ura'));
+      const iInicio = headers.findIndex(h => h.toLowerCase() === 'início' || h.toLowerCase() === 'inicio');
 
       const rows = [];
       let ano = new Date().getFullYear();
@@ -1246,7 +1304,8 @@ async function importarMGPRO(file) {
           grupo,
           linha: String(row[iLinha] || '').trim(),
           data: dataStr,
-          duracao: String(row[iDur] || '0:0:0').trim()
+          duracao: String(row[iDur] || '0:0:0').trim(),
+          inicio: iInicio >= 0 ? String(row[iInicio] || '0:0:0').trim() : '0:0:0'
         });
       }
 
@@ -1298,7 +1357,13 @@ export function initConfiabilidade() {
       btn.style.background  = 'var(--gold)';
       btn.style.color       = '#000';
       btn.style.fontWeight  = '600';
-      _confiabPeriodo = btn.dataset.periodo;
+      
+      // Se mudar de Mensal para Semanal ou vice-versa, reseta o dropdown de mês/semana
+      if (_confiabPeriodo !== btn.dataset.periodo) {
+          _confiabPeriodo = btn.dataset.periodo;
+          _confiabMesSemana = 'TODOS';
+      }
+      
       carregarConfiabilidade();
     });
   });
@@ -1310,6 +1375,11 @@ export function initConfiabilidade() {
   });
   document.getElementById('selectConfiabAno')?.addEventListener('change', e => {
     _confiabAno = parseInt(e.target.value);
+    _confiabMesSemana = 'TODOS'; // reset ao mudar de ano
+    carregarConfiabilidade();
+  });
+  document.getElementById('selectConfiabMesSemana')?.addEventListener('change', e => {
+    _confiabMesSemana = e.target.value;
     carregarConfiabilidade();
   });
 
@@ -1350,7 +1420,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
   inst.showLoading({ text: 'Carregando...', color: '#10b981', textColor: '#f1f5f9', maskColor: 'rgba(15, 23, 42, 0.8)' });
   
   try {
-    const resp = await fetch(`/api/kpi/drilldown_maquinas?semana=${encodeURIComponent(periodo)}`);
+    const resp = await fetch(`/api/kpi/drilldown_maquinas?semana=${encodeURIComponent(periodo)}&linha=${encodeURIComponent(_confiabLinha)}&ano=${encodeURIComponent(_confiabAno)}`);
     const rawData = await resp.json();
     inst.hideLoading();
     
@@ -1360,6 +1430,53 @@ window.abrirDrilldownMaquinas = async function(periodo) {
       tempo_total_min: Math.round(d.tempo_total_min * 10) / 10
     }));
     data.sort((a,b) => a.tempo_total_min - b.tempo_total_min);
+
+    // Cálculos de Inteligência Executiva
+    const totalMinutos = data.reduce((acc, d) => acc + d.tempo_total_min, 0);
+    const totalFalhas = data.reduce((acc, d) => acc + d.n_falhas, 0);
+    const sortedDesc = [...data].sort((a,b) => b.tempo_total_min - a.tempo_total_min);
+    
+    const formatTime = (totalMin) => {
+      if (!totalMin) return '0m';
+      const m = Math.round(totalMin);
+      const hours = Math.floor(m / 60);
+      const mins = m % 60;
+      if (hours > 0) return `${hours.toLocaleString('pt-BR')}h ${mins}m`;
+      return `${mins}m`;
+    };
+
+    document.getElementById('drilldownTotalMinutos').textContent = formatTime(totalMinutos);
+    document.getElementById('drilldownTotalOcorrencias').textContent = totalFalhas.toLocaleString('pt-BR');
+
+    const rankingHtml = sortedDesc.slice(0, 3).map((d, index) => {
+       const percent = totalMinutos > 0 ? ((d.tempo_total_min / totalMinutos) * 100).toFixed(1) : 0;
+       const colors = ['rgba(212,175,55,0.15)', 'rgba(192,192,192,0.1)', 'rgba(205,127,50,0.1)'];
+       const borderColors = ['rgba(212,175,55,0.4)', 'rgba(192,192,192,0.3)', 'rgba(205,127,50,0.3)'];
+       const labels = ['1º MAIOR', '2º MAIOR', '3º MAIOR'];
+       return `
+         <div style="background: ${colors[index] || 'rgba(15,23,42,0.5)'}; border: 1px solid ${borderColors[index] || 'rgba(255,255,255,0.05)'}; padding: 0.85rem 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+           <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+             <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;">${labels[index]}</span>
+             <strong style="color: #e2e8f0; font-size: 0.95rem; text-transform: uppercase;">${d.maquina}</strong>
+           </div>
+           <div style="text-align: right;">
+             <div style="color: #f43f5e; font-weight: 700; font-family: monospace; font-size: 1.15rem;">${formatTime(d.tempo_total_min)}</div>
+             <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 500;">${percent}% do impacto • ${d.n_falhas} falhas</div>
+           </div>
+         </div>
+       `;
+    }).join('');
+    
+    document.getElementById('drilldownRankingMaquinas').innerHTML = rankingHtml || '<div style="color: var(--muted); font-size: 0.85rem;">Sem dados suficientes neste período.</div>';
+
+    let insight = "Nenhum dado de parada registrado neste período.";
+    if (sortedDesc.length > 0) {
+      const pior = sortedDesc[0];
+      const percent = totalMinutos > 0 ? ((pior.tempo_total_min / totalMinutos) * 100).toFixed(1) : 0;
+      insight = `A planta fabril registrou um tempo total parado de <strong>${formatTime(totalMinutos)}</strong>.<br><br>`;
+      insight += `O equipamento <strong>${pior.maquina}</strong> lidera o índice de ofensores corporativos, sendo responsável por <strong>${percent}%</strong> do "downtime" da fábrica, com ${pior.n_falhas} ocorrência(s). Direcionar esforços corretivos primários a este maquinário maximizará a disponibilidade (OEE) geral.`;
+    }
+    document.getElementById('drilldownInsightTexto').innerHTML = insight;
     
     inst.setOption({
       backgroundColor: 'transparent',
@@ -1367,41 +1484,116 @@ window.abrirDrilldownMaquinas = async function(periodo) {
         trigger: 'axis', 
         axisPointer: { type: 'shadow' },
         backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-        borderColor: 'rgba(255,255,255,0.1)',
-        textStyle: { color: '#f1f5f9' },
+        borderColor: 'rgba(212,175,55,0.4)',
+        borderWidth: 1,
+        padding: [12, 16],
+        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'Inter, sans-serif' },
         formatter: (params) => {
-          let s = `<strong>${params[0].name}</strong><br/>`;
+          let s = `<div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 8px;">
+                     <strong style="color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">${params[0].name}</strong>
+                   </div>`;
           params.forEach(p => {
-            const val = p.seriesIndex === 0 ? p.value.toLocaleString('pt-BR') + ' min' : p.value + ' falhas';
-            s += `${p.marker} ${p.seriesName}: <strong>${val}</strong><br/>`;
+            const val = p.seriesIndex === 0 ? `<strong>${formatTime(p.value)}</strong>` : `<strong>${p.value}</strong> <span style="font-size:0.85em;color:#94a3b8">ocorrências</span>`;
+            s += `<div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 4px;">
+                    <span>${p.marker} ${p.seriesName}</span>
+                    <span style="font-family: monospace; font-size: 14px;">${val}</span>
+                  </div>`;
           });
           return s;
         }
       },
-      legend: { textStyle: { color: '#94a3b8' }, top: 10 },
-      grid: { left: '3%', right: '12%', bottom: '3%', top: 50, containLabel: true },
+      legend: { textStyle: { color: '#e2e8f0', fontWeight: '500' }, top: 5, itemGap: 20 },
+      grid: { left: '2%', right: '10%', bottom: '5%', top: 60, containLabel: true },
       xAxis: [
-        { type: 'value', name: 'Tempo (min)', axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } } },
-        { type: 'value', name: 'Nº Falhas', position: 'top', axisLabel: { color: '#94a3b8' }, splitLine: { show: false } }
+        { 
+          type: 'value', 
+          name: 'Tempo Total (min)', 
+          nameLocation: 'middle',
+          nameGap: 30,
+          nameTextStyle: { color: '#94a3b8', fontSize: 12, fontWeight: '500' },
+          axisLabel: { color: '#94a3b8', fontFamily: 'monospace' }, 
+          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)', type: 'solid' } } 
+        },
+        { 
+          type: 'value', 
+          name: 'Frequência (Falhas)', 
+          position: 'top', 
+          nameLocation: 'middle',
+          nameGap: 25,
+          nameTextStyle: { color: '#38bdf8', fontSize: 12, fontWeight: '500' },
+          axisLabel: { color: '#38bdf8', fontFamily: 'monospace' }, 
+          splitLine: { show: false } 
+        }
       ],
-      yAxis: { type: 'category', data: data.map(d => d.maquina), axisLabel: { color: '#e2e8f0', fontWeight: '500' } },
+      dataZoom: [
+        {
+          type: 'slider',
+          yAxisIndex: 0,
+          right: 0,
+          width: 10,
+          start: data.length > 15 ? Math.max(0, 100 - Math.floor((15 / data.length) * 100)) : 0,
+          end: 100,
+          borderColor: 'transparent',
+          fillerColor: 'rgba(212,175,55,0.4)',
+          backgroundColor: 'rgba(255,255,255,0.02)',
+          handleSize: '100%',
+          showDetail: false,
+          showDataShadow: false
+        },
+        {
+          type: 'inside',
+          yAxisIndex: 0,
+          zoomOnMouseWheel: false,
+          moveOnMouseWheel: true,
+          moveOnMouseMove: true
+        }
+      ],
+      yAxis: { 
+        type: 'category', 
+        data: data.map(d => d.maquina), 
+        axisLabel: { 
+          color: '#e2e8f0', 
+          fontWeight: '600', 
+          fontSize: 12, 
+          margin: 12,
+          formatter: function (value) {
+            return value.length > 35 ? value.substring(0, 35) + '...' : value;
+          }
+        },
+        axisTick: { show: false },
+        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+      },
       series: [
         {
           name: 'Tempo Parado',
           type: 'bar',
           xAxisIndex: 0,
-          barMaxWidth: 30, // Impede que a barra fique gigante se tiver poucas máquinas
+          barMaxWidth: 24, // A bit slimmer for elegance
           data: data.map(d => d.tempo_total_min),
           itemStyle: {
-            color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [{offset:0, color: '#f43f5e'}, {offset:1, color: 'rgba(244, 63, 94, 0.2)'}]),
-            borderRadius: [0, 6, 6, 0]
+            color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
+              {offset:0, color: 'rgba(244, 63, 94, 0.9)'}, 
+              {offset:1, color: 'rgba(244, 63, 94, 0.1)'}
+            ]),
+            borderRadius: [0, 8, 8, 0],
+            shadowBlur: 10,
+            shadowColor: 'rgba(244, 63, 94, 0.3)',
+            shadowOffsetX: 2
           },
           label: { 
             show: true, 
             position: 'right', 
             color: '#f1f5f9', 
-            formatter: (p) => p.value.toLocaleString('pt-BR') + 'm',
-            fontWeight: 'bold'
+            formatter: (p) => formatTime(p.value),
+            fontWeight: '600',
+            fontSize: 13,
+            distance: 10
+          },
+          emphasis: {
+            itemStyle: {
+              shadowBlur: 15,
+              shadowColor: 'rgba(244, 63, 94, 0.6)'
+            }
           }
         },
         {
@@ -1409,16 +1601,33 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           type: 'line',
           xAxisIndex: 1,
           data: data.map(d => d.n_falhas),
-          itemStyle: { color: '#38bdf8' },
-          symbolSize: 12,
-          lineStyle: { width: 3, type: 'dashed' },
+          itemStyle: { 
+            color: '#38bdf8',
+            shadowBlur: 8,
+            shadowColor: 'rgba(56, 189, 248, 0.8)'
+          },
+          symbol: 'circle',
+          symbolSize: 14,
+          lineStyle: { 
+            width: 3, 
+            type: 'dashed',
+            shadowBlur: 10,
+            shadowColor: 'rgba(56, 189, 248, 0.3)',
+            shadowOffsetY: 4
+          },
           label: { 
-            show: true, 
+            show: false, 
             position: 'top', 
             color: '#38bdf8', 
+            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            padding: [4, 8],
+            borderRadius: 4,
+            borderWidth: 1,
+            borderColor: 'rgba(56, 189, 248, 0.3)',
             formatter: '{c}',
             fontWeight: 'bold',
-            distance: 8
+            fontSize: 12,
+            distance: 12
           }
         }
       ]
