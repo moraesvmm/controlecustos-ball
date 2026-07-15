@@ -1346,7 +1346,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
   inst.showLoading({ text: 'Carregando...', color: '#10b981', textColor: '#f1f5f9', maskColor: 'rgba(15, 23, 42, 0.8)' });
   
   try {
-    const resp = await fetch(\/api/kpi/drilldown_maquinas?semana=\\);
+    const resp = await fetch(\/api/kpi/drilldown_maquinas?semana=\);
     const data = await resp.json();
     inst.hideLoading();
     
@@ -1364,7 +1364,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
         formatter: (params) => {
           let s = \<strong>\</strong><br/>\;
           params.forEach(p => {
-            s += \\ \: \ \<br/>\;
+            s += \ \: \ \<br/>\;
           });
           return s;
         }
