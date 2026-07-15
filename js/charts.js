@@ -804,6 +804,12 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
         markArea: markArea
       }]
     });
+    inst.on('click', function(params) {
+      if(window.abrirDrilldownMaquinas) {
+        window.abrirDrilldownMaquinas(params.name);
+      }
+    });
+
     return inst;
   }
 

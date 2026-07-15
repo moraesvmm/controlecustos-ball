@@ -243,6 +243,17 @@ def init_db():
         )
     ''')
 
+    # Add new columns to kpi_paradas_raw safely
+    try:
+        conn.execute("ALTER TABLE kpi_paradas_raw ADD COLUMN maquina TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        conn.execute("ALTER TABLE kpi_paradas_raw ADD COLUMN parada_original TEXT")
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -675,6 +686,28 @@ async def import_paradas(req: Request):
         except:
             return 0
 
+    def extract_maquina(parada_text):
+        text = str(parada_text).lower()
+        machines = {
+            'prensa': 'Prensa de Extrusão',
+            'esmaltadeira': 'Esmaltadeira',
+            'lavadora': 'Lavadora',
+            'conformadora': 'Conformadora',
+            'verniz': 'Verniz',
+            'forno': 'Forno',
+            'embaladora': 'Embaladora',
+            'paletizadora': 'Paletizadora',
+            'impressora': 'Impressora',
+            'necker': 'Necker',
+            'conificad': 'Conificadora',
+            'acumulador': 'Acumulador',
+            'estufa': 'Estufa'
+        }
+        for k, v in machines.items():
+            if k in text:
+                return v
+        return 'Outros'
+
     # Filtra apenas reparos
     reparos = [r for r in rows if any(g in str(r.get('grupo', '')) for g in GRUPOS_REPARO)]
     if not reparos:
@@ -684,25 +717,34 @@ async def import_paradas(req: Request):
     try:
         # 1. Limpa dados apenas dos meses que estão presentes no arquivo importado
         meses_no_arquivo = set()
+        semanas_no_arquivo = set()
         for r in reparos:
             m = int(file_mes) if file_mes else mes_num(r.get('data', ''))
+            sem = semana_iso(r.get('data', ''))
             if m:
                 meses_no_arquivo.add(m)
+            if sem:
+                semanas_no_arquivo.add(sem)
                 
         for m in meses_no_arquivo:
             conn.execute("DELETE FROM kpi_paradas_raw WHERE ano = ? AND mes = ?", (ano, m))
         
         # Limpa os consolidados (eles serão recalculados para o ano todo com base nos dados brutos atualizados)
         conn.execute("DELETE FROM kpi_confiabilidade WHERE ano = ?", (ano,))
+        
+        for sem in semanas_no_arquivo:
+            conn.execute("DELETE FROM kpi_maquinas_ofensoras WHERE semana = ?", (f'S{sem:02d}',))
 
         # 2. Insere raw
         for r in reparos:
             dur = hms_to_min(r.get('duracao', '0:0:0'))
             sem = semana_iso(r.get('data', ''))
             mes = int(file_mes) if file_mes else mes_num(r.get('data', ''))
+            parada_original = str(r.get('parada', '')).strip()
+            maquina = extract_maquina(parada_original)
             conn.execute(
-                "INSERT INTO kpi_paradas_raw (linha, grupo_parada, data, semana_iso, mes, ano, dur_min) VALUES (?,?,?,?,?,?,?)",
-                (r.get('linha', ''), r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur)
+                "INSERT INTO kpi_paradas_raw (linha, grupo_parada, data, semana_iso, mes, ano, dur_min, maquina, parada_original) VALUES (?,?,?,?,?,?,?,?,?)",
+                (r.get('linha', ''), r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur, maquina, parada_original)
             )
 
         # 3. Calcula KPIs por Linha x Mês
@@ -742,6 +784,58 @@ async def import_paradas(req: Request):
                 VALUES (?,?,?,?,?,?,?,?,?)
             ''', (ln, 'SEMANA', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2)))
 
+        # 5. Calcula KPIs de Ofensores (Máquinas) por Semana
+        rows_maq_sem = conn.execute(
+            "SELECT semana_iso, maquina, SUM(dur_min) as tp, COUNT(*) as qtde FROM kpi_paradas_raw WHERE ano=? GROUP BY semana_iso, maquina",
+            (ano,)
+        ).fetchall()
+        
+        try:
+            conn.execute("ALTER TABLE kpi_maquinas_ofensoras ADD COLUMN n_falhas INTEGER DEFAULT 0")
+        except:
+            pass
+
+        for r in rows_maq_sem:
+            sem, maq, tp, qtde = r['semana_iso'], r['maquina'], r['tp'], r['qtde']
+            bd_pct = (tp / TEMPO_SEM_MIN) * 100
+            
+            # Checa se o registro já existe para atualizar
+            exists = conn.execute("SELECT id FROM kpi_maquinas_ofensoras WHERE semana=? AND maquina=?", (f'S{sem:02d}', maq)).fetchone()
+            if exists:
+                conn.execute(
+                    "UPDATE kpi_maquinas_ofensoras SET tempo_total_min=?, breakdown_pct=?, n_falhas=? WHERE id=?", 
+                    (tp, round(bd_pct,4), qtde, exists['id'])
+                )
+            else:
+                conn.execute('''
+                    INSERT INTO kpi_maquinas_ofensoras
+                    (semana, maquina, tempo_mecanico_min, tempo_total_min, tempo_disponivel_min, breakdown_pct, n_falhas)
+                    VALUES (?,?,?,?,?,?,?)
+                ''', (f'S{sem:02d}', maq, 0, tp, TEMPO_SEM_MIN, round(bd_pct,4), qtde))
+
+        # 6. Calcula KPIs de Ofensores (Máquinas) por MÊS (para o drilldown mensal)
+        rows_maq_mes = conn.execute(
+            "SELECT mes, maquina, SUM(dur_min) as tp, COUNT(*) as qtde FROM kpi_paradas_raw WHERE ano=? GROUP BY mes, maquina",
+            (ano,)
+        ).fetchall()
+        for r in rows_maq_mes:
+            m, maq, tp, qtde = r['mes'], r['maquina'], r['tp'], r['qtde']
+            per_ref = MESES[m - 1] if 1 <= m <= 12 else str(m)
+            bd_pct = (tp / TEMPO_MES_MIN) * 100
+            
+            exists = conn.execute("SELECT id FROM kpi_maquinas_ofensoras WHERE semana=? AND maquina=?", (per_ref, maq)).fetchone()
+            if exists:
+                conn.execute(
+                    "UPDATE kpi_maquinas_ofensoras SET tempo_total_min=?, breakdown_pct=?, n_falhas=? WHERE id=?", 
+                    (tp, round(bd_pct,4), qtde, exists['id'])
+                )
+            else:
+                conn.execute('''
+                    INSERT INTO kpi_maquinas_ofensoras
+                    (semana, maquina, tempo_mecanico_min, tempo_total_min, tempo_disponivel_min, breakdown_pct, n_falhas)
+                    VALUES (?,?,?,?,?,?,?)
+                ''', (per_ref, maq, 0, tp, TEMPO_MES_MIN, round(bd_pct,4), qtde))
+
         conn.commit()
         total = len(reparos)
         return {"status": "ok", "importados": total, "ano": ano}
@@ -765,6 +859,21 @@ def get_kpi_confiabilidade(periodo_tipo: str = 'MES', ano: int = None, linha: st
             vals.append(linha)
         q += " ORDER BY linha, periodo_ref"
         rows = conn.execute(q, vals).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+@app.get("/api/kpi/drilldown_maquinas")
+def get_kpi_drilldown_maquinas(semana: str):
+    if not semana:
+        raise HTTPException(status_code=400, detail="Semana/Período é obrigatório")
+    conn = get_db()
+    try:
+        # Puxa os dados consolidados daquele período da tabela kpi_maquinas_ofensoras
+        rows = conn.execute(
+            "SELECT maquina, tempo_total_min, n_falhas FROM kpi_maquinas_ofensoras WHERE semana=? ORDER BY tempo_total_min DESC", 
+            (semana,)
+        ).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()

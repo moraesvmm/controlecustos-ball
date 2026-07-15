@@ -2540,7 +2540,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
   <div id="toast" class="toast"></div>
   </div>
   </div>
-  <script type="module" src="js/app.js?v=53"></script>
+  <script type="module" src="js/app.js?v=54"></script>
 
   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
   <div class="modal-overlay" id="modalEditarAtividadePM">
@@ -2749,6 +2749,22 @@ Segue abaixo itens para verificação de atraso.</textarea>
           <button type="submit" class="btn btn-primary">💾 Salvar Alterações</button>
         </footer>
       </form>
+    </div>
+  </div>
+
+  <!-- MODAL DRILLDOWN MAQUINAS OFENSORAS -->
+  <div id="modal-drilldown-maquinas" class="modal-overlay" style="display: none; z-index: 9999;">
+    <div class="modal" style="max-width: 900px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border);">
+      <header class="modal-header" style="border-bottom: 1px solid var(--border); padding: 1.5rem;">
+        <div>
+          <h2 id="modalDrilldownTitulo" style="color: var(--text-primary); margin: 0; font-size: 1.5rem;">Drilldown de Máquinas</h2>
+          <p id="modalDrilldownSub" style="color: var(--muted); margin: 0.5rem 0 0 0; font-size: 0.9rem;">Período selecionado</p>
+        </div>
+        <button type="button" class="btn-close" onclick="document.getElementById('modal-drilldown-maquinas').style.display='none';" style="background: none; border: none; font-size: 1.5rem; color: var(--text-secondary); cursor: pointer;">&times;</button>
+      </header>
+      <div class="modal-body" style="padding: 1.5rem; flex: 1; overflow-y: auto;">
+        <div id="chartDrilldownMaquinas" style="width: 100%; height: 450px;"></div>
+      </div>
     </div>
   </div>
 
