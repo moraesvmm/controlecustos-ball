@@ -682,8 +682,13 @@ async def import_paradas(req: Request):
 
     conn = get_db()
     try:
-        # 1. Limpa dados do ano importado
-        conn.execute("DELETE FROM kpi_paradas_raw WHERE ano = ?", (ano,))
+        # 1. Limpa dados do ano importado (ou do mês específico)
+        if file_mes:
+            conn.execute("DELETE FROM kpi_paradas_raw WHERE ano = ? AND mes = ?", (ano, int(file_mes)))
+        else:
+            conn.execute("DELETE FROM kpi_paradas_raw WHERE ano = ?", (ano,))
+        
+        # Limpa os consolidados (eles serão recalculados para o ano todo com base nos dados brutos atualizados)
         conn.execute("DELETE FROM kpi_confiabilidade WHERE ano = ?", (ano,))
 
         # 2. Insere raw
