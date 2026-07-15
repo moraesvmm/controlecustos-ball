@@ -1342,6 +1342,11 @@ window.abrirDrilldownMaquinas = async function(periodo) {
   let inst = echarts.getInstanceByDom(chartEl);
   if(!inst) inst = echarts.init(chartEl);
   
+  // Force resize immediately since modal just became visible
+  setTimeout(() => {
+    if (inst) inst.resize();
+  }, 10);
+  
   inst.showLoading({ text: 'Carregando...', color: '#10b981', textColor: '#f1f5f9', maskColor: 'rgba(15, 23, 42, 0.8)' });
   
   try {
@@ -1368,8 +1373,8 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           return s;
         }
       },
-      legend: { textStyle: { color: '#94a3b8' } },
-      grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
+      legend: { textStyle: { color: '#94a3b8' }, top: 10 },
+      grid: { left: '3%', right: '10%', bottom: '3%', top: 50, containLabel: true },
       xAxis: [
         { type: 'value', name: 'Tempo (min)', axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } } },
         { type: 'value', name: 'Nº Falhas', position: 'top', axisLabel: { color: '#94a3b8' }, splitLine: { show: false } }
@@ -1399,6 +1404,10 @@ window.abrirDrilldownMaquinas = async function(periodo) {
         }
       ]
     });
+    
+    // Safety resize after render
+    setTimeout(() => { if(inst) inst.resize(); }, 150);
+    
   } catch(e) {
     inst.hideLoading();
     console.error(e);
