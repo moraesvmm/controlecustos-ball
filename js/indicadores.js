@@ -1351,10 +1351,14 @@ window.abrirDrilldownMaquinas = async function(periodo) {
   
   try {
     const resp = await fetch(`/api/kpi/drilldown_maquinas?semana=${encodeURIComponent(periodo)}`);
-    const data = await resp.json();
+    const rawData = await resp.json();
     inst.hideLoading();
     
-    // Sort descending by time
+    // Formatar e ordenar
+    const data = rawData.map(d => ({
+      ...d,
+      tempo_total_min: Math.round(d.tempo_total_min * 10) / 10
+    }));
     data.sort((a,b) => a.tempo_total_min - b.tempo_total_min);
     
     inst.setOption({
@@ -1368,13 +1372,14 @@ window.abrirDrilldownMaquinas = async function(periodo) {
         formatter: (params) => {
           let s = `<strong>${params[0].name}</strong><br/>`;
           params.forEach(p => {
-            s += `${p.marker} ${p.seriesName}: ${p.value} ${p.seriesIndex===0?'min':'falhas'}<br/>`;
+            const val = p.seriesIndex === 0 ? p.value.toLocaleString('pt-BR') + ' min' : p.value + ' falhas';
+            s += `${p.marker} ${p.seriesName}: <strong>${val}</strong><br/>`;
           });
           return s;
         }
       },
       legend: { textStyle: { color: '#94a3b8' }, top: 10 },
-      grid: { left: '3%', right: '10%', bottom: '3%', top: 50, containLabel: true },
+      grid: { left: '3%', right: '12%', bottom: '3%', top: 50, containLabel: true },
       xAxis: [
         { type: 'value', name: 'Tempo (min)', axisLabel: { color: '#94a3b8' }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } } },
         { type: 'value', name: 'Nº Falhas', position: 'top', axisLabel: { color: '#94a3b8' }, splitLine: { show: false } }
@@ -1385,12 +1390,19 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           name: 'Tempo Parado',
           type: 'bar',
           xAxisIndex: 0,
+          barMaxWidth: 30, // Impede que a barra fique gigante se tiver poucas máquinas
           data: data.map(d => d.tempo_total_min),
           itemStyle: {
             color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [{offset:0, color: '#f43f5e'}, {offset:1, color: 'rgba(244, 63, 94, 0.2)'}]),
             borderRadius: [0, 6, 6, 0]
           },
-          label: { show: true, position: 'right', color: '#f1f5f9', formatter: '{c}m' }
+          label: { 
+            show: true, 
+            position: 'right', 
+            color: '#f1f5f9', 
+            formatter: (p) => p.value.toLocaleString('pt-BR') + 'm',
+            fontWeight: 'bold'
+          }
         },
         {
           name: 'Qtd Falhas',
@@ -1398,9 +1410,16 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           xAxisIndex: 1,
           data: data.map(d => d.n_falhas),
           itemStyle: { color: '#38bdf8' },
-          symbolSize: 10,
+          symbolSize: 12,
           lineStyle: { width: 3, type: 'dashed' },
-          label: { show: true, position: 'top', color: '#38bdf8', formatter: '{c}' }
+          label: { 
+            show: true, 
+            position: 'top', 
+            color: '#38bdf8', 
+            formatter: '{c}',
+            fontWeight: 'bold',
+            distance: 8
+          }
         }
       ]
     });
