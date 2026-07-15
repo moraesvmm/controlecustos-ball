@@ -1,5 +1,5 @@
 import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js';
-import { renderConfiabilidadeCharts, destroyConfiabCharts } from './charts.js?v=1000';
+import { renderConfiabilidadeCharts, destroyConfiabCharts } from './charts.js?v=1001';
 
 export async function initIndicadores() {
   const btnUploadKPI = document.getElementById('btnUploadKPI');

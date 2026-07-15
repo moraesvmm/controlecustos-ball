@@ -699,6 +699,9 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
       };
     }
 
+    // Determine if we have too many points (e.g., > 12 weeks)
+    const tooManyPoints = values.length > 12;
+
     inst.setOption({
       animationDuration: 1500,
       animationEasing: 'cubicOut',
@@ -712,7 +715,11 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
         formatter: tooltipFormatter,
         extraCssText: 'backdrop-filter: blur(8px); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);'
       },
-      grid: { left: '12%', right: '8%', top: '18%', bottom: '12%', containLabel: false },
+      grid: { left: '12%', right: '8%', top: '18%', bottom: tooManyPoints ? '22%' : '12%', containLabel: false },
+      dataZoom: tooManyPoints ? [
+        { type: 'slider', show: true, bottom: '2%', height: 16, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.05)', fillerColor: 'rgba(255,255,255,0.1)', handleSize: '100%', textStyle: { color: tc.tickColor } },
+        { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true }
+      ] : [],
       xAxis: {
         type: 'category',
         data: periodos,
@@ -756,7 +763,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, cfg.gradArea)
         },
         label: { 
-          show: true, 
+          show: !tooManyPoints, 
           position: 'top', 
           fontSize: 11, 
           color: '#fff', 
@@ -765,6 +772,19 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
           backgroundColor: 'rgba(0,0,0,0.4)',
           padding: [3, 6],
           borderRadius: 4
+        },
+        emphasis: {
+          label: {
+            show: true,
+            position: 'top',
+            fontSize: 12,
+            color: '#fff',
+            fontWeight: 'bold',
+            formatter: p => `${p.value}${unit}`,
+            backgroundColor: baseColor,
+            padding: [4, 8],
+            borderRadius: 4
+          }
         },
         markLine: {
           silent: true,
