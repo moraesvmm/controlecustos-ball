@@ -599,8 +599,15 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
     byPeriodo[d.periodo_ref].indisp.push(d.indisponibilidade_pct);
   }
 
-  // Ordena períodos
-  const periodos = Object.keys(byPeriodo).sort();
+  // Ordena períodos (cronológico para meses, alfabético para semanas S01)
+  const mesesOrder = {
+    'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6,
+    'Jul': 7, 'Ago': 8, 'Set': 9, 'Out': 10, 'Nov': 11, 'Dez': 12
+  };
+  const periodos = Object.keys(byPeriodo).sort((a, b) => {
+    if (mesesOrder[a] && mesesOrder[b]) return mesesOrder[a] - mesesOrder[b];
+    return a.localeCompare(b);
+  });
   const avg = arr => arr.length ? arr.reduce((s, v) => s + v, 0) / arr.length : 0;
   const vMtbf  = periodos.map(p => +avg(byPeriodo[p].mtbf).toFixed(2));
   const vMttr  = periodos.map(p => +avg(byPeriodo[p].mttr).toFixed(2));
