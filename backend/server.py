@@ -878,6 +878,78 @@ def get_kpi_confiabilidade(periodo_tipo: str = 'MES', ano: int = None, linha: st
     finally:
         conn.close()
 
+@app.get("/api/kpi/linhas_dynamic")
+def get_kpi_linhas_dynamic(ano: int = None):
+    import datetime
+    if not ano:
+        ano = datetime.datetime.now().year
+    cur_mes = datetime.datetime.now().month
+    MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+    cur_mes_str = MESES[cur_mes - 1]
+    
+    conn = get_db()
+    try:
+        linhas_data = []
+        linhas = conn.execute("SELECT DISTINCT linha FROM kpi_paradas_raw WHERE linha != ''").fetchall()
+        for r in linhas:
+            ln = r['linha']
+            anual_row = conn.execute("SELECT AVG(indisponibilidade_pct) as pct FROM kpi_confiabilidade WHERE periodo_tipo='MES' AND ano=? AND linha=?", (ano, ln)).fetchone()
+            mensal_row = conn.execute("SELECT indisponibilidade_pct as pct FROM kpi_confiabilidade WHERE periodo_tipo='MES' AND ano=? AND periodo_ref=? AND linha=?", (ano, cur_mes_str, ln)).fetchone()
+            
+            linhas_data.append({
+                "linha": ln,
+                "anual_pct": round(anual_row['pct'] or 0.0, 2) if anual_row else 0.0,
+                "mensal_pct": round(mensal_row['pct'] or 0.0, 2) if mensal_row else 0.0
+            })
+        return linhas_data
+    finally:
+        conn.close()
+
+@app.get("/api/kpi/mtbf_dynamic")
+def get_kpi_mtbf_dynamic(ano: int = None):
+    import datetime
+    if not ano:
+        ano = datetime.datetime.now().year
+    cur_mes = datetime.datetime.now().month
+    TEMPO_MES_MIN = 30 * 24 * 60
+    TEMPO_YTD = cur_mes * TEMPO_MES_MIN
+    
+    conn = get_db()
+    try:
+        mtbf_targets = {}
+        for r in conn.execute("SELECT * FROM kpi_mtbf").fetchall():
+            if r['maquina'] not in mtbf_targets:
+                mtbf_targets[r['maquina']] = r['target']
+
+        mtbf_data = []
+        maquinas = conn.execute("SELECT DISTINCT maquina, linha FROM kpi_paradas_raw WHERE maquina != '' AND maquina != 'Máquina Não Informada' AND ano=?", (ano,)).fetchall()
+
+        for m in maquinas:
+            mq = m['maquina']
+            ln = m['linha']
+            
+            mec = conn.execute("SELECT COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE maquina=? AND ano=? AND grupo_parada LIKE '%Mecânica%'", (mq, ano)).fetchone()
+            ele = conn.execute("SELECT COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE maquina=? AND ano=? AND grupo_parada LIKE '%Elétrica%'", (mq, ano)).fetchone()
+            
+            n_mec, tp_mec = mec['n'] or 0, mec['tp'] or 0
+            n_ele, tp_ele = ele['n'] or 0, ele['tp'] or 0
+            
+            mtbf_mec = round(max((TEMPO_YTD - tp_mec) / n_mec / 60, 0), 2) if n_mec > 0 else '-'
+            mtbf_ele = round(max((TEMPO_YTD - tp_ele) / n_ele / 60, 0), 2) if n_ele > 0 else '-'
+            
+            linha_col = ln.lower().replace(' ', '_')
+            tgt = mtbf_targets.get(mq, 100)
+            
+            if n_mec > 0:
+                mtbf_data.append({"tipo": "MEC", "maquina": mq, linha_col: mtbf_mec, "target": tgt})
+            if n_ele > 0:
+                mtbf_data.append({"tipo": "ELE", "maquina": mq, linha_col: mtbf_ele, "target": tgt})
+                
+        return mtbf_data
+    finally:
+        conn.close()
+
+
 @app.get("/api/kpi/drilldown_maquinas")
 def get_kpi_drilldown_maquinas(semana: str, linha: str = 'TODAS', ano: int = None):
     if not semana:

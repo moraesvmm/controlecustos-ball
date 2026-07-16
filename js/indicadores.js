@@ -318,10 +318,10 @@ async function carregarEAtualizarPainel() {
       apiRequest('kpi_breakdowns', 'GET'),
       apiRequest('kpi_maquinas_ofensoras', 'GET'),
       apiRequest('kpi_plano_acoes', 'GET'),
-      apiRequest('kpi_linhas', 'GET'),
+      fetch('/api/kpi/linhas_dynamic').then(r => r.json()),
       apiRequest('kpi_diario', 'GET'),
       apiRequest('kpi_compliance', 'GET'),
-      apiRequest('kpi_mtbf', 'GET')
+      fetch('/api/kpi/mtbf_dynamic').then(r => r.json())
     ]);
 
     kpiDataBreakdowns = resBreakdowns || [];
@@ -641,18 +641,18 @@ async function salvarDadosManuais() {
       const btn = document.getElementById('btnSaveKpiManual');
       btn.textContent = 'Salvando...'; btn.disabled = true;
       
-      // Salvar Linhas
-      const trs = document.querySelectorAll('#tableEditKpiLinhas tbody tr');
-      let records = [];
-      trs.forEach(tr => {
-         records.push({
-             linha: tr.cells[0].textContent,
-             anual_pct: parseFloat(tr.cells[1].textContent.replace(',','.')) || 0,
-             mensal_pct: parseFloat(tr.cells[2].textContent.replace(',','.')) || 0
-         });
-      });
-      await apiRequest('kpi_linhas', 'DELETE');
-      for (let r of records) { try { await apiRequest('kpi_linhas', 'POST', [r]); } catch(e){} }
+      // Salvar Linhas (Desativado pois agora é calculado via dados do MGPRO)
+      // const trs = document.querySelectorAll('#tableEditKpiLinhas tbody tr');
+      // let records = [];
+      // trs.forEach(tr => {
+      //    records.push({
+      //        linha: tr.cells[0].textContent,
+      //        anual_pct: parseFloat(tr.cells[1].textContent.replace(',','.')) || 0,
+      //        mensal_pct: parseFloat(tr.cells[2].textContent.replace(',','.')) || 0
+      //    });
+      // });
+      // await apiRequest('kpi_linhas', 'DELETE');
+      // for (let r of records) { try { await apiRequest('kpi_linhas', 'POST', [r]); } catch(e){} }
       
       // Salvar Compliance
       const compRecords = [
