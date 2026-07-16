@@ -655,12 +655,13 @@ export async function getDadosCustoGeral() {
     row.area = row.area || colab?.area || null;
     if (!colab && row.it_codigo) {
         // Fallback por prefixo do it_codigo (igual ao Excel do Financeiro Datasul):
-        // UCM* = Manutenção | SER* = Serviço (Manutenção) | demais = OUTROS
-        const prefix = row.it_codigo.toUpperCase();
-        if (prefix.startsWith('UCM') || prefix.startsWith('SER')) {
-            row.area = 'MANUTENÇÃO';
-        } else {
-            row.area = 'OUTROS';
+        if (!row.area) {
+            const prefix = (row.it_codigo || '').toUpperCase();
+            if (prefix.startsWith('UCM') || prefix.startsWith('UC') || prefix.startsWith('SER')) {
+                row.area = 'MANUTENÇÃO';
+            } else {
+                row.area = 'OUTROS';
+            }
         }
     } else if (!row.area) {
         row.area = 'OUTROS';
@@ -680,9 +681,7 @@ export async function getDadosCustoGeral() {
     }
 
     // Fórmula 7: check = IF(area == "OUTROS", "OUTROS", area & " - " & carater)
-    if (row.descricao_db && row.descricao_db.toUpperCase().includes('MANUTENÇÃO')) {
-      row.check = row.descricao_db;
-    } else if (row.area) {
+    if (row.area) {
       row.check = row.area === 'OUTROS' ? 'OUTROS' : `${row.area} - ${row.carater}`;
     }
 

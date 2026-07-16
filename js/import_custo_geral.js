@@ -280,11 +280,11 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             valor_mob: parseMoney(row['valor-mob-m'], false),
             valor_tt: parseMoney(row['valor tt'], false),
             quant_tt_ajustado: Number(row['quant tt ajustado']) || 0,
-            custo_do_mes: parseMoney(row['custo do mês'] || row['custo do mes'], true),
-            custo_mes_anterior: parseMoney(row['custo mês anterior'] || row['custo mes anterior'], true),
+            custo_do_mes: parseMoney(row['custo do mês'] || row['custo do mes'] || row['custo do ms'] || row['custo do m\ufffds'] || row['custo'], true),
+            custo_mes_anterior: parseMoney(row['custo mês anterior'] || row['custo mes anterior'] || row['custo ms anterior'] || row['custo m\ufffds anterior'], true),
             custo_de_entrada: parseMoney(row['custo de entrada'], true),
             sc_codigo: String(row['sc-codigo'] || ''),
-            descricao_db: String(row['check'] || row['coluna am'] || row['descricao-db'] || ''),
+            descricao_db: String(row['descricao-db'] || ''),
           };
         });
 
