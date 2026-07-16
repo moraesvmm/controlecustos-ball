@@ -4550,9 +4550,9 @@ function renderTabelaCustoGeral() {
       rFacilCons += custo;
     } else if (checkStr === 'facilities - real compras serv') {
       rFacilServ += custo;
-    } else if (checkStr === 'manutenção - real consumo') {
+    } else if (checkStr === 'manutenção - real consumo' || checkStr === 'manutenção real consumo') {
       rManutCons += custo;
-    } else if (checkStr === 'manutenção - real compras serv') {
+    } else if (checkStr === 'manutenção - real compras serv' || checkStr === 'manutenção real compras serv') {
       rManutServ += custo;
     }
     // Os custos que forem 'OUTROS' ou cujo solicitante não foi encontrado (area vazia)

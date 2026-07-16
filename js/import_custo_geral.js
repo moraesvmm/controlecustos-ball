@@ -284,7 +284,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
             custo_mes_anterior: parseMoney(row['custo mês anterior'] || row['custo mes anterior'], true),
             custo_de_entrada: parseMoney(row['custo de entrada'], true),
             sc_codigo: String(row['sc-codigo'] || ''),
-            descricao_db: String(row['descricao-db'] || ''),
+            descricao_db: String(row['check'] || row['coluna am'] || row['descricao-db'] || ''),
           };
         });
 

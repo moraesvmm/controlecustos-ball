@@ -680,7 +680,9 @@ export async function getDadosCustoGeral() {
     }
 
     // Fórmula 7: check = IF(area == "OUTROS", "OUTROS", area & " - " & carater)
-    if (row.area) {
+    if (row.descricao_db && row.descricao_db.toUpperCase().includes('MANUTENÇÃO')) {
+      row.check = row.descricao_db;
+    } else if (row.area) {
       row.check = row.area === 'OUTROS' ? 'OUTROS' : `${row.area} - ${row.carater}`;
     }
 
