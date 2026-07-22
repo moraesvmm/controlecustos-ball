@@ -8,3 +8,4 @@ scratch/
 OllamaSetup.exe
 js/env.runtime.js
 js/keys.js
+backend/database/database.sqlite
