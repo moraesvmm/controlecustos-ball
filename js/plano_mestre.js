@@ -1,4 +1,4 @@
-import { getClient } from './db.js';
+import { getClient } from './db.js?v=13';
 import { toast, confirmar } from './ui.js';
 
 let dataMaquinas = [];
@@ -178,8 +178,8 @@ function render() {
     if (atvsMaq.length === 0) return;
     
     html += `
-      <div class="panel-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: all 0.3s;">
-        <div style="padding: 1rem 1.5rem; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+      <div class="panel-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: all 0.3s;">
+        <div style="padding: 1rem 1.5rem; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
           <div>
             <h4 style="margin: 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
                <span class="icon">${maq.disciplina === 'ELÉTRICA' ? '⚡' : '⚙️'}</span>
@@ -194,7 +194,7 @@ function render() {
         </div>
         <div style="padding: 0; max-height: 500px; overflow-y: auto;">
           <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
-            <thead style="position: sticky; top: 0; background: #1b263b; z-index: 1;">
+            <thead style="position: sticky; top: 0; background: var(--surface); z-index: 1;">
               <tr>
                 <th style="padding: 0.8rem 1.5rem; text-align: left; width: 35%;">Sistema / Componente</th>
                 <th style="padding: 0.8rem 1rem; text-align: left; width: 25%;">Ação Preventiva</th>
@@ -212,7 +212,7 @@ function render() {
       const path = parts.join(' > ');
 
       html += `
-        <tr class="table-row-hover" style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; cursor: pointer;" onclick="window.abrirDetalhesPlanoMestre('${atv.id}')">
+        <tr class="table-row-hover" style="border-bottom: 1px solid var(--border); transition: background 0.2s; cursor: pointer;" onclick="window.abrirDetalhesPlanoMestre('${atv.id}')">
           <td style="padding: 0.8rem 1.5rem;">
             <div style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.2rem;">${path}</div>
             <div style="color: var(--text); font-weight: 500;">${componente}</div>
@@ -222,7 +222,7 @@ function render() {
              ${atv.material ? `<div style="font-size: 0.75rem; color: var(--muted); margin-top:0.3rem;">📦 ${atv.material}</div>` : ''}
           </td>
           <td style="padding: 0.8rem 1rem; text-align: center;">
-             <span class="badge" style="background: rgba(255,255,255,0.1);">${atv.estrategia || '-'}</span>
+             <span class="badge" style="background: var(--bg2); border: 1px solid var(--border);">${atv.estrategia || '-'}</span>
           </td>
           <td style="padding: 0.8rem 1rem; text-align: center; color: var(--muted);">${atv.hh ? atv.hh.toFixed(2) : '-'}</td>
           <td style="padding: 0.8rem 1rem; text-align: center;">

@@ -166,14 +166,14 @@
           <div style="overflow-x: auto;">
             <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
               <thead>
-                <tr style="background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.06);">
-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 55px; border-bottom: 1px solid rgba(255,255,255,0.08);">ID</th>
-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.08);">Descrição</th>
-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 90px; border-bottom: 1px solid rgba(255,255,255,0.08);">H-H</th>
-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 120px; border-bottom: 1px solid rgba(255,255,255,0.08);">Profissional</th>
-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 80px; border-bottom: 1px solid rgba(255,255,255,0.08);">OS</th>
-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 220px; border-bottom: 1px solid rgba(255,255,255,0.08);">% Execução</th>
-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 130px; border-bottom: 1px solid rgba(255,255,255,0.08);">Status</th>
+                <tr style="background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--border);">
+                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 55px; border-bottom: 1px solid var(--border);">ID</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border);">Descrição</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 90px; border-bottom: 1px solid var(--border);">H-H</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 120px; border-bottom: 1px solid var(--border);">Profissional</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 80px; border-bottom: 1px solid var(--border);">OS</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 220px; border-bottom: 1px solid var(--border);">% Execução</th>
+                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 130px; border-bottom: 1px solid var(--border);">Status</th>
                 </tr>
               </thead>
               <tbody>
@@ -275,23 +275,23 @@
       : (r.descricao || '—');
 
     return `
-    <tr class="rl05-table-row" data-id="${r.id}" style="background: ${rowBg}; border-left: ${rowBorderLeft}; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s; cursor: pointer;"
+    <tr class="rl05-table-row" data-id="${r.id}" style="background: ${rowBg}; border-left: ${rowBorderLeft}; border-bottom: 1px solid var(--border); transition: background 0.2s; cursor: pointer;"
         onclick="this.closest('.rl05-group-body').querySelectorAll('.rl05-table-row').forEach(tr => tr.style.backgroundColor=''); window.selecionarLinhaRL05('${r.id}')"
         ondblclick="window.abrirDetalheRL05('${r.id}')"
-        onmouseenter="if(!this.classList.contains('rl05-selected')) this.style.background='rgba(255,255,255,0.03)'"
+        onmouseenter="if(!this.classList.contains('rl05-selected')) this.style.background='var(--bg2)'"
         onmouseleave="if(!this.classList.contains('rl05-selected')) this.style.background='${rowBg}'">
       <td style="padding: 1.15rem 1rem; color: var(--muted); font-family: monospace; font-size: 0.8rem; font-weight: 600;">#${r.id}</td>
       <td style="padding: 1.15rem 1rem; max-width: 380px;">
-        <div title="${(r.descricao || '').replace(/"/g, '&quot;')}" style="line-height: 1.5; color: ${isConcluido ? 'var(--muted)' : '#ffffff'}; font-weight: ${isConcluido ? '400' : '500'}; font-size: 0.875rem;">${descTruncated}</div>
+        <div title="${(r.descricao || '').replace(/"/g, '&quot;')}" style="line-height: 1.5; color: ${isConcluido ? 'var(--muted)' : 'var(--text)'}; font-weight: ${isConcluido ? '400' : '500'}; font-size: 0.875rem;">${descTruncated}</div>
       </td>
       <td style="padding: 1.15rem 1rem; text-align: center; color: var(--muted); font-size: 0.85rem;">${r.duracao ? r.duracao + 'h' : '—'}</td>
       <td style="padding: 1.15rem 1rem; color: var(--muted); font-size: 0.8rem;">${r.profissional || '—'}</td>
       <td style="padding: 1.15rem 1rem; text-align: center;">
         <input type="text" class="rl05-os-input" data-id="${r.id}" data-original="${r.os || ''}"
           value="${r.os || ''}" placeholder="—"
-          style="width: 70px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--muted); padding: 3px 6px; text-align: center; font-family: monospace; font-size: 0.8rem; outline: none; transition: all 0.2s;"
+          style="width: 70px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 3px 6px; text-align: center; font-family: monospace; font-size: 0.8rem; outline: none; transition: all 0.2s;"
           onfocus="this.style.borderColor='rgba(56,189,248,0.5)'; this.style.color='var(--text)';"
-          onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.color='var(--muted)';">
+          onblur="this.style.borderColor='var(--border)'; this.style.color='var(--muted)';">
       </td>
       <td style="padding: 1.15rem 1rem;">
         <div style="display: flex; flex-direction: column; gap: 6px;">
@@ -302,7 +302,7 @@
               ${isConcluido ? 'disabled' : ''}>
             <input type="number" class="rl05-perc-input" data-id="${r.id}" data-original="${perc}"
               min="0" max="100" step="1" value="${perc}"
-              style="width: 52px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text); padding: 3px 6px; text-align: center; font-size: 0.85rem; font-weight: 600; outline: none;"
+              style="width: 52px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 3px 6px; text-align: center; font-size: 0.85rem; font-weight: 600; outline: none;"
               ${isConcluido ? 'disabled style="cursor:default; opacity:0.6;"' : ''}>
             <span style="color: var(--muted); font-size: 0.8rem;">%</span>
           </div>

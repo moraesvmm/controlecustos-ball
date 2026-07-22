@@ -20,20 +20,20 @@ let chartInstances = [];
 let registrosRef = [];
 let crudMesChartInstance = null;
 
-function themeColors() {
+export function themeColors() {
   const isLight = document.body.classList.contains('light-mode');
   return {
-    legendColor:  isLight ? '#334155' : '#cbd5e1',
+    legendColor:  isLight ? '#475569' : '#cbd5e1',
     titleColor:   isLight ? '#0f172a' : '#f8fafc',
-    tickColor:    isLight ? '#64748b' : '#94a3b8',
-    gridColor:    isLight ? 'rgba(100,116,139,0.12)' : 'rgba(148,163,184,0.08)',
-    tooltipBg:    isLight ? 'rgba(255,255,255,0.97)' : 'rgba(15,23,42,0.95)',
+    tickColor:    isLight ? '#94a3b8' : '#94a3b8',
+    gridColor:    isLight ? 'rgba(15,23,42,0.06)' : 'rgba(148,163,184,0.08)',
+    tooltipBg:    isLight ? 'rgba(255,255,255,0.98)' : 'rgba(15,23,42,0.95)',
     tooltipTitle: isLight ? '#0f172a' : '#f1f5f9',
-    tooltipText:  isLight ? '#334155' : '#cbd5e1',
-    borderColor:  isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
-    pointerShadow: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
+    tooltipText:  isLight ? '#475569' : '#cbd5e1',
+    borderColor:  isLight ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.1)',
+    pointerShadow: isLight ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.04)',
     pieBorder:    isLight ? '#ffffff' : '#0f172a',
-    shadowColor:  isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.4)',
+    shadowColor:  isLight ? 'rgba(15,23,42,0.1)' : 'rgba(0,0,0,0.4)',
   };
 }
 
@@ -675,7 +675,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
       return `
         <div style="padding: 6px;">
           <div style="font-size: 11px; color: ${tc.tickColor}; margin-bottom: 4px; opacity: 0.8;">${p.name}</div>
-          <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;">
+          <div style="font-size: 15px; font-weight: 700; color: ${tc.titleColor}; margin-bottom: 4px;">
             ${title}: ${val}${unit}
           </div>
           <div style="font-size: 12px; color: ${statusColor}; font-weight: 600;">
@@ -726,17 +726,17 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
       },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: 'rgba(15, 23, 42, 0.90)',
-        borderColor: 'rgba(255,255,255,0.1)',
+        backgroundColor: tc.tooltipBg,
+        borderColor: tc.borderColor,
         borderWidth: 1,
         padding: 10,
-        textStyle: { color: '#f1f5f9' },
+        textStyle: { color: tc.tooltipText },
         formatter: tooltipFormatter,
         extraCssText: 'backdrop-filter: blur(8px); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);'
       },
       grid: { left: '12%', right: '8%', top: '22%', bottom: tooManyPoints ? '22%' : '12%', containLabel: false },
       dataZoom: tooManyPoints ? [
-        { type: 'slider', show: true, bottom: '2%', height: 16, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.05)', fillerColor: 'rgba(255,255,255,0.1)', handleSize: '100%', textStyle: { color: tc.tickColor } },
+        { type: 'slider', show: true, bottom: '2%', height: 16, borderColor: 'transparent', backgroundColor: tc.gridColor, fillerColor: 'rgba(255,255,255,0.1)', handleSize: '100%', textStyle: { color: tc.tickColor } },
         { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true }
       ] : [],
       xAxis: {
@@ -764,7 +764,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
             { offset: 0, color: baseColor },
             { offset: 1, color: cfg.gradArea[1].color }
           ]),
-          borderColor: values.length === 1 ? 'transparent' : '#1e293b',
+          borderColor: values.length === 1 ? 'transparent' : tc.pieBorder,
           borderWidth: values.length === 1 ? 0 : 2,
           shadowColor: baseColor,
           shadowBlur: 8,
@@ -783,10 +783,10 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
           show: !tooManyPoints, 
           position: 'top', 
           fontSize: 11, 
-          color: '#fff', 
+          color: tc.tooltipTitle, 
           fontWeight: 600,
           formatter: p => `${p.value}${unit}`,
-          backgroundColor: 'rgba(0,0,0,0.4)',
+          backgroundColor: tc.tooltipBg,
           padding: [3, 6],
           borderRadius: 4
         },
@@ -795,7 +795,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
             show: true,
             position: 'top',
             fontSize: 12,
-            color: '#fff',
+            color: tc.tooltipTitle,
             fontWeight: 'bold',
             formatter: p => `${p.value}${unit}`,
             backgroundColor: baseColor,

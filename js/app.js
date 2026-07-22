@@ -20,7 +20,7 @@ import {
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync } from './db.js';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js';
 import {
   COLUNAS_TABELA,
@@ -37,8 +37,7 @@ import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './
 
 import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF, gerarChecklistRetomadaPDF } from './pdf_report.js?v=17';
 window.gerarChecklistRetomadaPDF = gerarChecklistRetomadaPDF;
-import { initExcelImportCustoGeral } from './import_custo_geral.js?v=6';
-import { COLUNAS_CUSTO_GERAL } from './ui.js';
+
 import { initPlanoMestre } from './plano_mestre.js';
 import { initImportPlanoMestre } from './import_plano_mestre.js';
 import { renderPrevisoes } from './previsoes.js';
@@ -47,8 +46,7 @@ import { initCopiloto } from './copiloto.js';
 import { initIndicadores, initConfiabilidade } from './indicadores.js?v=3';
 
 let registros = [];
-let registrosCustoGeral = [];
-let linhaSelecionadaCustoGeralId = null;
+
 let registrosPreventiva = [];
 
 Object.defineProperty(window, '_registrosPreventiva', { get: () => registrosPreventiva });
@@ -987,7 +985,7 @@ function showView(name) {
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
-                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'custo-geral', 'custo-movimentacoes', 'plano-mestre', 'custo-previsoes', 'indicadores'].includes(name);
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'plano-mestre', 'indicadores'].includes(name);
 
   const isTask = ['gestao-tarefas', 'minhas-tarefas'].includes(name);
 
@@ -1024,10 +1022,6 @@ function showView(name) {
     if (!estadoPlanosFrontend.mes) planosGoToStepFrontend('mes');
   } else if (name === 'plano-preventiva-frontend') {
     window._refreshPlanoPreventivaFrontend?.();
-  } else if (name === 'custo-geral' || name === 'custo-movimentacoes') {
-    renderTabelaCustoGeral();
-  } else if (name === 'custo-previsoes') {
-    renderPrevisoes();
   }
 
   const titles = {
@@ -1332,13 +1326,11 @@ async function init() {
       fornecedores,
       regs,
       preventivas,
-      custosGerais,
       tarefas
     ] = await Promise.allSettled([
       getFornecedoresContatos(),
       carregarRegistros(),
       carregarPreventiva(),
-      getDadosCustoGeral(),
       getTarefasDelegadas()
     ]);
 
@@ -1355,10 +1347,8 @@ async function init() {
       registrosPreventivaFrontend = todosPreventiva.filter(r => r.setor === 'frontend');
     }
 
-    if (custosGerais.status === 'fulfilled') registrosCustoGeral = custosGerais.value;
-
     // Expor TUDO para o Copiloto poder buscar ordens de todos os módulos
-    window._registrosGlobais = [...registros, ...(registrosCustoGeral || [])];
+    window._registrosGlobais = [...registros];
 
     if (tarefas.status === 'fulfilled') {
       tarefasDelegadas = tarefas.value;
@@ -1386,9 +1376,7 @@ async function init() {
             registrosPreventiva = todosPreventiva.filter(r => r.setor !== 'frontend');
             registrosPreventivaFrontend = todosPreventiva.filter(r => r.setor === 'frontend');
           } catch(e){}
-          try { registrosCustoGeral = await getDadosCustoGeral(); } catch(e){}
-          
-          window._registrosGlobais = [...registros, ...(registrosCustoGeral || [])];
+          window._registrosGlobais = [...registros];
           
           const novas = await getTarefasDelegadas();
           const oldIds = new Set(tarefasDelegadas.map(t => t.id));
@@ -1605,40 +1593,7 @@ async function init() {
     exportarExcel(data, 'preventiva-frontend', COLUNAS_PREVENTIVA);
   });
 
-  $('#btnExportCustoGeral')?.addEventListener('click', () => {
-    const termoBusca = ($('#filtroBuscaCustoGeral')?.value || '').toLowerCase();
-    const filtroOrdem = $('#filtroOrdemCustoGeral')?.value || 'todas';
-    const modoColunas = $('#filtroModoColunasCustoGeral')?.value || 'todas';
 
-    let colunasAtuais = COLUNAS_CUSTO_GERAL;
-    if (modoColunas === 'resumo') {
-      const permitidas = ['numero_ordem', 'solicitante', 'nome_solicitante', 'material', 'area'];
-      colunasAtuais = COLUNAS_CUSTO_GERAL.filter(c => permitidas.includes(c.key));
-    }
-
-    let registrosFiltrados = (registrosCustoGeral || []).filter(r => {
-      if (filtroOrdem === 'com_ordem' && !r.numero_ordem) return false;
-      if (filtroOrdem === 'sem_ordem' && r.numero_ordem) return false;
-      if (!termoBusca) return true;
-      const values = [r.numero_ordem, r.it_codigo, r.descricao_codigo, r.solicitante, r.nome_solicitante, r.area, r.linha, r.nro_docto, r.cc].map(v => String(v || '').toLowerCase());
-      return values.some(v => v.includes(termoBusca));
-    });
-
-    registrosFiltrados.sort((a, b) => {
-      const ordA = Number(a.numero_ordem) || 0;
-      const ordB = Number(b.numero_ordem) || 0;
-      if (ordA === 0 && ordB !== 0) return 1;
-      if (ordB === 0 && ordA !== 0) return -1;
-      return ordA - ordB;
-    });
-
-    if (registrosFiltrados.length === 0) {
-      toast('Nenhum registro para exportar', 'warning');
-      return;
-    }
-
-    exportarExcel(registrosFiltrados, 'custo-geral', colunasAtuais);
-  });
   
   function mergeLinhaData(baseArray, linha, mes) {
     const map = new Map();
@@ -4412,6 +4367,7 @@ function renderTabelaCustoGeral() {
 
   let budgetMetadata = null;
   let forecastMetadata = null;
+  let dashboardData = null;
   let registrosReais = [];
 
   for (let r of (registrosCustoGeral || [])) {
@@ -4427,6 +4383,11 @@ function renderTabelaCustoGeral() {
       } catch(e){}
     } else if (r.it_codigo === 'FORECAST_METADATA') {
       try { forecastMetadata = JSON.parse(r.descricao_codigo); } catch(e){}
+    } else if (r.it_codigo === 'DASHBOARD_METADATA') {
+      try { 
+        dashboardData = JSON.parse(r.descricao_codigo); 
+        window.dashboardData = dashboardData;
+      } catch(e){}
     } else {
       registrosReais.push(r);
     }
@@ -4565,34 +4526,62 @@ function renderTabelaCustoGeral() {
   const realFacil = rFacilServ + rFacilCons;
   const realTotal = realManut + realFerram + realFacil;
 
-  // Atualizando KPIs (Novos Widgets)
-  if ($('#kpiManutencao')) $('#kpiManutencao').textContent = fmtMoeda(realManut);
-  if ($('#kpiFerramentaria')) $('#kpiFerramentaria').textContent = fmtMoeda(realFerram);
-  if ($('#kpiFacilities')) $('#kpiFacilities').textContent = fmtMoeda(realFacil);
-  if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(realManut);
-
-  if ($('#kpiBudgetTotalResumo')) $('#kpiBudgetTotalResumo').textContent = fmtMoeda(bManutencao);
-  if ($('#kpiBudgetTotal')) $('#kpiBudgetTotal').textContent = fmtMoeda(bTotal);
-  if ($('#kpiBudgetManutencao')) $('#kpiBudgetManutencao').textContent = fmtMoeda(bManutencao);
-  if ($('#kpiBudgetFerramentas')) $('#kpiBudgetFerramentas').textContent = fmtMoeda(bFerramentaria);
-  if ($('#kpiBudgetFacilities')) $('#kpiBudgetFacilities').textContent = fmtMoeda(bFacilities);
-  
-  // Progress Bar e Saldo
-  if (bManutencao > 0) {
-    let perc = (realManut / bManutencao) * 100;
-    let color = perc > 100 ? 'var(--danger)' : (perc > 80 ? 'var(--warning)' : 'var(--success)');
-    if ($('#barBudgetConsumido')) {
-      $('#barBudgetConsumido').style.width = Math.min(perc, 100) + '%';
-      $('#barBudgetConsumido').style.background = color;
-    }
-    if ($('#lblPercentConsumido')) $('#lblPercentConsumido').textContent = perc.toFixed(1) + '%';
+  // Atualizando KPIs (Novos Widgets Premium - Apex Finance Architecture)
+  if (dashboardData) {
+    let bAnual = dashboardData.budget_anual || 0;
+    let rTotal = dashboardData.realizado_total || 0;
+    let perc = bAnual > 0 ? (rTotal / bAnual) * 100 : 0;
     
-    let saldo = bManutencao - realManut;
-    if ($('#lblSaldoBudget')) {
-      $('#lblSaldoBudget').textContent = fmtMoeda(saldo);
-      $('#lblSaldoBudget').style.color = saldo < 0 ? 'var(--danger)' : 'var(--success)';
+    if ($('#cgBudgetConsumidoPct')) $('#cgBudgetConsumidoPct').textContent = perc.toFixed(0) + '%';
+    if ($('#cgBudgetConsumido')) $('#cgBudgetConsumido').textContent = fmtMoeda(rTotal);
+    if ($('#cgBudgetTotalFlex')) $('#cgBudgetTotalFlex').textContent = fmtMoeda(bAnual);
+    
+    const circle = $('#apexRingFill');
+    if (circle) {
+      const radius = circle.r.baseVal.value;
+      const circumference = radius * 2 * Math.PI;
+      const offset = circumference - (Math.min(perc, 100) / 100) * circumference;
+      circle.style.strokeDashoffset = offset;
+      circle.style.stroke = perc > 100 ? '#ef4444' : 'url(#apex-gradient)';
     }
+
+    if ($('#cgManutConsol')) $('#cgManutConsol').textContent = fmtMoeda(dashboardData.realizado_manutencao || realManut);
+    if ($('#cgFerramConsol')) $('#cgFerramConsol').textContent = fmtMoeda(dashboardData.realizado_ferramentaria || realFerram);
+    if ($('#cgFacilConsol')) $('#cgFacilConsol').textContent = fmtMoeda(dashboardData.realizado_facilities || realFacil);
+
+  } else {
+    // Fallback caso ainda não tenha Dashboard Metadata
+    let bAnual = bTotal; // Fallback para budget AOP
+    let perc = bAnual > 0 ? (realTotal / bAnual) * 100 : 0;
+    
+    if ($('#cgBudgetConsumidoPct')) $('#cgBudgetConsumidoPct').textContent = perc.toFixed(0) + '%';
+    if ($('#cgBudgetConsumido')) $('#cgBudgetConsumido').textContent = fmtMoeda(realTotal);
+    if ($('#cgBudgetTotalFlex')) $('#cgBudgetTotalFlex').textContent = fmtMoeda(bAnual);
+    
+    const circle = $('#apexRingFill');
+    if (circle) {
+      const radius = circle.r.baseVal.value;
+      const circumference = radius * 2 * Math.PI;
+      const offset = circumference - (Math.min(perc, 100) / 100) * circumference;
+      circle.style.strokeDashoffset = offset;
+    }
+    
+    if ($('#cgManutConsol')) $('#cgManutConsol').textContent = fmtMoeda(realManut);
+    if ($('#cgFerramConsol')) $('#cgFerramConsol').textContent = fmtMoeda(realFerram);
+    if ($('#cgFacilConsol')) $('#cgFacilConsol').textContent = fmtMoeda(realFacil);
   }
+
+  // Atualizando as quebras táticas e budgets de cada área
+  if ($('#cgManutServico')) $('#cgManutServico').textContent = fmtMoeda(rManutServ);
+  if ($('#cgManutConsumo')) $('#cgManutConsumo').textContent = fmtMoeda(rManutCons);
+  if ($('#cgFerramServico')) $('#cgFerramServico').textContent = fmtMoeda(rFerramServ);
+  if ($('#cgFerramConsumo')) $('#cgFerramConsumo').textContent = fmtMoeda(rFerramCons);
+  if ($('#cgFacilServico')) $('#cgFacilServico').textContent = fmtMoeda(rFacilServ);
+  if ($('#cgFacilConsumo')) $('#cgFacilConsumo').textContent = fmtMoeda(rFacilCons);
+
+  if ($('#cgManutBudget')) $('#cgManutBudget').textContent = fmtMoeda(bManutencao);
+  if ($('#cgFerramBudget')) $('#cgFerramBudget').textContent = fmtMoeda(bFerramentaria);
+  if ($('#cgFacilBudget')) $('#cgFacilBudget').textContent = fmtMoeda(bFacilities);
 
   // Alertas Inteligentes e Explainability da IA
   const widgetAlertas = $('#widgetAlertasInteligentes');
@@ -4819,257 +4808,162 @@ function renderTabelaCustoGeral() {
 
   function renderChartsCustoGeral(todosRegistros, budgetMensal) {
     if (!window.echarts) return;
-    
-    // 1. Processar dados para Gráfico de Evolução (Agrupado por Mês e Área)
-    let mesesArr = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
-    let dadosManut = new Array(12).fill(0);
-    let dadosFerram = new Array(12).fill(0);
-    let dadosFacil = new Array(12).fill(0);
-    
-    // Processar Centros de Custo para o Gráfico de Estratificação
-    let ccMap = {};
-    
+    // ─── FONTE PRIMÁRIA: aba DASHBOARD do Excel ─────────────────────────────────
+    const dash = window.dashboardData || {};
+    const evolucao = dash.evolucao || {};
+
+    let dadosManut  = (evolucao.manutencao   || []).slice();
+    let dadosFerram = (evolucao.ferramentaria || []).slice();
+    let dadosFacil  = (evolucao.facilities    || []).slice();
+    let budgetMeses = (evolucao.budget        || []).slice();
+
+    while (dadosManut.length  < 12) dadosManut.push(0);
+    while (dadosFerram.length < 12) dadosFerram.push(0);
+    while (dadosFacil.length  < 12) dadosFacil.push(0);
+    while (budgetMeses.length < 12) budgetMeses.push(0);
+
+    // Fallback: se o DASHBOARD não veio, calcular dos registros
+    const temDashboard = dadosManut.some(v => v > 0) || dadosFerram.some(v => v > 0);
+    let ccMap = {}, linhaMap = {}, tecnicoMap = {}, relacao = {};
+
     for (let r of todosRegistros) {
       if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA' || r.it_codigo === 'DIFF_METADATA') continue;
-      
-      let custo = Number(r.custo_do_mes) || 0;
+      let custo = Math.abs(Number(r.custo_do_mes) || 0);
       if (custo === 0) continue;
       
-      let mStr = String(r.mes || '').trim();
-      let mesIdx = parseInt(mStr) - 1; 
-      
-      // Classificação de Área
-      const str = [r.grupo, r.descricao_conta, r.linha, r.descricao_db].join(' ').toLowerCase();
-      let areaNome = 'Manutenção';
-      if (str.includes('ferram')) areaNome = 'Ferramentaria';
-      else if (str.includes('facil') || str.includes('utilidades')) areaNome = 'Facilities';
-      else if (str.includes('manut') || str.includes('mecanica') || str.includes('eletrica') || str.includes('predial')) areaNome = 'Manutenção';
-      
-      if (mesIdx >= 0 && mesIdx <= 11) {
-        if (areaNome === 'Manutenção') dadosManut[mesIdx] += custo;
-        else if (areaNome === 'Ferramentaria') dadosFerram[mesIdx] += custo;
-        else if (areaNome === 'Facilities') dadosFacil[mesIdx] += custo;
-      }
-      
-      // Acumular por CC (apenas se tiver C.C.)
+      // Classificação para Gráficos Secundários
       let cc = String(r.cc || '').trim();
-      if (cc && cc !== 'null' && cc !== 'undefined') {
-        ccMap[cc] = (ccMap[cc] || 0) + custo;
+      if (cc && cc !== 'null' && cc !== 'undefined') ccMap[cc] = (ccMap[cc] || 0) + custo;
+      
+      let linha = String(r.linha || '').trim();
+      let tec   = String(r.nome_solicitante || '').trim();
+      if (linha && tec && linha !== 'null' && tec !== 'null') {
+        linhaMap[linha] = (linhaMap[linha] || 0) + custo;
+        tecnicoMap[tec] = (tecnicoMap[tec] || 0) + custo;
+        if (!relacao[tec]) relacao[tec] = {};
+        relacao[tec][linha] = (relacao[tec][linha] || 0) + custo;
+      }
+
+      // Fallback Evolução
+      if (!temDashboard) {
+        let mesIdx = parseInt(String(r.mes || '').trim()) - 1;
+        const area = String(r.area || '').toUpperCase();
+        if (mesIdx >= 0 && mesIdx <= 11) {
+          if (area.includes('FERRAM')) dadosFerram[mesIdx] += custo;
+          else if (area.includes('FACIL') || area.includes('UTILID')) dadosFacil[mesIdx] += custo;
+          else dadosManut[mesIdx] += custo;
+        }
       }
     }
+
+    if (!budgetMeses.some(v => v > 0) && budgetMensal > 0) {
+      budgetMeses = new Array(12).fill(budgetMensal);
+    }
     
-    // --- Renderizar Gráfico de Evolução (Misto) ---
+    // --- Renderizar Gráfico de Evolução (Misto PREMIUM) ---
     const ctxEvolucao = document.getElementById('chartEvolucaoCustos');
     if (ctxEvolucao) {
       let chartEvolucao = echarts.getInstanceByDom(ctxEvolucao) || echarts.init(ctxEvolucao);
-      let budgetLine = new Array(12).fill(budgetMensal);
       
-      let optionEvolucao = {
+      const fmtK = v => v >= 1e6 ? 'R$ ' + (v/1e6).toFixed(1) + 'M' : v >= 1000 ? 'R$ ' + (v/1000).toFixed(0) + 'k' : 'R$ 0';
+      const fmtBRL = v => (v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+      // Detectar meses de estouro
+      const markAreas = [];
+      const mesAtual = new Date().getMonth();
+      for (let i = 0; i <= mesAtual; i++) {
+        const total = dadosManut[i] + dadosFerram[i] + dadosFacil[i];
+        if (budgetMeses[i] > 0 && total > budgetMeses[i]) {
+          markAreas.push([{ xAxis: mesesArr[i], itemStyle: { color: 'rgba(239,68,68,0.07)', borderColor: 'rgba(239,68,68,0.3)', borderWidth: 1 } }, { xAxis: mesesArr[i] }]);
+        }
+      }
+
+      // Estilização Mês
+      const mkStyle = (baseHi, baseLo, idx) => idx > mesAtual
+        ? { opacity: 0.25, color: baseLo }
+        : { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{offset: 0, color: baseHi}, {offset: 1, color: baseLo}]) };
+        
+      const manutData  = dadosManut.map((v, i)  => ({ value: v, itemStyle: mkStyle('#60a5fa', '#3b82f6', i) }));
+      const ferramData = dadosFerram.map((v, i) => ({ value: v, itemStyle: mkStyle('#c4b5fd', '#8b5cf6', i) }));
+      const facilData  = dadosFacil.map((v, i)  => ({ value: v, itemStyle: mkStyle('#6ee7b7', '#10b981', i) }));
+
+      chartEvolucao.setOption({
+        backgroundColor: 'transparent',
+        animation: true, animationDuration: 900, animationEasing: 'cubicOut',
         tooltip: {
           trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: function(params) {
-            let res = params[0].axisValue + '<br/>';
-            params.forEach(p => {
-              res += p.marker + p.seriesName + ': R$ ' + p.value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + '<br/>';
-            });
-            return res;
+          axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(255,255,255,0.02)' } },
+          backgroundColor: 'rgba(9,9,11,0.97)',
+          borderColor: 'rgba(255,255,255,0.07)',
+          borderWidth: 1, borderRadius: 12, padding: [14, 18],
+          textStyle: { color: '#f1f5f9', fontFamily: 'Inter, sans-serif', fontSize: 13 },
+          extraCssText: 'box-shadow:0 24px 64px rgba(0,0,0,0.85);',
+          formatter: params => {
+            const mi = mesesArr.indexOf(params[0]?.axisValue || '');
+            const manut = dadosManut[mi] || 0, ferram = dadosFerram[mi] || 0, facil = dadosFacil[mi] || 0;
+            const total = manut + ferram + facil, budget = budgetMeses[mi] || 0, saldo = budget - total;
+            const pct = budget > 0 ? ((total / budget) * 100).toFixed(1) : null;
+            const saldoCor = saldo < 0 ? '#f87171' : '#4ade80';
+            const pctCor = pct ? (parseFloat(pct) > 100 ? '#f87171' : parseFloat(pct) > 80 ? '#fbbf24' : '#4ade80') : '#4ade80';
+            const badge = mi > mesAtual ? `<span style="background:rgba(251,191,36,0.15);color:#fbbf24;padding:1px 7px;border-radius:5px;font-size:10px;margin-left:6px;font-weight:600;">PROJEÇÃO</span>` : '';
+            return `<div style="font-weight:700;font-size:14px;margin-bottom:10px;color:#fff;">${mesesArr[mi]} 2026${badge}</div>
+              <div style="display:grid;grid-template-columns:1fr auto;gap:3px 18px;font-size:12px;color:#cbd5e1;margin-bottom:10px;">
+                <span>🔵 Manutenção</span><span style="text-align:right;font-weight:600;color:#93c5fd;">${fmtBRL(manut)}</span>
+                <span>🟣 Ferramentaria</span><span style="text-align:right;font-weight:600;color:#c4b5fd;">${fmtBRL(ferram)}</span>
+                <span>🟢 Facilities</span><span style="text-align:right;font-weight:600;color:#6ee7b7;">${fmtBRL(facil)}</span>
+              </div>
+              <div style="border-top:1px solid rgba(255,255,255,0.07);padding-top:9px;display:grid;grid-template-columns:1fr auto;gap:3px 18px;font-size:12px;">
+                <span style="color:#94a3b8;">Total</span><span style="text-align:right;font-weight:800;font-size:15px;color:#fff;">${fmtBRL(total)}</span>
+                ${budget > 0 ? `<span style="color:#94a3b8;">Budget</span><span style="text-align:right;color:#e2e8f0;">${fmtBRL(budget)}</span>` : ''}
+                ${budget > 0 ? `<span style="color:#94a3b8;">Saldo</span><span style="text-align:right;font-weight:700;color:${saldoCor};">${fmtBRL(saldo)}</span>` : ''}
+                ${pct ? `<span style="color:#94a3b8;">% Consumido</span><span style="text-align:right;font-weight:700;color:${pctCor};">${pct}%</span>` : ''}
+              </div>`;
           }
         },
-        legend: {
-          data: ['Budget (Meta Mensal)', 'Manutenção', 'Ferramentaria', 'Facilities'],
-          bottom: 0,
-          textStyle: { color: '#a1a1aa' }
-        },
-        grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
-        xAxis: [
-          {
-            type: 'category',
-            data: mesesArr,
-            axisLabel: { color: '#a1a1aa' }
-          }
-        ],
-        yAxis: [
-          {
-            type: 'value',
-            axisLabel: {
-              color: '#a1a1aa',
-              formatter: function(val) { return 'R$ ' + (val/1000).toFixed(0) + 'k'; }
-            },
-            splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
-          }
-        ],
+        legend: { data: ['Manutenção', 'Ferramentaria', 'Facilities', 'Budget'], bottom: 4, textStyle: { color: '#94a3b8', fontFamily: 'Inter, sans-serif', fontSize: 11 }, icon: 'roundRect', itemWidth: 12, itemHeight: 6, itemGap: 22 },
+        grid: { left: '1%', right: '1%', bottom: '13%', top: '3%', containLabel: true },
+        xAxis: [{ type: 'category', data: mesesArr, axisLabel: { color: '#64748b', fontFamily: 'Inter, sans-serif', fontSize: 11, interval: 0 }, axisLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }, axisTick: { show: false } }],
+        yAxis: [{ type: 'value', axisLabel: { color: '#64748b', fontFamily: 'Inter, sans-serif', fontSize: 11, formatter: v => fmtK(v) }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)', type: 'dashed' } }, axisLine: { show: false }, axisTick: { show: false } }],
         series: [
-          {
-            name: 'Budget (Meta Mensal)',
-            type: 'line',
-            data: budgetLine,
-            itemStyle: { color: '#ffffff' },
-            lineStyle: { type: 'dashed', width: 2, opacity: 0.6 },
-            symbol: 'none'
-          },
-          {
-            name: 'Manutenção',
-            type: 'bar',
-            stack: 'Total',
-            data: dadosManut,
-            itemStyle: { color: '#3b82f6', borderRadius: [0, 0, 0, 0] }
-          },
-          {
-            name: 'Ferramentaria',
-            type: 'bar',
-            stack: 'Total',
-            data: dadosFerram,
-            itemStyle: { color: '#8b5cf6', borderRadius: [0, 0, 0, 0] }
-          },
-          {
-            name: 'Facilities',
-            type: 'bar',
-            stack: 'Total',
-            data: dadosFacil,
-            itemStyle: { color: '#10b981', borderRadius: [4, 4, 0, 0] }
-          }
+          { name: 'Budget', type: 'line', data: budgetMeses, z: 10, symbol: 'none', lineStyle: { color: 'rgba(255,255,255,0.3)', type: 'dashed', width: 1.5 }, itemStyle: { color: '#fff' }, markArea: { silent: true, data: markAreas }, markLine: { silent: true, symbol: 'none', data: [{ xAxis: mesesArr[mesAtual], lineStyle: { color: '#f59e0b', type: 'dashed', width: 1.5 }, label: { show: true, formatter: 'Mês atual', position: 'insideEndTop', color: '#f59e0b', fontSize: 10 } }] } },
+          { name: 'Manutenção',    type: 'bar', stack: 'Total', barMaxWidth: 44, data: manutData,  itemStyle: { borderRadius: [0,0,0,0] }, emphasis: { focus: 'series', itemStyle: { shadowBlur: 12, shadowColor: 'rgba(59,130,246,0.5)' } } },
+          { name: 'Ferramentaria', type: 'bar', stack: 'Total', barMaxWidth: 44, data: ferramData, itemStyle: { borderRadius: [0,0,0,0] }, emphasis: { focus: 'series', itemStyle: { shadowBlur: 12, shadowColor: 'rgba(139,92,246,0.5)' } } },
+          { name: 'Facilities',    type: 'bar', stack: 'Total', barMaxWidth: 44, data: facilData,  itemStyle: { borderRadius: [4,4,0,0] }, emphasis: { focus: 'series', itemStyle: { shadowBlur: 12, shadowColor: 'rgba(16,185,129,0.5)' } } }
         ]
-      };
-      chartEvolucao.setOption(optionEvolucao);
+      }, true);
     }
 
     // --- Renderizar Gráfico de Estratificação por C.C. ---
     const ctxCC = document.getElementById('chartEstratificacaoCC');
     if (ctxCC) {
       let chartCC = echarts.getInstanceByDom(ctxCC) || echarts.init(ctxCC);
-      
-      // Pegar top 10 maiores C.C.s
-      let ccArray = Object.keys(ccMap).map(key => ({ nome: key, valor: ccMap[key] }));
-      ccArray.sort((a, b) => b.valor - a.valor);
-      ccArray = ccArray.slice(0, 10);
-      ccArray.reverse(); // ECharts desenha de baixo para cima
-      
-      let optionCC = {
-        tooltip: {
-          trigger: 'axis',
-          axisPointer: { type: 'shadow' },
-          formatter: function(params) {
-            let p = params[0];
-            return p.name + '<br/>' + p.marker + 'Custo Realizado: R$ ' + p.value.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2});
-          }
-        },
-        grid: { left: '3%', right: '4%', bottom: '5%', top: '5%', containLabel: true },
-        xAxis: {
-          type: 'value',
-          axisLabel: {
-            color: '#a1a1aa',
-            formatter: function(val) { return 'R$ ' + (val/1000).toFixed(0) + 'k'; }
-          },
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)' } }
-        },
-        yAxis: {
-          type: 'category',
-          data: ccArray.map(item => item.nome),
-          axisLabel: { color: '#a1a1aa', fontSize: 10, width: 100, overflow: 'truncate' }
-        },
-        series: [
-          {
-            name: 'Custo Realizado',
-            type: 'bar',
-            data: ccArray.map(item => item.valor),
-            itemStyle: { color: '#3b82f6', borderRadius: [0, 4, 4, 0] }
-          }
-        ]
-      };
-      chartCC.setOption(optionCC);
+      let ccArr = Object.keys(ccMap).map(k => ({ nome: k, valor: ccMap[k] })).sort((a,b) => b.valor - a.valor).slice(0,10).reverse();
+      chartCC.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, backgroundColor: 'rgba(9,9,11,0.97)', borderColor: 'rgba(255,255,255,0.07)', textStyle: { color: '#f1f5f9' }, formatter: p => `${p[0].name}<br/>${p[0].marker} ${(p[0].value||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}` },
+        grid: { left: '2%', right: '6%', bottom: '5%', top: '5%', containLabel: true },
+        xAxis: { type: 'value', axisLabel: { color: '#64748b', fontSize: 10, formatter: v => 'R$' + (v/1000).toFixed(0) + 'k' }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.04)', type: 'dashed' } }, axisLine: { show: false }, axisTick: { show: false } },
+        yAxis: { type: 'category', data: ccArr.map(i => i.nome), axisLabel: { color: '#94a3b8', fontSize: 10 }, axisTick: { show: false }, axisLine: { show: false } },
+        series: [{ type: 'bar', data: ccArr.map(i => ({ value: i.valor, itemStyle: { color: new echarts.graphic.LinearGradient(1,0,0,0,[{offset:0,color:'#3b82f6'},{offset:1,color:'rgba(59,130,246,0.12)'}]), borderRadius: [0,4,4,0] } })), barMaxWidth: 18 }]
+      });
     }
 
-    // --- Processar dados para Radar (Técnico x Linha) ---
-    let linhaMap = {};
-    let tecnicoMap = {};
-    let relacao = {}; // { tecnico: { linha: custo } }
-    
-    for (let r of todosRegistros) {
-      if (r.it_codigo === 'BUDGET_METADATA' || r.it_codigo === 'FORECAST_METADATA' || r.it_codigo === 'DIFF_METADATA') continue;
-      let custo = Number(r.custo_cc) || 0;
-      if (custo === 0) continue;
-      
-      let linha = String(r.linha || '').trim();
-      let tec = String(r.nome_solicitante || '').trim();
-      
-      if (!linha || !tec || linha === 'null' || tec === 'null' || linha === 'undefined' || tec === 'undefined') continue;
-      
-      linhaMap[linha] = (linhaMap[linha] || 0) + custo;
-      tecnicoMap[tec] = (tecnicoMap[tec] || 0) + custo;
-      
-      if (!relacao[tec]) relacao[tec] = {};
-      relacao[tec][linha] = (relacao[tec][linha] || 0) + custo;
-    }
-    
-    let topLinhas = Object.keys(linhaMap).map(k => ({nome: k, val: linhaMap[k]})).sort((a,b) => b.val - a.val).slice(0, 5).map(x => x.nome);
-    let topTecnicos = Object.keys(tecnicoMap).map(k => ({nome: k, val: tecnicoMap[k]})).sort((a,b) => b.val - a.val).slice(0, 5).map(x => x.nome);
-    
-    const colorsRadar = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'];
-    
-    let radarDatasets = topTecnicos.map((tec, i) => {
-      let data = topLinhas.map(l => (relacao[tec] && relacao[tec][l]) ? relacao[tec][l] : 0);
-      return {
-        name: tec.split(' ')[0], // Pega só o primeiro nome
-        value: data,
-        itemStyle: { color: colorsRadar[i % colorsRadar.length] },
-        lineStyle: { width: 2 }
-      };
-    });
-
-    const ctxRadar = document.getElementById('chartRadarTecnicos');
-    if (ctxRadar) {
-      let chartRadar = echarts.getInstanceByDom(ctxRadar) || echarts.init(ctxRadar);
-      
-      // Calculate max for radar axis (max cost per line)
-      let maxCustos = topLinhas.map(l => {
-          let maxTecn = 0;
-          topTecnicos.forEach(tec => {
-              if(relacao[tec] && relacao[tec][l] > maxTecn) maxTecn = relacao[tec][l];
-          });
-          return maxTecn;
+    // --- Radar Técnicos ---
+    let topLinhas   = Object.keys(linhaMap).map(k => ({nome:k,val:linhaMap[k]})).sort((a,b)=>b.val-a.val).slice(0,5).map(x=>x.nome);
+    let topTecnicos = Object.keys(tecnicoMap).map(k => ({nome:k,val:tecnicoMap[k]})).sort((a,b)=>b.val-a.val).slice(0,5).map(x=>x.nome);
+    const ctxRadar  = document.getElementById('chartRadarTecnicos');
+    if (ctxRadar && topLinhas.length > 0 && topTecnicos.length > 0) {
+      let chartRdr = echarts.getInstanceByDom(ctxRadar) || echarts.init(ctxRadar);
+      const colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444'];
+      let rds = topTecnicos.map((tec,i) => ({ name: tec.split(' ')[0], value: topLinhas.map(l => (relacao[tec]&&relacao[tec][l])||0), itemStyle: { color: colors[i%colors.length] }, lineStyle: { width: 2 } }));
+      let maxG = Math.max(...topLinhas.map(l => Math.max(...topTecnicos.map(t => (relacao[t]&&relacao[t][l])||0)))) || 1;
+      chartRdr.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'item', backgroundColor: 'rgba(9,9,11,0.97)', borderColor: 'rgba(255,255,255,0.07)', textStyle: { color: '#f1f5f9', fontSize: 12 }, formatter: p => { let res = `<strong>${p.name}</strong><br/>`; topLinhas.forEach((l,i) => { res += `${l}: ${(p.value[i]||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}<br/>`; }); return res; } },
+        legend: { data: rds.map(d=>d.name), bottom: 0, textStyle: { color: '#94a3b8', fontSize: 10 } },
+        radar: { indicator: topLinhas.map(l => ({ name: l.length > 15 ? l.substring(0,15) + '…' : l, max: maxG * 1.1 })), splitNumber: 4, axisName: { color: '#e4e4e7', fontSize: 10, fontFamily: 'Inter' }, splitArea: { show: false }, splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }, axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } } },
+        series: [{ type: 'radar', data: rds, symbol: 'circle', symbolSize: 4, areaStyle: { opacity: 0.15 } }]
       });
-      let maxGlobal = Math.max(...maxCustos) || 1;
-      
-      let radarLabels = topLinhas.map(l => {
-         return { name: l.length > 15 ? l.substring(0, 15) + '...' : l, max: maxGlobal * 1.1 };
-      });
-      
-      let optionRadar = {
-        tooltip: {
-          trigger: 'item',
-          formatter: function(params) {
-            let res = params.name + '<br/>';
-            for (let i = 0; i < params.value.length; i++) {
-               res += topLinhas[i] + ': R$ ' + params.value[i].toLocaleString('pt-BR', {minimumFractionDigits: 2}) + '<br/>';
-            }
-            return res;
-          }
-        },
-        legend: {
-          data: radarDatasets.map(d => d.name),
-          bottom: 0,
-          textStyle: { color: '#a1a1aa', fontSize: 10 }
-        },
-        radar: {
-          indicator: radarLabels.length ? radarLabels : [{name:'N/A', max:1}],
-          splitNumber: 4,
-          axisName: { color: '#e4e4e7', fontSize: 10, fontFamily: 'Inter' },
-          splitArea: { show: false },
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } },
-          axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
-        },
-        series: [
-          {
-            type: 'radar',
-            data: radarDatasets,
-            symbol: 'circle',
-            symbolSize: 4,
-            areaStyle: { opacity: 0.2 }
-          }
-        ]
-      };
-      chartRadar.setOption(optionRadar);
     }
   }
 
@@ -5141,556 +5035,11 @@ function renderTabelaCustoGeral() {
   });
 }
 
-// Listeners for Custo Geral Filters
-if ($('#filtroBuscaCustoGeral')) {
-  $('#filtroBuscaCustoGeral').addEventListener('input', () => {
-    renderTabelaCustoGeral();
-  });
-}
-
-if ($('#filtroOrdemCustoGeral')) {
-  $('#filtroOrdemCustoGeral').addEventListener('change', () => {
-    renderTabelaCustoGeral();
-  });
-}
-
-if ($('#filtroAreaCustoGeral')) {
-  $('#filtroAreaCustoGeral').addEventListener('change', () => {
-    renderTabelaCustoGeral();
-  });
-}
-
-if ($('#filtroModoColunasCustoGeral')) {
-  $('#filtroModoColunasCustoGeral').addEventListener('change', () => {
-    renderTabelaCustoGeral();
-  });
-}
-
-if ($('#filtroDataDeCustoGeral')) {
-  $('#filtroDataDeCustoGeral').addEventListener('change', () => {
-    renderTabelaCustoGeral();
-  });
-}
-
-if ($('#filtroDataAteCustoGeral')) {
-  $('#filtroDataAteCustoGeral').addEventListener('change', () => {
-    renderTabelaCustoGeral();
-  });
-}
-
-if ($('#btnLimparFiltrosCustoGeral')) {
-  $('#btnLimparFiltrosCustoGeral').addEventListener('click', () => {
-    if ($('#filtroBuscaCustoGeral'))        $('#filtroBuscaCustoGeral').value = '';
-    if ($('#filtroOrdemCustoGeral'))        $('#filtroOrdemCustoGeral').value = 'todas';
-    if ($('#filtroAreaCustoGeral'))         $('#filtroAreaCustoGeral').value = 'todas';
-    if ($('#filtroModoColunasCustoGeral'))  $('#filtroModoColunasCustoGeral').value = 'todas';
-    if ($('#filtroDataDeCustoGeral'))       $('#filtroDataDeCustoGeral').value = '';
-    if ($('#filtroDataAteCustoGeral'))      $('#filtroDataAteCustoGeral').value = '';
-    renderTabelaCustoGeral();
-  });
-}
-
-initExcelImportCustoGeral(getClient(), toast, async () => {
-  try {
-    registrosCustoGeral = await getDadosCustoGeral();
-    if (viewAtual === 'custo-geral') {
-      renderTabelaCustoGeral();
-    }
-  } catch (err) {
-    console.error('Erro ao recarregar custo geral', err);
-  }
-});
-
-// =============================
-// CRUD Custo Geral
-// =============================
-
-function abrirModalCustoGeral(id = null) {
-  const m = document.getElementById('modalCustoGeral');
-  if (!m) return;
-  const form = document.getElementById('formCustoGeral');
-  form.reset();
-
-  const title = document.getElementById('modalCustoGeralTitle');
-  
-  if (id) {
-    title.textContent = 'Editar Registro - Custo Geral';
-    const r = (registrosCustoGeral || []).find(x => String(x.id) === String(id));
-    if (r) {
-      document.getElementById('cg_id').value = r.id;
-      document.getElementById('cg_numero_ordem').value = r.numero_ordem || '';
-      document.getElementById('cg_it_codigo').value = r.it_codigo || '';
-      document.getElementById('cg_descricao_codigo').value = r.descricao_codigo || '';
-      document.getElementById('cg_dt_trans').value = r.dt_trans ? String(r.dt_trans).slice(0,10) : '';
-      document.getElementById('cg_mes').value = r.mes || '';
-      document.getElementById('cg_ent_sai').value = r.ent_sai || '';
-      document.getElementById('cg_quantidade').value = r.quantidade || '';
-      document.getElementById('cg_nro_docto').value = r.nro_docto || '';
-      document.getElementById('cg_linha').value = r.linha || '';
-      document.getElementById('cg_solicitante').value = r.solicitante || '';
-      document.getElementById('cg_nome_solicitante').value = r.nome_solicitante || '';
-      document.getElementById('cg_area').value = r.area || '';
-      document.getElementById('cg_cc').value = r.cc || '';
-      
-      const setMoeda = (id, val) => {
-        if (val) document.getElementById(id).value = fmtMoeda(val);
-      };
-      setMoeda('cg_material', r.material);
-      setMoeda('cg_ggf', r.ggf);
-      setMoeda('cg_custo_do_mes', r.custo_do_mes);
-      setMoeda('cg_custo_mes_anterior', r.custo_mes_anterior);
-      setMoeda('cg_custo_de_entrada', r.custo_de_entrada);
-    }
-  } else {
-    title.textContent = 'Novo Registro - Custo Geral';
-    document.getElementById('cg_id').value = '';
-  }
-
-  m.classList.add('open');
-}
-
-function fecharModalCustoGeral() {
-  const m = document.getElementById('modalCustoGeral');
-  if (m) m.classList.remove('open');
-}
-
-$('#btnNovoCustoGeral')?.addEventListener('click', () => abrirModalCustoGeral(null));
-$('#btnFecharModalCustoGeral')?.addEventListener('click', fecharModalCustoGeral);
-$('#btnCancelarModalCustoGeral')?.addEventListener('click', fecharModalCustoGeral);
-
-$('#btnEditarCustoGeral')?.addEventListener('click', () => {
-  if (linhaSelecionadaCustoGeralId) {
-    abrirModalCustoGeral(linhaSelecionadaCustoGeralId);
-  } else {
-    toast('Selecione uma linha primeiro', 'warning');
-  }
-});
-
-$('#btnExcluirCustoGeral')?.addEventListener('click', async () => {
-  if (!linhaSelecionadaCustoGeralId) return;
-  if (!confirmar('Deseja realmente excluir este registro de Custo Geral?')) return;
-  
-  try {
-    toast('Excluindo...', 'info');
-    await excluirCustoGeral(linhaSelecionadaCustoGeralId);
-    toast('Registro excluído!', 'success');
-    linhaSelecionadaCustoGeralId = null;
-    const bar = document.getElementById('rowActionBarCustoGeral');
-    if (bar) bar.classList.add('hidden');
-    
-    registrosCustoGeral = await getDadosCustoGeral();
-    renderTabelaCustoGeral();
-  } catch (err) {
-    console.error(err);
-    toast('Erro ao excluir: ' + err.message, 'danger');
-  }
-});
-
-$('#btnSalvarModalCustoGeral')?.addEventListener('click', async () => {
-  const id = document.getElementById('cg_id').value;
-  
-  const parseMoeda = (str) => {
-    if (!str) return 0;
-    if (typeof str === 'number') return str;
-    let v = str.replace(/[R$\s]/g, '');
-    if (v.includes(',')) {
-      v = v.replace(/\./g, '').replace(',', '.');
-    }
-    return Number(v) || 0;
-  };
-
-  const dados = {
-    numero_ordem: document.getElementById('cg_numero_ordem').value.trim() || null,
-    it_codigo: document.getElementById('cg_it_codigo').value.trim() || null,
-    descricao_codigo: document.getElementById('cg_descricao_codigo').value.trim() || null,
-    dt_trans: document.getElementById('cg_dt_trans').value || null,
-    mes: document.getElementById('cg_mes').value ? Number(document.getElementById('cg_mes').value) : null,
-    ent_sai: document.getElementById('cg_ent_sai').value.trim() || null,
-    quantidade: document.getElementById('cg_quantidade').value ? Number(document.getElementById('cg_quantidade').value) : 0,
-    nro_docto: document.getElementById('cg_nro_docto').value.trim() || null,
-    linha: document.getElementById('cg_linha').value.trim() || null,
-    solicitante: document.getElementById('cg_solicitante').value.trim() || null,
-    nome_solicitante: document.getElementById('cg_nome_solicitante').value.trim() || null,
-    area: document.getElementById('cg_area').value.trim() || null,
-    cc: document.getElementById('cg_cc').value.trim() || null,
-    material: parseMoeda(document.getElementById('cg_material').value),
-    ggf: parseMoeda(document.getElementById('cg_ggf').value),
-    custo_do_mes: parseMoeda(document.getElementById('cg_custo_do_mes').value),
-    custo_mes_anterior: parseMoeda(document.getElementById('cg_custo_mes_anterior').value),
-    custo_de_entrada: parseMoeda(document.getElementById('cg_custo_de_entrada').value)
-  };
-
-  try {
-    const btn = document.getElementById('btnSalvarModalCustoGeral');
-    const oldText = btn.textContent;
-    btn.textContent = 'Salvando...';
-    btn.disabled = true;
-
-    if (id) {
-      await atualizarCustoGeral(id, dados);
-      toast('Registro atualizado com sucesso!', 'success');
-    } else {
-      await inserirCustoGeral(dados);
-      toast('Registro inserido com sucesso!', 'success');
-    }
-
-    fecharModalCustoGeral();
-    registrosCustoGeral = await getDadosCustoGeral();
-    renderTabelaCustoGeral();
-    
-    btn.textContent = oldText;
-    btn.disabled = false;
-  } catch (err) {
-    console.error(err);
-    toast('Erro ao salvar: ' + err.message, 'danger');
-    const btn = document.getElementById('btnSalvarModalCustoGeral');
-    btn.textContent = 'Salvar Registro';
-    btn.disabled = false;
-  }
-});
-
-
-// EXPORTAÇÃO DE RELATÓRIO PREDITIVO A4 (Ollama)
-$('#btnExportarRelatorioIA')?.addEventListener('click', async () => {
-  const btn = $('#btnExportarRelatorioIA');
-  btn.disabled = true;
-  const originalText = btn.innerHTML;
-  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> A IA está redigindo o relatório...';
-
-  try {
-    // Busca dados atualizados da nuvem
-    const supabase = getClient();
-    const { data: mData } = await supabase.from('custo_geral').select('descricao_codigo').eq('it_codigo', 'FORECAST_METADATA').maybeSingle();
-    if (!mData) throw new Error("Metadata preditivo não encontrado");
-    const p = JSON.parse(mData.descricao_codigo);
-
-    const dataAtual = new Date().toLocaleDateString('pt-BR');
-    
-    // Prompt para o Ollama — versão detalhada e exigente
-    const diasNoMes = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
-    const diasRestantes = diasNoMes - (p.dia_atual || new Date().getDate());
-    const overrunFormatado = Number(p.overrun || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    const rangeMin = Number(p.projecao_min || p.projecao_final || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    const rangeMax = Number(p.projecao_max || p.projecao_final || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    const gastoAtual = Number(p.gasto_atual || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    const budget = Number(p.budget || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2});
-    const alertas = p.alerts && p.alerts.length > 0 ? p.alerts.join('\n- ') : 'Nenhum alerta crítico identificado.';
-
-    const sysPrompt = `Você é um Controller Financeiro Sênior especializado em gestão de custos de manutenção industrial.
-Sua missão é redigir um RELATÓRIO EXECUTIVO COMPLETO E DETALHADO para ser apresentado à diretoria da fábrica Ball Beverage.
-O relatório deve ter aproximadamente 700 a 1000 palavras de conteúdo textual — NÃO seja breve. Cada seção deve ter pelo menos 2 a 4 parágrafos longos e bem desenvolvidos.
-
-REGRAS DE FORMATAÇÃO (OBRIGATÓRIAS E CRÍTICAS):
-- Responda APENAS com código HTML válido, sem blocos de markdown (sem crases, sem \`\`\`html).
-- Não inclua as tags <html>, <head> ou <body>. Apenas o conteúdo interno.
-- Você DEVE usar tags <p> para separar os parágrafos. O espaçamento é fundamental!
-- Use um bloco <style> interno no início para estilizar elegantemente: adicione "p { margin-bottom: 1.2em; line-height: 1.6; text-align: justify; }" para garantir o espaçamento correto entre parágrafos.
-- Tipografia: font-family sans-serif, cores corporativas (azul escuro #1a3a5c, cinza #555, preto #222).
-- Cabeçalho com logo textual "BALL BEVERAGE — MANUTENÇÃO", título do relatório, data e uma linha divisória.
-- Cada seção com título em azul escuro bold (tag <h3> ou <h2>), separada por divisórias horizontais sutis.
-- Números financeiros em negrito e cor azul.
-- Caixas de alerta com fundo amarelo-claro para avisos.
-- Layout profissional e denso, adequado para impressão A4.
-- IMPORTANTE: NUNCA use jargões técnicos de inteligência artificial (como KNN, algoritmos, machine learning). Explique tudo em termos de negócios (ex: "análise de padrões históricos").
-
-DADOS REAIS DO SISTEMA (use todos eles no relatório):
-- Data do Relatório: ${dataAtual}
-- Dia Atual no Mês: ${p.dia_atual || new Date().getDate()} de ${diasNoMes} (${diasRestantes} dias restantes)
-- Gasto Acumulado até hoje: R$ ${gastoAtual}
-- Budget Mensal (Meta): R$ ${budget}
-- Projeção de Fechamento: R$ ${Number(p.projecao_final || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-- Estouro / Economia projetada: R$ ${overrunFormatado} ${(p.overrun || 0) > 0 ? '(ESTOURO)' : '(ECONOMIA)'}
-- Range de Incerteza: R$ ${rangeMin} até R$ ${rangeMax}
-- Volume de Ordens Abertas: ${p.volume_ordens_atual || 0} ordens
-- Mês Gêmeo (Mês Histórico mais similar): ${p.twin_month || 'N/A'}
-- Nível de Similaridade com o Mês Gêmeo: ${p.twin_month_similaridade || 0}%
-- Confiança da Projeção: ${p.confianca_pct}%
-- Alertas Identificados:
-- ${alertas}
-
-ESTRUTURA OBRIGATÓRIA DO RELATÓRIO (escreva TODAS as seções com profundidade):
-
-1. CABEÇALHO CORPORATIVO
-   Título: "Relatório Preditivo de Custos de Manutenção"
-   Subtítulo: "Análise de Fechamento Mensal — ${dataAtual}"
-   Emitido por: Controle RC — Inteligência Preditiva
-
-2. RESUMO EXECUTIVO (2–3 parágrafos)
-   Faça uma síntese executiva do momento financeiro da manutenção: o quanto foi gasto, o quanto resta de budget, o que o sistema projeta e qual o risco de estouro. Escreva como se estivesse reportando à diretoria, com linguagem formal mas clara. Mencione o percentual do mês consumido (${p.dia_atual} de ${diasNoMes} dias = ${Math.round(((p.dia_atual||1)/diasNoMes)*100)}% do mês), o ritmo de gastos e se estamos acima ou abaixo do ritmo esperado. Lembre-se de usar <p> para separar os parágrafos.
-
-3. ANÁLISE DO MÊS GÊMEO E PADRÕES HISTÓRICOS (2–3 parágrafos)
-   Explique com riqueza de detalhes O QUE É o "Mês Gêmeo", por que o sistema identificou ${p.twin_month} como o período mais similar no passado, o que isso significa na prática (ritmo de gastos, volume de ordens similares). Fale sobre a similaridade de ${p.twin_month_similaridade}% e o que ela implica para a confiabilidade da projeção. Mencione o range de incerteza e o que o cenário pessimista vs otimista representa. IMPORTANTE: Fale apenas em termos de negócios, comportamento e histórico, SEM citar algoritmos. Lembre-se de usar <p> para separar os parágrafos.
-
-4. DIAGNÓSTICO DE RISCO (2 parágrafos)
-   Com base nos dados, classifique o risco: ALTO, MÉDIO ou BAIXO. Justifique com base no estouro projetado de R$ ${overrunFormatado}, nos ${diasRestantes} dias restantes e nos alertas identificados. Fale sobre o "Efeito Fechamento" — o fenômeno em que os últimos dias do mês concentram faturamentos represados de notas fiscais, contratos mensais e requisições aprovadas. Dê uma estimativa de quanto pode ainda entrar nesses últimos dias.
-
-5. ALERTAS E ÁREAS DE ATENÇÃO (bullets + parágrafo explicativo)
-   Liste cada alerta de forma detalhada. Para cada alerta, explique o que ele significa, qual área está impactada, e qual ação preventiva ou corretiva deveria ser tomada. Se não houver alertas, explique por que isso é positivo e quais métricas sustentam essa afirmação.
-
-6. RECOMENDAÇÕES ESTRATÉGICAS PARA O FECHAMENTO (lista numerada, 4–5 itens)
-   Sugira ações concretas e específicas que a equipe de manutenção e o controller devem tomar nos próximos ${diasRestantes} dias para minimizar o estouro ou garantir a economia. Seja prático e acionável.
-
-7. CONCLUSÃO (1 parágrafo)
-   Encerre com uma avaliação geral do mês, um comentário sobre a maturidade do processo de gestão e uma mensagem motivacional para a equipe de manutenção.
-
-Lembre-se: o relatório deve ser LONGO, RICO e DETALHADO. Não resuma. Desenvolva cada seção completamente.`;
-
-    const res = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama3',
-        prompt: sysPrompt,
-        stream: false,
-        options: {
-          num_predict: 4096,
-          temperature: 0.7
-        }
-      })
-    });
-
-    if (!res.ok) throw new Error("Falha ao comunicar com Ollama. Verifique se OLLAMA_ORIGINS='*' está configurado e o Ollama rodando.");
-    
-    const ollamaResponse = await res.json();
-    let htmlContent = ollamaResponse.response;
-    
-    // Remove possíveis blocos de markdown no início/fim
-    htmlContent = htmlContent.replace(/^```html/i, '').replace(/```$/i, '').trim();
-
-    // Container oculto para PDF — largura equivalente a A4 em 96dpi (794px) menos margens
-    const printContainer = document.createElement('div');
-    printContainer.style.width = '710px';
-    printContainer.style.padding = '0';
-    printContainer.style.background = '#fff';
-    printContainer.style.color = '#222';
-    printContainer.style.fontSize = '13px';
-    printContainer.style.lineHeight = '1.6';
-    printContainer.style.fontFamily = 'Arial, sans-serif';
-    printContainer.style.boxSizing = 'border-box';
-    printContainer.style.overflowWrap = 'break-word';
-    printContainer.style.wordBreak = 'break-word';
-    printContainer.innerHTML = htmlContent;
-    
-    // Injeta gráfico (opcional)
-    const canvasChart = document.getElementById('predictiveChart');
-    if (canvasChart) {
-      const imgData = canvasChart.toDataURL('image/png');
-      const imgHtml = `<div style="margin-top: 20px; text-align: center;"><img src="${imgData}" style="max-width: 100%; height: auto; border: 1px solid #eee;" /></div>`;
-      printContainer.innerHTML += imgHtml;
-    }
-
-    // Gera PDF
-    const opt = {
-      margin:       [10, 10, 10, 10],
-      filename:     `Relatorio_Preditivo_IA_${dataAtual.replace(/\//g, '-')}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
-    html2pdf().set(opt).from(printContainer).save();
-
-    toast('Relatório Preditivo gerado e baixado!', 'success');
-
-  } catch (e) {
-    console.error(e);
-    toast('Erro na Geração por IA: ' + e.message, 'danger');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-  }
-});
-
-// DISPARO MANUAL DA IA (GitHub Actions)
-$('#btnRunForecast')?.addEventListener('click', async () => {
-  if (!GITHUB_PAT) {
-    toast('Erro: GITHUB_PAT não configurado. Adicione no env.runtime.js ou config.js', 'danger');
-    return;
-  }
-  
-  try {
-    const btn = $('#btnRunForecast');
-    const icon = btn.querySelector('i');
-    
-    btn.disabled = true;
-    if (icon) icon.classList.add('fa-spin');
-    toast('Disparando modelo preditivo na nuvem...', 'info');
-
-    const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/actions/workflows/${GITHUB_WORKFLOW_ID}/dispatches`, {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/vnd.github+json',
-        'Authorization': `Bearer ${GITHUB_PAT}`,
-        'X-GitHub-Api-Version': '2022-11-28'
-      },
-      body: JSON.stringify({ ref: 'main' })
-    });
-
-    if (!res.ok) {
-      throw new Error(`Erro ${res.status}: ${await res.text()}`);
-    }
-
-    toast('IA ativada com sucesso! Atualize a página em ~2 minutos.', 'success');
-  } catch (err) {
-    console.error(err);
-    toast('Falha ao acionar a IA: ' + err.message, 'danger');
-  } finally {
-    setTimeout(() => {
-      const btn = $('#btnRunForecast');
-      if (btn) {
-        btn.disabled = false;
-        const icon = btn.querySelector('i');
-        if (icon) icon.classList.remove('fa-spin');
-      }
-    }, 2500);
-  }
-});
-
 // PLANO MESTRE INIT
 initPlanoMestre();
 initImportPlanoMestre();
 
-// LOGICA BUDGET EXPORT
-const btnLogica = document.getElementById('btnEntregarLogica');
-if (btnLogica) {
-  btnLogica.addEventListener('click', () => {
-    const text = `=== LÓGICA DE CÁLCULO DE BUDGET (AUTOMAÇÃO) ===
-
-Esta automação substitui o processo manual que era realizado na aba "DADOS" do Excel original.
-
-1. IMPORTAÇÃO DOS DADOS AOP:
-O sistema lê automaticamente a aba "AOP 2026 PHC_Itupeva" do arquivo Excel importado.
-Ao invés de depender de percentuais fixos aplicados sobre o "Budget Total Flexibilizado", 
-o sistema agora localiza as linhas correspondentes a "M&R" (Manutenção), "Ferramentaria" e "Facilities" 
-na coluna de metas mensais. O valor puro e exato para cada área é capturado.
-O "Budget Total" é a soma exata desses três valores encontrados, eliminando a margem de erro de arredondamentos.
-
-2. DESDOBRAMENTO (META MÊS E META SEMANA):
-Seguindo o racional de distribuição do seu dashboard anterior:
-A meta total da área é dividida equitativamente (50% / 50%) entre os tipos "Serviço" e "Consumo".
-A Meta Semanal é a Meta Mês correspondente dividida por 5.
-A Estimativa Acumulada considera a Meta por Dia (Meta / 30) multiplicada pelo dia atual do mês.
-
-3. CONSOLIDAÇÃO DO REAL (CONSUMIDO):
-O valor "Real" de cada área e tipo é calculado somando o "Custo do Mês" de cada linha da aba "Movimento".
-Para determinar se a linha é "Consumo" ou "Serviço":
-- Se a coluna "Material" possui valor, o registro é classificado como "Consumo".
-- Caso contrário, o registro é classificado como "Serviço".
-Para determinar a área:
-- O sistema varre o Grupo, a Descrição da Conta e a Linha de Produto.
-- Se o registro mencionar "ferram", vai para Ferramentaria.
-- Se mencionar "facil", vai para Facilities.
-- Qualquer outro registro (ou explicitamente "manuten") vai para Manutenção.
-
-Com isso, não é mais necessário nenhum cálculo intermediário manual!
-`;
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'Logica_Calculo_Budget.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  });
-}
-function renderBudgetConfigUI() {
-  if (!document.getElementById('tabelaVinculoBudget')) return;
-  const tbody = document.querySelector('#tabelaVinculoBudget tbody');
-  let html = '';
-  Object.keys(usersHierarchy).forEach(user => {
-    const areas = usersHierarchy[user].budget_areas || [];
-    html += `
-      <tr>
-        <td style="text-align: left; font-weight: 500;">${user}</td>
-        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="mo_terceiros" ${areas.includes('mo_terceiros') ? 'checked' : ''}></td>
-        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="pecas_corretiva" ${areas.includes('pecas_corretiva') ? 'checked' : ''}></td>
-        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="pecas_preventiva" ${areas.includes('pecas_preventiva') ? 'checked' : ''}></td>
-        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="materiais_reparo" ${areas.includes('materiais_reparo') ? 'checked' : ''}></td>
-        <td><input type="checkbox" class="chk-budget" data-user="${user}" data-area="debito_direto" ${areas.includes('debito_direto') ? 'checked' : ''}></td>
-      </tr>
-    `;
-  });
-  tbody.innerHTML = html;
-
-  if (window.budgetMetadata) {
-    const bm = window.budgetMetadata;
-    const c = bm.categorias || {};
-    // "Total Mês" = o campo manutencao (vindo da AOP ou configurado manualmente).
-    // Se houver um override manual salvo (bm.total_manual), ele tem prioridade.
-    const totalParaExibir = bm.total_manual ?? bm.manutencao ?? bm.total ?? 0;
-    if (document.getElementById('cfgBudgetTotal'))    document.getElementById('cfgBudgetTotal').value    = totalParaExibir;
-    if (document.getElementById('cfgBudgetMO'))       document.getElementById('cfgBudgetMO').value       = c.mo_terceiros    || 0;
-    if (document.getElementById('cfgBudgetCorretiva'))document.getElementById('cfgBudgetCorretiva').value= c.pecas_corretiva  || 0;
-    if (document.getElementById('cfgBudgetPreventiva'))document.getElementById('cfgBudgetPreventiva').value= c.pecas_preventiva || 0;
-    if (document.getElementById('cfgBudgetReparo'))   document.getElementById('cfgBudgetReparo').value   = c.materiais_reparo || 0;
-    if (document.getElementById('cfgBudgetDebito'))   document.getElementById('cfgBudgetDebito').value   = c.debito_direto    || 0;
-  }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => renderBudgetConfigUI(), 2000); // wait for data to load
-  
-  const btnSalvar = document.getElementById('btnSalvarConfigBudget');
-  if (btnSalvar) {
-    btnSalvar.addEventListener('click', async () => {
-      // 1. Coletar Inputs
-      const total = Number(document.getElementById('cfgBudgetTotal').value);
-      const cats = {
-        mo_terceiros: Number(document.getElementById('cfgBudgetMO').value),
-        pecas_corretiva: Number(document.getElementById('cfgBudgetCorretiva').value),
-        pecas_preventiva: Number(document.getElementById('cfgBudgetPreventiva').value),
-        materiais_reparo: Number(document.getElementById('cfgBudgetReparo').value),
-        debito_direto: Number(document.getElementById('cfgBudgetDebito').value),
-      };
-
-      // 2. Coletar Checkboxes
-      const checkboxes = document.querySelectorAll('.chk-budget');
-      const userAreas = {};
-      checkboxes.forEach(chk => {
-        const u = chk.dataset.user;
-        const a = chk.dataset.area;
-        if (!userAreas[u]) userAreas[u] = [];
-        if (chk.checked) userAreas[u].push(a);
-      });
-
-      // Sincroniza localmente
-      Object.keys(userAreas).forEach(u => {
-        if (usersHierarchy[u]) usersHierarchy[u].budget_areas = userAreas[u];
-      });
-
-      if (!window.budgetMetadata) window.budgetMetadata = {};
-
-      // total_manual = o que o usuário digitou no campo. Ele passa a ser a fonte de
-      // verdade do KPI "Desempenho Budget" no Custo Geral, sobrepondo a aba AOP.
-      window.budgetMetadata.total_manual = total;
-      window.budgetMetadata.manutencao   = total;  // atualiza o campo usado pelos KPIs
-      window.budgetMetadata.total        = total;  // retrocompatibilidade
-      window.budgetMetadata.categorias   = cats;
-      window.budgetMetadata.responsaveis = userAreas;
-
-      // Salvar no Supabase (merge: preserva ferramentaria, facilities, data_importacao da AOP)
-      import('./db.js').then(async (m) => {
-        const supabase = m.getClient();
-        await supabase.from('custo_geral').delete().eq('it_codigo', 'BUDGET_METADATA');
-        await supabase.from('custo_geral').insert([{
-          it_codigo: 'BUDGET_METADATA',
-          descricao_codigo: JSON.stringify(window.budgetMetadata),
-          numero_ordem: '0', quantidade: 0, custo_do_mes: 0
-        }]);
-        // Força re-render dos KPIs do Custo Geral sem precisar recarregar a página
-        if (typeof renderCustoGeral === 'function') renderCustoGeral();
-        Swal.fire({
-          icon: 'success',
-          title: 'Configurações Salvas!',
-          text: 'Budget atualizado e sincronizado com o Custo Geral.',
-          background: '#161f33', color: '#f1f5f9', confirmButtonColor: '#d4af37'
-        });
-      });
-    });
-  }
-});// ===================================================
+// ===================================================
 // SISTEMA DE NOTIFICAÇÕES DE PRAZOS POR USUÁRIO
 // ===================================================
 async function checkPrazosAlerts() {

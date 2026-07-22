@@ -129,6 +129,7 @@ body.light-mode .swal2-popup { border: 1px solid rgba(0, 0, 0, 0.08) !important;
   line-height: 1.5;
   animation: fadeSlideIn 0.3s ease;
 }
+body.light-mode .alerta-card { background: rgba(0,0,0,0.02); }
 @keyframes fadeSlideIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
 .alerta-card.warning { border-color: #facc15; background: rgba(250,204,21,0.06); }
 .alerta-card.danger  { border-color: #ef4444; background: rgba(239,68,68,0.06); }
@@ -141,10 +142,10 @@ body.light-mode .swal2-popup { border: 1px solid rgba(0, 0, 0, 0.08) !important;
   z-index: 9500;
   max-width: 300px;
   background: var(--surface);
-  border: 1px solid rgba(255,215,0,0.3);
+  border: 1px solid rgba(212,175,55,0.3);
   border-radius: 12px;
   padding: 1rem 1.1rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  box-shadow: var(--shadow);
   font-size: 0.85rem;
   line-height: 1.55;
   color: var(--text);

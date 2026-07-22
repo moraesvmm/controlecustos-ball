@@ -1,0 +1,1319 @@
+﻿diff --git a/backend/database/database.sqlite b/backend/database/database.sqlite
+index e8a3089..b1fbddc 100644
+Binary files a/backend/database/database.sqlite and b/backend/database/database.sqlite differ
+diff --git a/css/components.css b/css/components.css
+index 8f2bfaf..8a65cec 100644
+--- a/css/components.css
++++ b/css/components.css
+@@ -129,6 +129,7 @@ body.light-mode .swal2-popup { border: 1px solid rgba(0, 0, 0, 0.08) !important;
+   line-height: 1.5;
+   animation: fadeSlideIn 0.3s ease;
+ }
++body.light-mode .alerta-card { background: rgba(0,0,0,0.02); }
+ @keyframes fadeSlideIn { from { opacity: 0; transform: translateX(16px); } to { opacity: 1; transform: none; } }
+ .alerta-card.warning { border-color: #facc15; background: rgba(250,204,21,0.06); }
+ .alerta-card.danger  { border-color: #ef4444; background: rgba(239,68,68,0.06); }
+@@ -141,10 +142,10 @@ body.light-mode .swal2-popup { border: 1px solid rgba(0, 0, 0, 0.08) !important;
+   z-index: 9500;
+   max-width: 300px;
+   background: var(--surface);
+-  border: 1px solid rgba(255,215,0,0.3);
++  border: 1px solid rgba(212,175,55,0.3);
+   border-radius: 12px;
+   padding: 1rem 1.1rem;
+-  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
++  box-shadow: var(--shadow);
+   font-size: 0.85rem;
+   line-height: 1.55;
+   color: var(--text);
+diff --git a/css/styles.css b/css/styles.css
+index fc60fa1..bc2e6a4 100644
+--- a/css/styles.css
++++ b/css/styles.css
+@@ -19,21 +19,21 @@
+ 
+ /* ===== LIGHT MODE ===== */
+ body.light-mode {
+-  --bg: #f0f2f7;
+-  --bg2: #e4e8f2;
+-  --surface: rgba(255, 255, 255, 0.85);
++  --bg: #f8fafc;
++  --bg2: #f1f5f9;
++  --surface: rgba(255, 255, 255, 0.95);
+   --surface-solid: #ffffff;
+-  --border: rgba(100, 116, 139, 0.18);
++  --border: rgba(15, 23, 42, 0.08);
+   --text: #0f172a;
+-  --muted: #64748b;
++  --muted: #475569;
+   --gold: #b8860b;
+   --gold-rgb: 184, 134, 11;
+   --gold-dim: rgba(184, 134, 11, 0.12);
+   --accent: #0284c7;
+   --danger: #dc2626;
+   --success: #059669;
+-  --warning: #f59e0b;
+-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
++  --warning: #d97706;
++  --shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
+ }
+ 
+ 
+@@ -46,6 +46,7 @@ body {
+   min-height: 100vh;
+   line-height: 1.5;
+   overflow-x: hidden;
++  transition: background-color 0.3s ease, color 0.3s ease;
+ }
+ 
+ .app-bg {
+@@ -70,6 +71,7 @@ body {
+   border-bottom: 1px solid var(--border);
+   backdrop-filter: blur(12px);
+   background: rgba(8, 12, 20, 0.6);
++  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+ }
+ 
+ .brand { display: flex; align-items: center; gap: 1rem; }
+@@ -152,6 +154,7 @@ nav.tabs button.active {
+   border: 1px solid var(--border);
+   border-radius: var(--radius);
+   backdrop-filter: blur(16px);
++  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+ }
+ 
+ /* KPI */
+@@ -237,7 +240,7 @@ nav.tabs button.active {
+ }
+ 
+ .status-chip {
+-  background: rgba(255,255,255,0.06);
++  background: var(--surface-solid);
+   border: 1px solid var(--border);
+   color: var(--text);
+   padding: 0.25rem 0.6rem;
+@@ -473,7 +476,7 @@ select option {
+ 
+ .alerta-item small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 0.2rem; }
+ 
+-/* CRUD Table ├ó┬Ç┬ö scroll melhorado */
++/* CRUD Table ├óÔé¼ÔÇØ scroll melhorado */
+ body.view-crud .main-layout {
+   display: flex;
+   flex-direction: column;
+@@ -699,7 +702,7 @@ body.view-crud .main-layout {
+ .badge-ENTREGUE { background: rgba(52, 211, 153, 0.2); color: #6ee7b7; }
+ .badge-PENDENTE-DE-ENTREGA { background: rgba(59, 130, 246, 0.2); color: #93c5fd; } /* Azul */
+ .badge-PENDENTE-DE-PEDIDO { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; } /* Roxo */
+-.badge-PENDENTE-DE-ORCAMENTO, .badge-PENDENTE-DE-OR├â┬çAMENTO { background: rgba(249, 115, 22, 0.2); color: #fdba74; } /* Laranja */
++.badge-PENDENTE-DE-ORCAMENTO, .badge-PENDENTE-DE-OR├âÔÇíAMENTO { background: rgba(249, 115, 22, 0.2); color: #fdba74; } /* Laranja */
+ .badge-PENDENTE-DE-RC, .badge-PENDENTE-RC { background: rgba(234, 179, 8, 0.2); color: #fde047; } /* Amarelo */
+ .badge-PENDENTE { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+ .badge-CRITICA { background: rgba(248, 113, 113, 0.25); color: #fca5a5; }
+@@ -1325,6 +1328,7 @@ body.view-crud .main-layout {
+   border: 1px solid rgba(212,175,55,0.18);
+   position: relative;
+   overflow: hidden;
++  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+   animation: fadeInUserPanel 0.5s ease;
+ }
+ 
+@@ -1832,16 +1836,18 @@ body.light-mode .form-grid input,
+ body.light-mode .form-grid select,
+ body.light-mode .form-grid textarea,
+ body.light-mode .filters select,
+-body.light-mode .filters input {
+-  background: #ffffff;
+-  border-color: rgba(100, 116, 139, 0.3);
+-  color: var(--text);
++body.light-mode .filters input,
++body.light-mode .rl05-filter-input {
++  background: #ffffff !important;
++  border-color: rgba(100, 116, 139, 0.3) !important;
++  color: var(--text) !important;
+ }
+ body.light-mode .form-grid input:focus,
+ body.light-mode .form-grid select:focus,
+ body.light-mode .form-grid textarea:focus,
+ body.light-mode .filters select:focus,
+-body.light-mode .filters input:focus {
++body.light-mode .filters input:focus,
++body.light-mode .rl05-filter-input:focus {
+   outline: 2px solid rgba(184, 134, 11, 0.5);
+   border-color: var(--gold);
+ }
+@@ -2108,6 +2114,27 @@ body.light-mode .swal2-html-container {
+    invis├¡veis sobre fundo branco.
+    =================================================== */
+ 
++/* Corre├º├Áes espec├¡ficas para Retomada Linha 05 */
++body.light-mode #rl05-header {
++  background: var(--surface) !important;
++  border: 1px solid var(--border) !important;
++  box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
++}
++body.light-mode #rl05-content {
++  background: var(--bg) !important;
++  border-color: var(--border) !important;
++}
++body.light-mode .rl05-kpi-card {
++  background: var(--surface) !important;
++  border: 1px solid var(--border) !important;
++}
++body.light-mode .rl05-group-body {
++  background: var(--surface) !important;
++}
++body.light-mode .rl05-table-row {
++  border-bottom-color: var(--border) !important;
++}
++
+ /* T├¡tulos e textos da sidebar com cores hardcoded */
+ body.light-mode aside.sidebar h1,
+ body.light-mode aside.sidebar h2,
+diff --git a/index.html b/index.html
+index 0c3d08f..4a5e492 100644
+--- a/index.html
++++ b/index.html
+@@ -11,8 +11,8 @@
+   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+-  <link rel="stylesheet" href="css/styles.css?v=64">
+-  <link rel="stylesheet" href="css/components.css?v=64">
++  <link rel="stylesheet" href="css/styles.css?v=65">
++  <link rel="stylesheet" href="css/components.css?v=65">
+   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+   <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+   <script src="js/env.runtime.js?v=999"></script>
+@@ -98,11 +98,11 @@
+     
+     <!-- SIDEBAR -->
+     <aside class="sidebar" style="width: 260px; background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column;">
+-      <div class="sidebar-header" style="padding: 1.5rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.05); background: linear-gradient(180deg, rgba(255,255,255,0.02) 0%, transparent 100%);">
++      <div class="sidebar-header" style="padding: 1.5rem 1.25rem; display: flex; align-items: center; gap: 0.75rem; border-bottom: 1px solid var(--border); background: linear-gradient(180deg, var(--surface) 0%, transparent 100%);">
+         <img src="img/BALL.png" alt="Logo Ball" style="height: 28px; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));" />
+-        <div style="display: flex; flex-direction: column; justify-content: center; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 0.75rem;">
+-          <h1 style="font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 600; margin: 0; letter-spacing: 0.08em; line-height: 1; color: #ffffff; text-transform: uppercase;">MANUTEN├ç├âO</h1>
+-          <span style="font-size: 0.6rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 400; margin-top: 0.25rem;">Sistema Central</span>
++        <div style="display: flex; flex-direction: column; justify-content: center; border-left: 1px solid var(--border); padding-left: 0.75rem;">
++          <h1 style="font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 600; margin: 0; letter-spacing: 0.08em; line-height: 1; color: var(--text); text-transform: uppercase;">MANUTEN├ç├âO</h1>
++          <span style="font-size: 0.6rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; font-weight: 400; margin-top: 0.25rem;">Sistema Central</span>
+         </div>
+       </div>
+       
+@@ -225,7 +225,7 @@
+           <div class="kpi-card kpi-gold tooltip-container" id="cardValorTotal" style="cursor: pointer;">
+             <div class="label" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+               <span>VALOR TOTAL</span>
+-              <span style="font-size: 0.8rem; opacity: 0.6; background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 50%;">?</span>
++              <span style="font-size: 0.8rem; opacity: 0.8; background: var(--border); padding: 2px 6px; border-radius: 50%;">?</span>
+             </div>
+             <div class="value skeleton" id="kpiValor">R$ 000.000,00</div>
+             <div class="tooltip-card" style="width: 250px;">
+@@ -298,15 +298,15 @@
+           <div id="kpi-view-global" class="kpi-subview" style="display: flex; flex-direction: column; gap: 1.5rem;">
+             <!-- KPI Cards Top -->
+             <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+-              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);">
++              <div class="kpi-card">
+                 <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Breakdown Atual (Semana)</div>
+                 <div class="value" id="kpiBreakdownSemana" style="font-size: 2rem; color: var(--text-primary);">--</div>
+               </div>
+-              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);">
++              <div class="kpi-card">
+                 <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Breakdown Acumulado (M├¬s)</div>
+                 <div class="value" id="kpiBreakdownMes" style="font-size: 2rem; color: var(--text-primary);">--</div>
+               </div>
+-              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);">
++              <div class="kpi-card">
+                 <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Meta Global</div>
+                 <div class="value" id="kpiBreakdownMeta" style="font-size: 2rem; color: #10b981;">--</div>
+               </div>
+@@ -321,7 +321,7 @@ Evolu├º├úo da porcentagem de tempo que a linha passou parada devido a falhas.
+ 
+ L├│gica de C├ílculo:
+ ÔÇó F├│rmula = (Total de Minutos Parados ├À Tempo Dispon├¡vel) ├ù 100">?</span></h4>
+-                  <div style="display: flex; gap: 0.5rem; background: rgba(0,0,0,0.2); padding: 0.25rem; border-radius: 6px;">
++                  <div style="display: flex; gap: 0.5rem; background: var(--bg2); padding: 0.25rem; border-radius: 6px; border: 1px solid var(--border);">
+                     <button type="button" id="btnKpiDiario" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Di├írio</button>
+                     <button type="button" id="btnKpiSemana" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:var(--bg3); color:var(--text-primary);">Semanal</button>
+                     <button type="button" id="btnKpiMes" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Mensal</button>
+@@ -364,11 +364,11 @@ Dividido em:
+ 
+             <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+               <div style="display: flex; flex-direction: column; gap: 1.5rem;">
+-                <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
++                <div class="kpi-card" style="text-align: center;">
+                   <div class="label" style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Breakdown Anual (<span id="lblKpiLinhaAnual">--</span>)</div>
+                   <div class="value" id="valKpiLinhaAnual" style="font-size: 2.5rem; color: var(--text-primary); font-weight: bold;">--</div>
+                 </div>
+-                <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
++                <div class="kpi-card" style="text-align: center;">
+                   <div class="label" style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Breakdown Mensal (<span id="lblKpiLinhaMensal">--</span>)</div>
+                   <div class="value" id="valKpiLinhaMensal" style="font-size: 2.5rem; color: var(--text-primary); font-weight: bold;">--</div>
+                 </div>
+@@ -401,7 +401,7 @@ Avalia a confiabilidade da m├íquina. Quanto MAIOR, mais confi├ível ├® a m├íquina
+             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem;">
+               <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                 <!-- Toggle Mensal / Semanal -->
+-                <div style="display: flex; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 3px; border: 1px solid var(--border);">
++                <div style="display: flex; background: var(--bg2); border-radius: 8px; padding: 3px; border: 1px solid var(--border);">
+                   <button type="button" id="btnConfiabMes" class="btn-toggle-confiab active-toggle" data-periodo="MES" style="border:none; padding:5px 16px; border-radius:6px; font-size:0.82rem; cursor:pointer; font-weight:600; background: var(--gold); color:#000;">Mensal</button>
+                   <button type="button" id="btnConfiabSem" class="btn-toggle-confiab" data-periodo="SEMANA" style="border:none; padding:5px 16px; border-radius:6px; font-size:0.82rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Semanal</button>
+                 </div>
+@@ -662,7 +662,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+       <div style="display: flex; flex-direction: column;">
+       <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+         <div class="header-left">
+-          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Custo Geral</h1>
++          <h1 style="font-size: 1.75rem; color: var(--text); margin: 0;">Custo Geral</h1>
+           <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Integra├º├úo Financeiro & Datasul</p>
+         </div>
+         <div class="header-actions" style="display: flex; gap: 1rem; align-items: center;">
+@@ -713,7 +713,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+                   <th style="padding:0.5rem 0.75rem; text-align:right;">Custo do M├¬s</th>
+                 </tr>
+               </thead>
+-              <tbody id="tbodyFluxoDia" style="color:#fff;"></tbody>
++              <tbody id="tbodyFluxoDia" style="color: var(--text);"></tbody>
+             </table>
+           </div>
+         </div>
+@@ -723,13 +723,13 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+       <section id="kpisCustoGeral" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin-bottom: 1.5rem; flex-shrink: 0;">
+         
+         <!-- Widget 1: Desempenho do Budget -->
+-        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
++        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+-            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Desempenho Budget Manuten├º├úo</span>
++            <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Desempenho Global (Manut + Ferram + Facil)</span>
+             <i class="fa-solid fa-bullseye" style="color: var(--primary); font-size: 1.2rem;"></i>
+           </div>
+           <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.5rem;">
+-            <strong id="kpiCustoMes" style="font-size: 2rem; color: #fff; line-height: 1;">R$ 0,00</strong>
++            <strong id="kpiCustoMes" style="font-size: 2rem; color: var(--text); line-height: 1;">R$ 0,00</strong>
+             <span style="color: var(--muted); font-size: 0.9rem;">/ <span id="kpiBudgetTotalResumo">R$ 0,00</span></span>
+           </div>
+           <!-- Barra de Progresso do Budget -->
+@@ -737,18 +737,18 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+             <div id="barBudgetConsumido" style="height: 100%; width: 0%; background: linear-gradient(90deg, var(--success), var(--warning)); transition: width 1s ease-in-out;"></div>
+           </div>
+           <div style="display: flex; justify-content: space-between; margin-top: 0.5rem; font-size: 0.75rem; color: var(--muted);">
+-            <span>Consumido: <strong id="lblPercentConsumido" style="color: #fff;">0%</strong></span>
++            <span>Consumido: <strong id="lblPercentConsumido" style="color: var(--text);">0%</strong></span>
+             <span>Resta: <strong id="lblSaldoBudget" style="color: var(--success);">R$ 0,00</strong></span>
+           </div>
+         </div>
+ 
+         <!-- Widget 2: Composi├º├úo do Budget -->
+-        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
++        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+             <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Composi├º├úo do Budget Anual</span>
+             <i class="fa-solid fa-chart-pie" style="color: #8b5cf6; font-size: 1.2rem;"></i>
+           </div>
+-          <strong id="kpiBudgetTotal" style="font-size: 1.5rem; color: #fff; margin-bottom: 1rem; line-height: 1;">R$ 0,00</strong>
++          <strong id="kpiBudgetTotal" style="font-size: 1.5rem; color: var(--text); margin-bottom: 1rem; line-height: 1;">R$ 0,00</strong>
+           
+           <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+             <div style="display: flex; justify-content: space-between; font-size: 0.85rem;">
+@@ -767,7 +767,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+         </div>
+ 
+         <!-- Widget 3: Controle Geral -->
+-        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
++        <div class="panel" style="background: linear-gradient(145deg, var(--surface) 0%, rgba(255,255,255,0.02) 100%); border: 1px solid var(--border); padding: 1.5rem; border-radius: 12px; display: flex; flex-direction: column; justify-content: center;">
+           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+             <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px;">Valida├º├úo de Custo</span>
+             <i class="fa-solid fa-file-invoice-dollar" style="color: #d4af37; font-size: 1.2rem;"></i>
+@@ -775,15 +775,15 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+           <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+             <div>
+               <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Manuten├º├úo</span>
+-              <strong id="kpiManutencao" style="font-size: 1.2rem; color: #fff;">R$ 0,00</strong>
++              <strong id="kpiManutencao" style="font-size: 1.2rem; color: var(--text);">R$ 0,00</strong>
+             </div>
+             <div>
+               <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Ferramentaria</span>
+-              <strong id="kpiFerramentaria" style="font-size: 1.1rem; color: #ccc;">R$ 0,00</strong>
++              <strong id="kpiFerramentaria" style="font-size: 1.1rem; color: var(--muted);">R$ 0,00</strong>
+             </div>
+             <div>
+               <span style="color: var(--muted); font-size: 0.8rem; display: block; margin-bottom: 0.2rem;">Facilities</span>
+-              <strong id="kpiFacilities" style="font-size: 1.1rem; color: #ccc;">R$ 0,00</strong>
++              <strong id="kpiFacilities" style="font-size: 1.1rem; color: var(--muted);">R$ 0,00</strong>
+             </div>
+           </div>
+         </div>
+@@ -806,7 +806,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+       <!-- Gr├íficos Main Container -->
+       <section id="chartsContainer" style="display: grid; grid-template-columns: 2fr 1.2fr 1.2fr; gap: 1.5rem; margin-bottom: 1.5rem; min-height: 350px; flex-shrink: 0;">
+         <!-- Gr├ífico de Evolu├º├úo (Mensal) -->
+-        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
++        <div class="panel" style="background: var(--surface); border: 1px solid var(--border); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+           <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Evolu├º├úo de Custos por Classifica├º├úo</h3>
+           <div style="flex: 1; position: relative;">
+             <div id="chartEvolucaoCustos" style="width: 100%; height: 100%; min-height: 250px;"></div>
+@@ -814,7 +814,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+         </div>
+         
+         <!-- Gr├ífico de Estratifica├º├úo por CC -->
+-        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
++        <div class="panel" style="background: var(--surface); border: 1px solid var(--border); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+           <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">Estratifica├º├úo por C.C. (Top 10)</h3>
+           <div style="flex: 1; position: relative;">
+             <div id="chartEstratificacaoCC" style="width: 100%; height: 100%; min-height: 250px;"></div>
+@@ -822,7 +822,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+         </div>
+ 
+         <!-- Gr├ífico de Radar: T├®cnico x Equipamento -->
+-        <div class="panel" style="background: var(--surface); border: 1px solid rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
++        <div class="panel" style="background: var(--surface); border: 1px solid var(--border); padding: 1rem; border-radius: 12px; display: flex; flex-direction: column;">
+           <h3 style="margin: 0 0 1rem 0; font-size: 1rem; color: var(--text);">T├®cnicos x Linhas (Top 5)</h3>
+           <div style="flex: 1; position: relative; display: flex; justify-content: center; align-items: center;">
+             <div id="chartRadarTecnicos" style="width: 100%; height: 100%; min-height: 250px;"></div>
+@@ -831,7 +831,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+       </section>
+ 
+       <!-- Tabela Detalhada de Budgets -->
+-      <section class="panel" id="tabelaBudgetsContainer" style="margin-bottom: 1.5rem; display: none; background: var(--surface); padding: 1rem; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto; flex-shrink: 0;">
++      <section class="panel" id="tabelaBudgetsContainer" style="margin-bottom: 1.5rem; display: none; background: var(--surface); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); overflow-x: auto; flex-shrink: 0;">
+         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+           <h3 style="margin: 0; font-size: 1rem; color: var(--text);">Desdobramento do Budget</h3>
+           <button id="btnEntregarLogica" class="btn btn-outline" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;"><i class="fa-solid fa-file-export"></i> Entregar L├│gica</button>
+@@ -861,7 +861,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+     <div id="view-custo-previsoes" class="view" style="padding: 1.5rem;">
+       <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+         <div class="header-left">
+-          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Previs├Áes (Burn Rate)</h1>
++          <h1 style="font-size: 1.75rem; color: var(--text); margin: 0;">Previs├Áes (Burn Rate)</h1>
+           <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Modelagem Preditiva de Estouro de Budget</p>
+         </div>
+         <div class="header-right">
+@@ -888,8 +888,8 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+               </span>
+             </div>
+             <div style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--muted); line-height: 1.6;">
+-              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste m├¬s em <strong id="aiProjFinal" style="color:#fff; font-size: 1rem;">R$ 0,00</strong>, podendo variar de <span id="aiRangeMin" style="color:#ccc;">R$ 0</span> a <span id="aiRangeMax" style="color:#ccc;">R$ 0</span> (confian├ºa: <strong id="aiConfianca" style="color:#facc15;">ÔÇö</strong>).</p>
+-              <p style="margin-bottom: 0;"><strong>Como a IA aprende:</strong> Nosso modelo inteligente aprende diariamente com as cargas de dados feitas via <strong>Importar Financeiro</strong> (que processou <span id="aiVolOrdens" style="color:#fff;">0</span> ordens este m├¬s). Ele analisa seu ritmo de gasto atual e vasculha o hist├│rico buscando meses com padr├úo de consumo semelhante. O m├¬s que a IA julgou ter o comportamento mais parecido com o cen├írio de agora foi <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong> (<span id="aiSimilaridade" style="color:#facc15;">ÔÇö</span>% de semelhan├ºa). A IA projeta a curva futura usando o padr├úo desses meses hist├│ricos como refer├¬ncia, prevendo estolhos antes de acontecerem.</p>
++              <p style="margin-bottom: 0.5rem;">A IA projetou o fechamento deste m├¬s em <strong id="aiProjFinal" style="color:var(--text); font-size: 1rem;">R$ 0,00</strong>, podendo variar de <span id="aiRangeMin" style="color:var(--muted);">R$ 0</span> a <span id="aiRangeMax" style="color:var(--muted);">R$ 0</span> (confian├ºa: <strong id="aiConfianca" style="color:#facc15;">ÔÇö</strong>).</p>
++              <p style="margin-bottom: 0;"><strong>Como a IA aprende:</strong> Nosso modelo inteligente aprende diariamente com as cargas de dados feitas via <strong>Importar Financeiro</strong> (que processou <span id="aiVolOrdens" style="color:var(--text);">0</span> ordens este m├¬s). Ele analisa seu ritmo de gasto atual e vasculha o hist├│rico buscando meses com padr├úo de consumo semelhante. O m├¬s que a IA julgou ter o comportamento mais parecido com o cen├írio de agora foi <strong id="aiTwinMonth" style="color:#3b82f6; font-size: 0.95rem;">N/A</strong> (<span id="aiSimilaridade" style="color:#facc15;">ÔÇö</span>% de semelhan├ºa). A IA projeta a curva futura usando o padr├úo desses meses hist├│ricos como refer├¬ncia, prevendo estolhos antes de acontecerem.</p>
+             </div>
+           </div>
+         </aside>
+@@ -901,13 +901,13 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+       <div style="display: flex; flex-direction: column; height: calc(100vh - 3rem); overflow: hidden;">
+       <header class="view-header" style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 1.5rem; flex-shrink: 0;">
+         <div class="header-left">
+-          <h1 style="font-size: 1.75rem; color: #fff; margin: 0;">Movimenta├º├Áes</h1>
++          <h1 style="font-size: 1.75rem; color: var(--text); margin: 0;">Movimenta├º├Áes</h1>
+           <p style="color: var(--muted); margin-top: 0.25rem; font-size: 0.95rem;">Dados detalhados do Custo Geral</p>
+         </div>
+       </header>
+       
+       <!-- Filtros de Busca -->
+-      <section class="filters panel" style="margin-bottom: 1rem; border-color: rgba(255,255,255,0.05); background: var(--surface); flex-shrink: 0;">
++      <section class="filters panel" style="margin-bottom: 1rem; border-color: var(--border); background: var(--surface); flex-shrink: 0;">
+         <label class="search-field"><span>Busca</span><input type="search" id="filtroBuscaCustoGeral" placeholder="Buscar por Ordem, Item, Descri├º├úo..." /></label>
+         <label>
+           <span>Filtro de Ordem</span>
+@@ -1542,13 +1542,13 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+               <label onclick="event.stopPropagation()" title="Atualizar base via Excel" style="cursor: pointer;">
+                 <input type="file" id="rl05-file-input" accept=".xlsx,.xls" style="display:none;"
+                        onchange="rl05ImportExcel(this.files[0]); this.value='';">
+-                <span id="rl05-btn-import" style="display: inline-flex; align-items: center; gap: 6px; background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: #38bdf8; padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; white-space: nowrap; pointer-events: none;">
++                <span id="rl05-btn-import" style="display: inline-flex; align-items: center; gap: 6px; background: var(--surface-hover); border: 1px solid var(--border); color: var(--primary); padding: 6px 14px; border-radius: 8px; font-size: 0.8rem; font-weight: 500; white-space: nowrap; pointer-events: none;">
+                   <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                   Atualizar Excel
+                 </span>
+               </label>
+               <!-- Arrow -->
+-              <div id="rl05-toggle-icon" style="width: 32px; height: 32px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1rem; transition: transform 0.3s, background 0.2s;">Ôû¥</div>
++              <div id="rl05-toggle-icon" style="width: 32px; height: 32px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1rem; transition: transform 0.3s, background 0.2s;">Ôû¥</div>
+             </div>
+           </div>
+ 
+@@ -1565,7 +1565,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+             <div id="rl05-body" style="display: none;">
+ 
+               <!-- Progress Hero -->
+-              <div style="padding: 2rem 2rem 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.15);">
++              <div style="padding: 2rem 2rem 1.5rem; border-bottom: 1px solid var(--border); background: var(--bg2);">
+                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                   <div>
+                     <div style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.3rem;">Progresso Geral</div>
+@@ -2152,7 +2152,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+         <div class="panel" style="position: relative; overflow: hidden; padding: 1.5rem; margin-bottom: 1.5rem;">
+           <header style="display: flex; justify-content: space-between; align-items: center;">
+             <div>
+-              <h2 style="color: #fff; margin: 0 0 0.25rem 0;">An├ílise Mensal</h2>
++              <h2 style="color: var(--text); margin: 0 0 0.25rem 0;">An├ílise Mensal</h2>
+               <p class="section-hint" style="margin-bottom: 0;">Vis├úo financeira (Previsto vs Recebido) filtrada para o contexto atual.</p>
+             </div>
+             <div style="display:flex; gap:0.5rem; align-items:center;">
+@@ -2177,7 +2177,7 @@ Um n├║mero alto indica alta disciplina.">?</span></div>
+           <span class="table-count" id="tableCount">0 registros</span>
+         </div>
+         <div class="toolbar-actions">
+-          <button type="button" class="btn btn-outline" id="btnInlineEdit" title="Ativar Edi├º├úo por Linha" style="border-color: rgba(255,255,255,0.2); color: var(--text); padding: 0.5rem 0.75rem;">
++          <button type="button" class="btn btn-outline" id="btnInlineEdit" title="Ativar Edi├º├úo por Linha" style="border-color: var(--border); color: var(--text); padding: 0.5rem 0.75rem;">
+             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="pointer-events: none;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+             <span style="pointer-events: none; font-weight: 500;">Modo Edi├º├úo</span>
+           </button>
+@@ -2574,7 +2574,7 @@ Segue abaixo itens para verifica├º├úo de atraso.</textarea>
+   <div id="toast" class="toast"></div>
+   </div>
+   </div>
+-  <script type="module" src="js/app.js?v=61"></script>
++  <script type="module" src="js/app.js?v=67"></script>
+ 
+   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
+   <div class="modal-overlay" id="modalEditarAtividadePM">
+@@ -2788,54 +2788,54 @@ Segue abaixo itens para verifica├º├úo de atraso.</textarea>
+ 
+   <!-- MODAL DRILLDOWN MAQUINAS OFENSORAS (EXECUTIVO) -->
+   <div id="modal-drilldown-maquinas" class="modal-overlay" style="display: none; z-index: 9999;">
+-    <div class="modal" style="max-width: 1200px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; background: var(--bg-card); border: 1px solid var(--border); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
+-      <header class="modal-header" style="border-bottom: 1px solid rgba(255,255,255,0.05); padding: 1.5rem 2rem;">
++    <div class="modal" style="max-width: 1200px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
++      <header class="modal-header" style="border-bottom: 1px solid var(--border); padding: 1.5rem 2rem;">
+         <div>
+           <h2 id="modalDrilldownTitulo" style="color: var(--text-primary); margin: 0; font-size: 1.6rem; font-weight: 600; letter-spacing: -0.02em;">Relat├│rio Anal├¡tico de Paradas</h2>
+-          <p id="modalDrilldownSub" style="color: var(--muted); margin: 0.25rem 0 0 0; font-size: 0.95rem; font-family: monospace;">Per├¡odo selecionado</p>
++          <p id="modalDrilldownSub" style="color: var(--text-secondary); margin: 0.25rem 0 0 0; font-size: 0.95rem; font-family: monospace;">Per├¡odo selecionado</p>
+         </div>
+         <button type="button" class="btn-close" onclick="document.getElementById('modal-drilldown-maquinas').style.display='none';" style="background: none; border: none; font-size: 1.75rem; color: var(--text-secondary); cursor: pointer; transition: color 0.2s;">&times;</button>
+       </header>
+       <div class="modal-body" style="padding: 0; flex: 1; display: flex; overflow: hidden; min-height: 500px;">
+         
+         <!-- Esquerda: Gr├ífico Principal -->
+-        <div style="flex: 2; padding: 1.5rem 2rem; display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.05); overflow-y: auto;">
++        <div style="flex: 2; padding: 1.5rem 2rem; display: flex; flex-direction: column; border-right: 1px solid var(--border); overflow-y: auto;">
+           <div style="display: flex; gap: 1.5rem; margin-bottom: 1rem;">
+-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.05); padding: 1rem 1.5rem; border-radius: 8px; flex: 1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
+-              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Tempo Total Parado</div>
+-              <div id="drilldownTotalMinutos" style="font-size: 1.75rem; font-weight: 700; color: #f1f5f9; font-family: monospace;">--</div>
++            <div style="background: var(--bg3); border: 1px solid var(--border); padding: 1rem 1.5rem; border-radius: 8px; flex: 1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
++              <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Tempo Total Parado</div>
++              <div id="drilldownTotalMinutos" style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); font-family: monospace;">--</div>
+             </div>
+-            <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(255,255,255,0.05); padding: 1rem 1.5rem; border-radius: 8px; flex: 1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);">
+-              <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Total de Ocorr├¬ncias</div>
+-              <div id="drilldownTotalOcorrencias" style="font-size: 1.75rem; font-weight: 700; color: #f1f5f9; font-family: monospace;">--</div>
++            <div style="background: var(--bg3); border: 1px solid var(--border); padding: 1rem 1.5rem; border-radius: 8px; flex: 1; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);">
++              <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Total de Ocorr├¬ncias</div>
++              <div id="drilldownTotalOcorrencias" style="font-size: 1.75rem; font-weight: 700; color: var(--text-primary); font-family: monospace;">--</div>
+             </div>
+           </div>
+           <div id="chartDrilldownMaquinas" style="width: 100%; flex: 1; min-height: 400px;"></div>
+         </div>
+         
+         <!-- Direita: Intelig├¬ncia Executiva -->
+-        <div style="flex: 1.2; padding: 2rem; background: rgba(0, 0, 0, 0.2); display: flex; flex-direction: column; overflow-y: auto;">
++        <div style="flex: 1.2; padding: 2rem; background: var(--bg2); display: flex; flex-direction: column; overflow-y: auto;">
+           <h3 style="color: var(--gold, #d4af37); font-size: 0.95rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 1.5rem 0; border-bottom: 1px solid rgba(212,175,55,0.2); padding-bottom: 0.75rem;">Resumo Executivo</h3>
+           
+-          <div id="drilldownInsightTexto" style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.7; margin-bottom: 2.5rem; background: rgba(212,175,55,0.05); border-left: 3px solid rgba(212,175,55,0.5); padding: 1rem; border-radius: 0 6px 6px 0;">
++          <div id="drilldownInsightTexto" style="color: var(--text-primary); font-size: 0.95rem; line-height: 1.7; margin-bottom: 2.5rem; background: rgba(212,175,55,0.05); border-left: 3px solid rgba(212,175,55,0.5); padding: 1rem; border-radius: 0 6px 6px 0;">
+             Processando intelig├¬ncia de dados...
+           </div>
+ 
+-          <h4 style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 1.25rem 0;">Maiores Ofensores</h4>
++          <h4 style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 1.25rem 0;">Maiores Ofensores</h4>
+           <div id="drilldownRankingMaquinas" style="display: flex; flex-direction: column; gap: 0.75rem; margin-bottom: 2.5rem;">
+             <!-- Preenchido via JavaScript -->
+           </div>
+ 
+           <div style="margin-top: auto;">
+-            <h4 style="color: #94a3b8; font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 1rem 0;">A├º├Áes Estrat├®gicas</h4>
++            <h4 style="color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 1rem 0;">A├º├Áes Estrat├®gicas</h4>
+             <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+-               <button type="button" class="btn btn-outline" style="border-color: rgba(212,175,55,0.4); color: #d4af37; background: rgba(212,175,55,0.05); justify-content: flex-start; padding: 0.75rem 1rem; font-weight: 500; text-align: left;" onclick="document.getElementById('modal-drilldown-maquinas').style.display='none'; showView('plano-preventiva');">
++               <button type="button" class="btn btn-outline" style="border-color: rgba(212,175,55,0.4); color: var(--gold, #d4af37); background: rgba(212,175,55,0.05); justify-content: flex-start; padding: 0.75rem 1rem; font-weight: 500; text-align: left;" onclick="document.getElementById('modal-drilldown-maquinas').style.display='none'; showView('plano-preventiva');">
+                  <span style="display:block;">Gerenciar Planos de A├º├úo</span>
+                  <span style="display:block; font-size:0.75rem; color: rgba(212,175,55,0.7); font-weight: 400; margin-top: 2px;">Direcionar esfor├ºos para m├íquinas cr├¡ticas</span>
+                </button>
+-               <button type="button" class="btn btn-outline" style="border-color: rgba(255,255,255,0.1); color: #cbd5e1; justify-content: flex-start; padding: 0.75rem 1rem; font-weight: 500; text-align: left;" onclick="document.getElementById('modal-drilldown-maquinas').style.display='none'; showView('por-maquina');">
++               <button type="button" class="btn btn-outline" style="border-color: var(--border); color: var(--text-primary); justify-content: flex-start; padding: 0.75rem 1rem; font-weight: 500; text-align: left;" onclick="document.getElementById('modal-drilldown-maquinas').style.display='none'; showView('por-maquina');">
+                  <span style="display:block;">Explorar Hist├│rico da M├íquina</span>
+-                 <span style="display:block; font-size:0.75rem; color: #94a3b8; font-weight: 400; margin-top: 2px;">Verificar ordens de servi├ºo pendentes e pe├ºas</span>
++                 <span style="display:block; font-size:0.75rem; color: var(--text-secondary); font-weight: 400; margin-top: 2px;">Verificar ordens de servi├ºo pendentes e pe├ºas</span>
+                </button>
+             </div>
+           </div>
+@@ -2844,7 +2844,7 @@ Segue abaixo itens para verifica├º├úo de atraso.</textarea>
+     </div>
+   </div>
+ 
+-  <script src="js/retomada_l05.js?v=10"></script>
++  <script src="js/retomada_l05.js?v=12"></script>
+   <script>
+     (function() {
+       function tryInit() {
+@@ -2883,7 +2883,9 @@ Segue abaixo itens para verifica├º├úo de atraso.</textarea>
+     const ro = new ResizeObserver(() => {
+       const chartIds = [
+         'chartStatus', 'chartMes', 'chartMaquina', 'chartConsertoDias', 'chartComprasDias', 
+-        'chartCrudMes', 'chartConsertoFluxo', 'chartKpiEvolucao', 'chartKpiOfensores'
++        'chartCrudMes', 'chartConsertoFluxo', 'chartKpiEvolucao', 'chartKpiOfensores',
++        'chartEvolucaoCustos', 'chartEstratificacaoCC', 'chartRadarTecnicos',
++        'chartConfiabIndisp', 'chartConfiabMtbf', 'chartConfiabMttr', 'chartMtta'
+       ];
+       chartIds.forEach(id => {
+         const el = document.getElementById(id);
+diff --git a/js/app.js b/js/app.js
+index 50363dc..fcc7bd5 100644
+--- a/js/app.js
++++ b/js/app.js
+@@ -14,13 +14,13 @@ import {
+   normalizarNatureza,
+   agregarFornecedores,
+   calcularDiasFora
+-} from './logic.js';
++} from './logic.js?v=12';
+ import { initCalendario, updateCalendario } from './calendario.js';
+ import { 
+ carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
+ getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
+ createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
+-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js';
++getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync, getDadosCustoGeral, inserirCustoGeral, atualizarCustoGeral, excluirCustoGeral } from './db.js?v=12';
+ import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js';
+ import {
+   COLUNAS_TABELA,
+@@ -37,7 +37,7 @@ import { initExcelImportPreventiva, initExcelImportPreventivaFrontend } from './
+ 
+ import { gerarRelatorioExecutivoPDF, gerarRelatorioSLAPDF, gerarChecklistLinhaPDF, gerarChecklistRetomadaPDF } from './pdf_report.js?v=17';
+ window.gerarChecklistRetomadaPDF = gerarChecklistRetomadaPDF;
+-import { initExcelImportCustoGeral } from './import_custo_geral.js?v=6';
++import { initExcelImportCustoGeral } from './import_custo_geral.js?v=7';
+ import { COLUNAS_CUSTO_GERAL } from './ui.js';
+ import { initPlanoMestre } from './plano_mestre.js';
+ import { initImportPlanoMestre } from './import_plano_mestre.js';
+@@ -1081,24 +1081,24 @@ function abrirModalFluxoConsertos() {
+     background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);
+   `;
+   modal.innerHTML = `
+-    <div style="background:var(--bg-card,#1e293b); border:1px solid var(--border,#334155); border-radius:16px;
++    <div style="background:var(--surface); border:1px solid var(--border); border-radius:16px;
+                 padding:1.5rem; width:min(90vw,820px); max-height:85vh; overflow-y:auto; position:relative;">
+       <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:1rem; flex-wrap:wrap; gap:0.5rem;">
+-        <h2 style="margin:0; font-size:1.1rem; color:var(--text,#f1f5f9);">­ƒôè Fluxo de Consertos</h2>
++        <h2 style="margin:0; font-size:1.1rem; color:var(--text);">­ƒôè Fluxo de Consertos</h2>
+         <div style="display:flex; align-items:center; gap:0.75rem; flex-wrap:wrap;">
+-          <select id="fluxoMesSel" style="background:var(--bg-alt,#0f172a); color:var(--text,#f1f5f9);
+-            border:1px solid var(--border,#334155); border-radius:8px; padding:6px 10px; font-size:0.85rem; cursor:pointer;">
++          <select id="fluxoMesSel" style="background:var(--bg); color:var(--text);
++            border:1px solid var(--border); border-radius:8px; padding:6px 10px; font-size:0.85rem; cursor:pointer;">
+             <option value="all">Ano completo (${anoAtual})</option>
+             ${opcoesRetroativas}
+           </select>
+-          <button id="fluxoFechar" style="background:transparent; border:1px solid var(--border,#334155); color:var(--muted,#94a3b8);
++          <button id="fluxoFechar" style="background:transparent; border:1px solid var(--border); color:var(--muted);
+             border-radius:8px; padding:6px 12px; cursor:pointer; font-size:0.85rem;">Ô£ò Fechar</button>
+         </div>
+       </div>
+       <div style="position:relative; height:340px; width:100%;">
+         <div id="chartFluxoConsertos" style="width: 100%; height: 100%;"></div>
+       </div>
+-      <p id="fluxoHint" style="margin-top:0.75rem; font-size:0.75rem; color:var(--muted,#94a3b8); text-align:center;">
++      <p id="fluxoHint" style="margin-top:0.75rem; font-size:0.75rem; color:var(--muted); text-align:center;">
+         ­ƒÆí Clique nas barras para ver os registros detalhados ┬À Barras amarelas = patrim├┤nio exposto ┬À Barras verdes = custo de reparo realizado
+       </p>
+     </div>
+@@ -3413,7 +3413,7 @@ document.addEventListener('click', (e) => {
+ 
+ // Fun├º├úo auxiliar tempor├íria para o usu├írio migrar do Excel para o Supabase
+ window.migrarPlanilhaParaSupabase = async function() {
+-  const db = await import('./db.js');
++  const db = await import('./db.js?v=4');
+   let maquinasPrev = opcoesUnicas(registrosPreventiva, 'maquina');
+   maquinasPrev = maquinasPrev.filter(m => !['FRONTEND', 'GERAL', 'MAQUINA'].includes(m.toUpperCase()));
+   const maquinasArray = Array.from(new Set([...maquinasPrev])).sort();
+@@ -3551,8 +3551,15 @@ if (document.readyState === 'complete' || document.readyState === 'interactive')
+     btn.addEventListener('click', () => {
+       const isNowLight = !document.body.classList.contains('light-mode');
+       applyTheme(isNowLight);
++      window.dispatchEvent(new CustomEvent('themeChanged', { detail: { isLight: isNowLight } }));
+     });
+   }
++  
++  window.addEventListener('themeChanged', () => {
++    if (typeof refresh === 'function') refresh();
++    if (typeof carregarEAtualizarPainel === 'function') carregarEAtualizarPainel();
++    if (window.carregarEAtualizarPainel) window.carregarEAtualizarPainel();
++  });
+ })();
+ 
+ window.importarMaquinaExcel = async function() {
+@@ -4440,10 +4447,8 @@ function renderTabelaCustoGeral() {
+     // Filtro de Simula├º├úo Excel
+     if (filtroArea === 'manutencao_excel') {
+       let checkStr = String(r.check || '').toLowerCase().trim();
+-      let isManut = checkStr.includes('manuten├º├úo') || checkStr.includes('manutencao');
++      let isManut = !checkStr.includes('ferramentaria') && !checkStr.includes('ferramentas') && !checkStr.includes('facilities');
+       if (!isManut) return false;
+-      // Exclui os que o Excel perde porque a refer├¬ncia do PROCV quebrou (recuperados do Datasul)
+-      if (r.recuperado_datasul) return false;
+     }
+ 
+     // Filtro de Data (dt_trans)
+@@ -4550,12 +4555,17 @@ function renderTabelaCustoGeral() {
+       rFacilCons += custo;
+     } else if (checkStr === 'facilities - real compras serv') {
+       rFacilServ += custo;
+-    } else if (checkStr === 'manuten├º├úo - real consumo') {
+-      rManutCons += custo;
+-    } else if (checkStr === 'manuten├º├úo - real compras serv') {
+-      rManutServ += custo;
++    } else {
++      // Qualquer outro custo (incluindo "Manuten├º├úo", "OUTROS", ├íreas novas ou erros de digita├º├úo)
++      // ├® classificado como Manuten├º├úo. Isso garante que NENHUM custo seja perdido
++      // e que o consolidado bata exatamente com o Excel (ex: 476k para Manut).
++      let isServico = String(r.it_codigo || '').toUpperCase().startsWith('SER');
++      if (isServico) {
++        rManutServ += custo;
++      } else {
++        rManutCons += custo;
++      }
+     }
+-    // Os custos que forem 'OUTROS' ou cujo solicitante n├úo foi encontrado (area vazia)
+     // s├úo ignorados do "Budget Consumido" composto de Manuten├º├úo+Ferramentaria+Facilities,
+     // garantindo que os valores batam perfeitamente com a planilha original.
+   }
+@@ -4569,17 +4579,17 @@ function renderTabelaCustoGeral() {
+   if ($('#kpiManutencao')) $('#kpiManutencao').textContent = fmtMoeda(realManut);
+   if ($('#kpiFerramentaria')) $('#kpiFerramentaria').textContent = fmtMoeda(realFerram);
+   if ($('#kpiFacilities')) $('#kpiFacilities').textContent = fmtMoeda(realFacil);
+-  if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(realManut);
++  if ($('#kpiCustoMes')) $('#kpiCustoMes').textContent = fmtMoeda(realTotal);
+ 
+-  if ($('#kpiBudgetTotalResumo')) $('#kpiBudgetTotalResumo').textContent = fmtMoeda(bManutencao);
++  if ($('#kpiBudgetTotalResumo')) $('#kpiBudgetTotalResumo').textContent = fmtMoeda(bTotal);
+   if ($('#kpiBudgetTotal')) $('#kpiBudgetTotal').textContent = fmtMoeda(bTotal);
+   if ($('#kpiBudgetManutencao')) $('#kpiBudgetManutencao').textContent = fmtMoeda(bManutencao);
+   if ($('#kpiBudgetFerramentas')) $('#kpiBudgetFerramentas').textContent = fmtMoeda(bFerramentaria);
+   if ($('#kpiBudgetFacilities')) $('#kpiBudgetFacilities').textContent = fmtMoeda(bFacilities);
+   
+   // Progress Bar e Saldo
+-  if (bManutencao > 0) {
+-    let perc = (realManut / bManutencao) * 100;
++  if (bTotal > 0) {
++    let perc = (realTotal / bTotal) * 100;
+     let color = perc > 100 ? 'var(--danger)' : (perc > 80 ? 'var(--warning)' : 'var(--success)');
+     if ($('#barBudgetConsumido')) {
+       $('#barBudgetConsumido').style.width = Math.min(perc, 100) + '%';
+@@ -5671,7 +5681,7 @@ document.addEventListener('DOMContentLoaded', () => {
+       window.budgetMetadata.responsaveis = userAreas;
+ 
+       // Salvar no Supabase (merge: preserva ferramentaria, facilities, data_importacao da AOP)
+-      import('./db.js').then(async (m) => {
++      import('./db.js?v=4').then(async (m) => {
+         const supabase = m.getClient();
+         await supabase.from('custo_geral').delete().eq('it_codigo', 'BUDGET_METADATA');
+         await supabase.from('custo_geral').insert([{
+diff --git a/js/charts.js b/js/charts.js
+index 018d493..e1d7a7c 100644
+--- a/js/charts.js
++++ b/js/charts.js
+@@ -20,20 +20,20 @@ let chartInstances = [];
+ let registrosRef = [];
+ let crudMesChartInstance = null;
+ 
+-function themeColors() {
++export function themeColors() {
+   const isLight = document.body.classList.contains('light-mode');
+   return {
+-    legendColor:  isLight ? '#334155' : '#cbd5e1',
++    legendColor:  isLight ? '#475569' : '#cbd5e1',
+     titleColor:   isLight ? '#0f172a' : '#f8fafc',
+-    tickColor:    isLight ? '#64748b' : '#94a3b8',
+-    gridColor:    isLight ? 'rgba(100,116,139,0.12)' : 'rgba(148,163,184,0.08)',
+-    tooltipBg:    isLight ? 'rgba(255,255,255,0.97)' : 'rgba(15,23,42,0.95)',
++    tickColor:    isLight ? '#94a3b8' : '#94a3b8',
++    gridColor:    isLight ? 'rgba(15,23,42,0.06)' : 'rgba(148,163,184,0.08)',
++    tooltipBg:    isLight ? 'rgba(255,255,255,0.98)' : 'rgba(15,23,42,0.95)',
+     tooltipTitle: isLight ? '#0f172a' : '#f1f5f9',
+-    tooltipText:  isLight ? '#334155' : '#cbd5e1',
+-    borderColor:  isLight ? '#e2e8f0' : 'rgba(255,255,255,0.1)',
+-    pointerShadow: isLight ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.04)',
++    tooltipText:  isLight ? '#475569' : '#cbd5e1',
++    borderColor:  isLight ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.1)',
++    pointerShadow: isLight ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.04)',
+     pieBorder:    isLight ? '#ffffff' : '#0f172a',
+-    shadowColor:  isLight ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.4)',
++    shadowColor:  isLight ? 'rgba(15,23,42,0.1)' : 'rgba(0,0,0,0.4)',
+   };
+ }
+ 
+@@ -675,7 +675,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
+       return `
+         <div style="padding: 6px;">
+           <div style="font-size: 11px; color: ${tc.tickColor}; margin-bottom: 4px; opacity: 0.8;">${p.name}</div>
+-          <div style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 4px;">
++          <div style="font-size: 15px; font-weight: 700; color: ${tc.titleColor}; margin-bottom: 4px;">
+             ${title}: ${val}${unit}
+           </div>
+           <div style="font-size: 12px; color: ${statusColor}; font-weight: 600;">
+@@ -726,17 +726,17 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
+       },
+       tooltip: {
+         trigger: 'axis',
+-        backgroundColor: 'rgba(15, 23, 42, 0.90)',
+-        borderColor: 'rgba(255,255,255,0.1)',
++        backgroundColor: tc.tooltipBg,
++        borderColor: tc.borderColor,
+         borderWidth: 1,
+         padding: 10,
+-        textStyle: { color: '#f1f5f9' },
++        textStyle: { color: tc.tooltipText },
+         formatter: tooltipFormatter,
+         extraCssText: 'backdrop-filter: blur(8px); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);'
+       },
+       grid: { left: '12%', right: '8%', top: '22%', bottom: tooManyPoints ? '22%' : '12%', containLabel: false },
+       dataZoom: tooManyPoints ? [
+-        { type: 'slider', show: true, bottom: '2%', height: 16, borderColor: 'transparent', backgroundColor: 'rgba(255,255,255,0.05)', fillerColor: 'rgba(255,255,255,0.1)', handleSize: '100%', textStyle: { color: tc.tickColor } },
++        { type: 'slider', show: true, bottom: '2%', height: 16, borderColor: 'transparent', backgroundColor: tc.gridColor, fillerColor: 'rgba(255,255,255,0.1)', handleSize: '100%', textStyle: { color: tc.tickColor } },
+         { type: 'inside', zoomOnMouseWheel: true, moveOnMouseMove: true }
+       ] : [],
+       xAxis: {
+@@ -764,7 +764,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
+             { offset: 0, color: baseColor },
+             { offset: 1, color: cfg.gradArea[1].color }
+           ]),
+-          borderColor: values.length === 1 ? 'transparent' : '#1e293b',
++          borderColor: values.length === 1 ? 'transparent' : tc.pieBorder,
+           borderWidth: values.length === 1 ? 0 : 2,
+           shadowColor: baseColor,
+           shadowBlur: 8,
+@@ -783,10 +783,10 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
+           show: !tooManyPoints, 
+           position: 'top', 
+           fontSize: 11, 
+-          color: '#fff', 
++          color: tc.tooltipTitle, 
+           fontWeight: 600,
+           formatter: p => `${p.value}${unit}`,
+-          backgroundColor: 'rgba(0,0,0,0.4)',
++          backgroundColor: tc.tooltipBg,
+           padding: [3, 6],
+           borderRadius: 4
+         },
+@@ -795,7 +795,7 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
+             show: true,
+             position: 'top',
+             fontSize: 12,
+-            color: '#fff',
++            color: tc.tooltipTitle,
+             fontWeight: 'bold',
+             formatter: p => `${p.value}${unit}`,
+             backgroundColor: baseColor,
+diff --git a/js/db.js b/js/db.js
+index 7677bef..dc13908 100644
+--- a/js/db.js
++++ b/js/db.js
+@@ -1,5 +1,6 @@
+ import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA } from './config.js?v=3';
+ import { enriquecerRegistro, normalizarNatureza } from './logic.js?v=10';
++import { EXCEL_COLAB_MAP, EXCEL_ORDEM_MAP } from './excel_mapping.js?v=1';
+ 
+ let supabaseClient = null;
+ 
+@@ -653,17 +654,26 @@ export async function getDadosCustoGeral() {
+     // PROCV 4: area = VLOOKUP(solicitante, COLABORADORES, "area")
+     // Se a area j├í existir no banco (edi├º├úo manual), ela tem preced├¬ncia!
+     row.area = row.area || colab?.area || null;
+-    if (!colab && row.it_codigo) {
+-        // Fallback por prefixo do it_codigo (igual ao Excel do Financeiro Datasul):
+-        if (!row.area) {
+-            const prefix = (row.it_codigo || '').toUpperCase();
+-            if (prefix.startsWith('UCM') || prefix.startsWith('UC') || prefix.startsWith('SER')) {
+-                row.area = 'MANUTEN├ç├âO';
+-            } else {
+-                row.area = 'OUTROS';
++
++    // L├│gica Exata da Planilha Excel do Usu├írio (424k)
++    // Se n├úo encontrou no banco, tenta os mappings extra├¡dos diretamente do arquivo Excel original
++    if (!row.area) {
++        // Tenta pelo solicitante/C├ôD.REQ, estritamente usando o Coluna1 original sem Datasul
++        const pureExcelSolKey = (originalSolicitante || '').toLowerCase().trim();
++        if (pureExcelSolKey && EXCEL_COLAB_MAP[pureExcelSolKey]) {
++            row.area = EXCEL_COLAB_MAP[pureExcelSolKey];
++        } 
++        // Se a coluna 1 estava vazia (solicitante n├úo veio direto), o Excel faz VLOOKUP do numero-ordem na Tabela2/Planilha2
++        else if ((!originalSolicitante || originalSolicitante.trim() === '') && row.numero_ordem) {
++            const ordemLimpa = String(row.numero_ordem).split('.')[0].trim();
++            if (EXCEL_ORDEM_MAP[ordemLimpa]) {
++                row.area = EXCEL_ORDEM_MAP[ordemLimpa];
+             }
+         }
+-    } else if (!row.area) {
++    }
++
++    // Se ainda assim n├úo achou, DEVE ser 'OUTROS' como a planilha Excel faz
++    if (!row.area) {
+         row.area = 'OUTROS';
+     }
+ 
+@@ -672,13 +682,6 @@ export async function getDadosCustoGeral() {
+ 
+     row.item_tipo = (row.it_codigo || '').substring(0, 3).toUpperCase();
+     row.carater = row.item_tipo === 'SER' ? 'Real Compras Serv' : 'Real Consumo';
+-    
+-    // Regra especial: Ignorar WZF
+-    const emitenteStr = String(row.descricao_emitente || '').toUpperCase();
+-    if (emitenteStr.includes('WZF')) {
+-        row.area = 'OUTROS';
+-        row.carater = 'IGNORADO WZF';
+-    }
+ 
+     // F├│rmula 7: check = IF(area == "OUTROS", "OUTROS", area & " - " & carater)
+     if (row.area) {
+diff --git a/js/import_custo_geral.js b/js/import_custo_geral.js
+index c430eaa..989e06e 100644
+--- a/js/import_custo_geral.js
++++ b/js/import_custo_geral.js
+@@ -226,8 +226,16 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
+           if (typeof v === 'number') { val = v; }
+           else {
+             let str = String(v).split(';')[0].trim();
++            // Descobre se ├® negativo por qualquer uma das 3 formas: "-100", "100-", ou "(100)"
++            const isNegative = str.startsWith('-') || str.endsWith('-') || (str.startsWith('(') && str.endsWith(')'));
++            
++            // Remove tudo que n├úo for d├¡gito, v├¡rgula ou ponto (remove R$, espa├ºos, par├¬nteses e sinais de menos)
++            str = str.replace(/[^0-9.,]/g, ''); 
++            
+             if (str.includes(',')) { str = str.replace(/\./g, '').replace(',', '.'); }
++            
+             val = Number(str) || 0;
++            if (isNegative) val = -val;
+           }
+           return invert ? -val : val;
+         };
+@@ -281,7 +289,7 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
+             valor_tt: parseMoney(row['valor tt'], false),
+             quant_tt_ajustado: Number(row['quant tt ajustado']) || 0,
+             custo_do_mes: parseMoney(row['custo do m├¬s'] || row['custo do mes'] || row['custo do ms'] || row['custo do m\ufffds'] || row['custo'], true),
+-            custo_mes_anterior: parseMoney(row['custo m├¬s anterior'] || row['custo mes anterior'] || row['custo ms anterior'] || row['custo m\ufffds anterior'], true),
++            custo_mes_anterior: parseMoney(row['custo do m├¬s anterior'] || row['custo do mes anterior'] || row['custo m├¬s anterior'] || row['custo mes anterior'] || row['custo ms anterior'] || row['custo m\ufffds anterior'], true),
+             custo_de_entrada: parseMoney(row['custo de entrada'], true),
+             sc_codigo: String(row['sc-codigo'] || ''),
+             descricao_db: String(row['descricao-db'] || ''),
+@@ -380,15 +388,23 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
+ 
+           const SKIP_KEYS = ['BUDGET_METADATA', 'FORECAST_METADATA', 'DIFF_METADATA'];
+ 
+-          // Busca todos os registros atuais do banco (exceto metadados)
++          // Busca os meses presentes na planilha para restringir o diff apenas a eles
++          const mesesNoArquivo = [...new Set(records.map(r => r.mes).filter(m => m != null))];
++
++          // Busca registros atuais do banco SOMENTE para os meses da planilha (exceto metadados)
+           let existentes = [];
+           const PAGE = 1000;
+           let from = 0;
+           while (true) {
+-            const { data: page, error } = await supabase.from('custo_geral')
+-              .select('id, numero_ordem, it_codigo, dt_trans, esp_docto, nro_docto, custo_do_mes, material, ggf, descricao_codigo, ct_codigo')
+-              .not('it_codigo', 'in', `(${SKIP_KEYS.map(k => `"${k}"`).join(',')})`)
+-              .range(from, from + PAGE - 1);
++            let query = supabase.from('custo_geral')
++              .select('id, numero_ordem, it_codigo, dt_trans, esp_docto, nro_docto, custo_do_mes, material, ggf, descricao_codigo, ct_codigo, mes')
++              .not('it_codigo', 'in', `(${SKIP_KEYS.map(k => `"${k}"`).join(',')})`);
++              
++            if (mesesNoArquivo.length > 0) {
++              query = query.in('mes', mesesNoArquivo);
++            }
++
++            const { data: page, error } = await query.range(from, from + PAGE - 1);
+             if (error) throw error;
+             if (!page || page.length === 0) break;
+             existentes = existentes.concat(page);
+@@ -502,6 +518,14 @@ export async function initExcelImportCustoGeral(supabase, toast, atualizarDadosG
+       } catch (err) {
+         console.error(err);
+         const msg = err.message || (typeof err === 'object' ? JSON.stringify(err) : String(err));
++        Swal.fire({
++          title: 'Erro na Importa├º├úo',
++          text: msg,
++          icon: 'error',
++          background: '#161f33',
++          color: '#f1f5f9',
++          confirmButtonColor: '#ef4444'
++        });
+         toast(`Erro: ${msg}`, 'error');
+         fileFinanceiro.value = '';
+       }
+diff --git a/js/indicadores.js b/js/indicadores.js
+index 73ab736..bf33fb2 100644
+--- a/js/indicadores.js
++++ b/js/indicadores.js
+@@ -1,5 +1,5 @@
+ import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js';
+-import { renderConfiabilidadeCharts, destroyConfiabCharts } from './charts.js?v=1002';
++import { renderConfiabilidadeCharts, destroyConfiabCharts, themeColors } from './charts.js?v=1002';
+ 
+ export async function initIndicadores() {
+   const btnUploadKPI = document.getElementById('btnUploadKPI');
+@@ -496,25 +496,27 @@ function renderKpiOfensores(semana) {
+   }
+   chartOfensoresInstance = echarts.init(ctxEl);
+   
++  const th = themeColors();
++  
+   chartOfensoresInstance.setOption({
+     tooltip: {
+       trigger: 'item',
+-      backgroundColor: 'rgba(15, 23, 42, 0.9)', textStyle: { color: '#f8fafc', fontFamily: 'Inter' }, borderColor: 'rgba(255,255,255,0.1)'
++      backgroundColor: th.tooltipBg, textStyle: { color: th.tooltipText, fontFamily: 'Inter' }, borderColor: th.borderColor
+     },
+     toolbox: {
+       feature: {
+-        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualiza├º├úo de Dados', 'Fechar', 'Atualizar'], backgroundColor: '#0f172a', textareaColor: '#0f172a', textareaBorderColor: 'rgba(255,255,255,0.1)', textColor: '#e2e8f0', buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
++        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualiza├º├úo de Dados', 'Fechar', 'Atualizar'], backgroundColor: document.body.classList.contains('light-mode') ? '#f8fafc' : '#0f172a', textareaColor: document.body.classList.contains('light-mode') ? '#ffffff' : '#0f172a', textareaBorderColor: th.borderColor, textColor: th.titleColor, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+         saveAsImage: { show: true, title: 'Salvar' }
+       },
+-      iconStyle: { borderColor: '#94a3b8' }
++      iconStyle: { borderColor: th.tickColor }
+     },
+     dataZoom: [
+       { type: 'slider', yAxisIndex: 0, show: true, right: '2%', width: 12, startValue: data.length > 15 ? data.length - 15 : 0, endValue: data.length - 1, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
+       { type: 'inside', yAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
+     ],
+     grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
+-    xAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
+-    yAxis: { type: 'category', data: data.map(d => d.maquina), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#e2e8f0', fontWeight: '500' } },
++    xAxis: { type: 'value', splitLine: { lineStyle: { color: th.gridColor, type: 'dashed' } }, axisLabel: { color: th.tickColor, formatter: '{value}%' } },
++    yAxis: { type: 'category', data: data.map(d => d.maquina), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: th.titleColor, fontWeight: '500' } },
+     series: [{
+       name: 'Breakdown (%)',
+       type: 'bar',
+@@ -1408,6 +1410,8 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+   document.getElementById('modalDrilldownSub').textContent = `Per├¡odo: ${periodo}`;
+   document.getElementById('modal-drilldown-maquinas').style.display = 'flex';
+   
++  const tc = themeColors();
++  
+   const chartEl = document.getElementById('chartDrilldownMaquinas');
+   let inst = echarts.getInstanceByDom(chartEl);
+   if(!inst) inst = echarts.init(chartEl);
+@@ -1417,7 +1421,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+     if (inst) inst.resize();
+   }, 10);
+   
+-  inst.showLoading({ text: 'Carregando...', color: '#10b981', textColor: '#f1f5f9', maskColor: 'rgba(15, 23, 42, 0.8)' });
++  inst.showLoading({ text: 'Carregando...', color: '#10b981', textColor: tc.titleColor, maskColor: tc.tooltipBg });
+   
+   try {
+     const resp = await fetch(`/api/kpi/drilldown_maquinas?semana=${encodeURIComponent(periodo)}&linha=${encodeURIComponent(_confiabLinha)}&ano=${encodeURIComponent(_confiabAno)}`);
+@@ -1454,14 +1458,14 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+        const borderColors = ['rgba(212,175,55,0.4)', 'rgba(192,192,192,0.3)', 'rgba(205,127,50,0.3)'];
+        const labels = ['1┬║ MAIOR', '2┬║ MAIOR', '3┬║ MAIOR'];
+        return `
+-         <div style="background: ${colors[index] || 'rgba(15,23,42,0.5)'}; border: 1px solid ${borderColors[index] || 'rgba(255,255,255,0.05)'}; padding: 0.85rem 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
++         <div style="background: ${colors[index] || 'var(--bg3)'}; border: 1px solid ${borderColors[index] || 'var(--border)'}; padding: 0.85rem 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+-             <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;">${labels[index]}</span>
+-             <strong style="color: #e2e8f0; font-size: 0.95rem; text-transform: uppercase;">${d.maquina}</strong>
++             <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.5px;">${labels[index]}</span>
++             <strong style="color: var(--text-primary); font-size: 0.95rem; text-transform: uppercase;">${d.maquina}</strong>
+            </div>
+            <div style="text-align: right;">
+              <div style="color: #f43f5e; font-weight: 700; font-family: monospace; font-size: 1.15rem;">${formatTime(d.tempo_total_min)}</div>
+-             <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 500;">${percent}% do impacto ÔÇó ${d.n_falhas} falhas</div>
++             <div style="color: var(--text-secondary); font-size: 0.75rem; font-weight: 500;">${percent}% do impacto ÔÇó ${d.n_falhas} falhas</div>
+            </div>
+          </div>
+        `;
+@@ -1483,26 +1487,26 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+       tooltip: { 
+         trigger: 'axis', 
+         axisPointer: { type: 'shadow' },
+-        backgroundColor: 'rgba(15, 23, 42, 0.95)', 
+-        borderColor: 'rgba(212,175,55,0.4)',
++        backgroundColor: tc.tooltipBg, 
++        borderColor: tc.borderColor,
+         borderWidth: 1,
+         padding: [12, 16],
+-        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'Inter, sans-serif' },
++        textStyle: { color: tc.tooltipText, fontSize: 13, fontFamily: 'Inter, sans-serif' },
+         formatter: (params) => {
+-          let s = `<div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 8px;">
++          let s = `<div style="border-bottom: 1px solid ${tc.borderColor}; padding-bottom: 6px; margin-bottom: 8px;">
+                      <strong style="color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">${params[0].name}</strong>
+                    </div>`;
+           params.forEach(p => {
+-            const val = p.seriesIndex === 0 ? `<strong>${formatTime(p.value)}</strong>` : `<strong>${p.value}</strong> <span style="font-size:0.85em;color:#94a3b8">ocorr├¬ncias</span>`;
++            const val = p.seriesIndex === 0 ? `<strong>${formatTime(p.value)}</strong>` : `<strong>${p.value}</strong> <span style="font-size:0.85em;color:var(--text-secondary)">ocorr├¬ncias</span>`;
+             s += `<div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 4px;">
+                     <span>${p.marker} ${p.seriesName}</span>
+-                    <span style="font-family: monospace; font-size: 14px;">${val}</span>
++                    <span style="font-family: monospace; font-size: 14px; color: ${tc.titleColor}">${val}</span>
+                   </div>`;
+           });
+           return s;
+         }
+       },
+-      legend: { textStyle: { color: '#e2e8f0', fontWeight: '500' }, top: 5, itemGap: 20 },
++      legend: { textStyle: { color: tc.legendColor, fontWeight: '500' }, top: 5, itemGap: 20 },
+       grid: { left: '2%', right: '10%', bottom: '5%', top: 60, containLabel: true },
+       xAxis: [
+         { 
+@@ -1510,9 +1514,9 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+           name: 'Tempo Total (min)', 
+           nameLocation: 'middle',
+           nameGap: 30,
+-          nameTextStyle: { color: '#94a3b8', fontSize: 12, fontWeight: '500' },
+-          axisLabel: { color: '#94a3b8', fontFamily: 'monospace' }, 
+-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)', type: 'solid' } } 
++          nameTextStyle: { color: tc.tickColor, fontSize: 12, fontWeight: '500' },
++          axisLabel: { color: tc.tickColor, fontFamily: 'monospace' }, 
++          splitLine: { lineStyle: { color: tc.gridColor, type: 'solid' } } 
+         },
+         { 
+           type: 'value', 
+@@ -1535,7 +1539,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+           end: 100,
+           borderColor: 'transparent',
+           fillerColor: 'rgba(212,175,55,0.4)',
+-          backgroundColor: 'rgba(255,255,255,0.02)',
++          backgroundColor: tc.gridColor,
+           handleSize: '100%',
+           showDetail: false,
+           showDataShadow: false
+@@ -1552,7 +1556,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+         type: 'category', 
+         data: data.map(d => d.maquina), 
+         axisLabel: { 
+-          color: '#e2e8f0', 
++          color: tc.titleColor, 
+           fontWeight: '600', 
+           fontSize: 12, 
+           margin: 12,
+@@ -1561,7 +1565,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+           }
+         },
+         axisTick: { show: false },
+-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
++        axisLine: { lineStyle: { color: tc.borderColor } }
+       },
+       series: [
+         {
+@@ -1583,7 +1587,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+           label: { 
+             show: true, 
+             position: 'right', 
+-            color: '#f1f5f9', 
++            color: tc.titleColor, 
+             formatter: (p) => formatTime(p.value),
+             fontWeight: '600',
+             fontSize: 13,
+@@ -1619,7 +1623,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
+             show: false, 
+             position: 'top', 
+             color: '#38bdf8', 
+-            backgroundColor: 'rgba(15, 23, 42, 0.7)',
++            backgroundColor: tc.tooltipBg,
+             padding: [4, 8],
+             borderRadius: 4,
+             borderWidth: 1,
+diff --git a/js/plano_mestre.js b/js/plano_mestre.js
+index b72c9e5..cf810ad 100644
+--- a/js/plano_mestre.js
++++ b/js/plano_mestre.js
+@@ -178,8 +178,8 @@ function render() {
+     if (atvsMaq.length === 0) return;
+     
+     html += `
+-      <div class="panel-card" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: all 0.3s;">
+-        <div style="padding: 1rem 1.5rem; background: rgba(0,0,0,0.2); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
++      <div class="panel-card" style="background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; transition: all 0.3s;">
++        <div style="padding: 1rem 1.5rem; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+           <div>
+             <h4 style="margin: 0; color: var(--primary); font-size: 1.1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span class="icon">${maq.disciplina === 'EL├ëTRICA' ? 'ÔÜí' : 'ÔÜÖ´©Å'}</span>
+@@ -194,7 +194,7 @@ function render() {
+         </div>
+         <div style="padding: 0; max-height: 500px; overflow-y: auto;">
+           <table class="table" style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+-            <thead style="position: sticky; top: 0; background: #1b263b; z-index: 1;">
++            <thead style="position: sticky; top: 0; background: var(--surface); z-index: 1;">
+               <tr>
+                 <th style="padding: 0.8rem 1.5rem; text-align: left; width: 35%;">Sistema / Componente</th>
+                 <th style="padding: 0.8rem 1rem; text-align: left; width: 25%;">A├º├úo Preventiva</th>
+@@ -212,7 +212,7 @@ function render() {
+       const path = parts.join(' > ');
+ 
+       html += `
+-        <tr class="table-row-hover" style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.2s; cursor: pointer;" onclick="window.abrirDetalhesPlanoMestre('${atv.id}')">
++        <tr class="table-row-hover" style="border-bottom: 1px solid var(--border); transition: background 0.2s; cursor: pointer;" onclick="window.abrirDetalhesPlanoMestre('${atv.id}')">
+           <td style="padding: 0.8rem 1.5rem;">
+             <div style="color: var(--muted); font-size: 0.75rem; margin-bottom: 0.2rem;">${path}</div>
+             <div style="color: var(--text); font-weight: 500;">${componente}</div>
+@@ -222,7 +222,7 @@ function render() {
+              ${atv.material ? `<div style="font-size: 0.75rem; color: var(--muted); margin-top:0.3rem;">­ƒôª ${atv.material}</div>` : ''}
+           </td>
+           <td style="padding: 0.8rem 1rem; text-align: center;">
+-             <span class="badge" style="background: rgba(255,255,255,0.1);">${atv.estrategia || '-'}</span>
++             <span class="badge" style="background: var(--bg2); border: 1px solid var(--border);">${atv.estrategia || '-'}</span>
+           </td>
+           <td style="padding: 0.8rem 1rem; text-align: center; color: var(--muted);">${atv.hh ? atv.hh.toFixed(2) : '-'}</td>
+           <td style="padding: 0.8rem 1rem; text-align: center;">
+diff --git a/js/retomada_l05.js b/js/retomada_l05.js
+index 6e4fb3c..ca58548 100644
+--- a/js/retomada_l05.js
++++ b/js/retomada_l05.js
+@@ -166,14 +166,14 @@
+           <div style="overflow-x: auto;">
+             <table style="width: 100%; border-collapse: collapse; font-size: 0.875rem;">
+               <thead>
+-                <tr style="background: rgba(0,0,0,0.25); border-bottom: 1px solid rgba(255,255,255,0.06);">
+-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 55px; border-bottom: 1px solid rgba(255,255,255,0.08);">ID</th>
+-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.08);">Descri├º├úo</th>
+-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 90px; border-bottom: 1px solid rgba(255,255,255,0.08);">H-H</th>
+-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 120px; border-bottom: 1px solid rgba(255,255,255,0.08);">Profissional</th>
+-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 80px; border-bottom: 1px solid rgba(255,255,255,0.08);">OS</th>
+-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 220px; border-bottom: 1px solid rgba(255,255,255,0.08);">% Execu├º├úo</th>
+-                  <th style="position: sticky; top: 0; z-index: 10; background: #0f172a; padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 130px; border-bottom: 1px solid rgba(255,255,255,0.08);">Status</th>
++                <tr style="background: rgba(0,0,0,0.25); border-bottom: 1px solid var(--border);">
++                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 55px; border-bottom: 1px solid var(--border);">ID</th>
++                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--border);">Descri├º├úo</th>
++                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 90px; border-bottom: 1px solid var(--border);">H-H</th>
++                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 120px; border-bottom: 1px solid var(--border);">Profissional</th>
++                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 80px; border-bottom: 1px solid var(--border);">OS</th>
++                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 220px; border-bottom: 1px solid var(--border);">% Execu├º├úo</th>
++                  <th style="position: sticky; top: 0; z-index: 10; background: var(--surface); padding: 1rem; text-align: center; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; width: 130px; border-bottom: 1px solid var(--border);">Status</th>
+                 </tr>
+               </thead>
+               <tbody>
+@@ -275,23 +275,23 @@
+       : (r.descricao || 'ÔÇö');
+ 
+     return `
+-    <tr class="rl05-table-row" data-id="${r.id}" style="background: ${rowBg}; border-left: ${rowBorderLeft}; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.2s; cursor: pointer;"
++    <tr class="rl05-table-row" data-id="${r.id}" style="background: ${rowBg}; border-left: ${rowBorderLeft}; border-bottom: 1px solid var(--border); transition: background 0.2s; cursor: pointer;"
+         onclick="this.closest('.rl05-group-body').querySelectorAll('.rl05-table-row').forEach(tr => tr.style.backgroundColor=''); window.selecionarLinhaRL05('${r.id}')"
+         ondblclick="window.abrirDetalheRL05('${r.id}')"
+-        onmouseenter="if(!this.classList.contains('rl05-selected')) this.style.background='rgba(255,255,255,0.03)'"
++        onmouseenter="if(!this.classList.contains('rl05-selected')) this.style.background='var(--bg2)'"
+         onmouseleave="if(!this.classList.contains('rl05-selected')) this.style.background='${rowBg}'">
+       <td style="padding: 1.15rem 1rem; color: var(--muted); font-family: monospace; font-size: 0.8rem; font-weight: 600;">#${r.id}</td>
+       <td style="padding: 1.15rem 1rem; max-width: 380px;">
+-        <div title="${(r.descricao || '').replace(/"/g, '&quot;')}" style="line-height: 1.5; color: ${isConcluido ? 'var(--muted)' : '#ffffff'}; font-weight: ${isConcluido ? '400' : '500'}; font-size: 0.875rem;">${descTruncated}</div>
++        <div title="${(r.descricao || '').replace(/"/g, '&quot;')}" style="line-height: 1.5; color: ${isConcluido ? 'var(--muted)' : 'var(--text)'}; font-weight: ${isConcluido ? '400' : '500'}; font-size: 0.875rem;">${descTruncated}</div>
+       </td>
+       <td style="padding: 1.15rem 1rem; text-align: center; color: var(--muted); font-size: 0.85rem;">${r.duracao ? r.duracao + 'h' : 'ÔÇö'}</td>
+       <td style="padding: 1.15rem 1rem; color: var(--muted); font-size: 0.8rem;">${r.profissional || 'ÔÇö'}</td>
+       <td style="padding: 1.15rem 1rem; text-align: center;">
+         <input type="text" class="rl05-os-input" data-id="${r.id}" data-original="${r.os || ''}"
+           value="${r.os || ''}" placeholder="ÔÇö"
+-          style="width: 70px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--muted); padding: 3px 6px; text-align: center; font-family: monospace; font-size: 0.8rem; outline: none; transition: all 0.2s;"
++          style="width: 70px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px; color: var(--muted); padding: 3px 6px; text-align: center; font-family: monospace; font-size: 0.8rem; outline: none; transition: all 0.2s;"
+           onfocus="this.style.borderColor='rgba(56,189,248,0.5)'; this.style.color='var(--text)';"
+-          onblur="this.style.borderColor='rgba(255,255,255,0.1)'; this.style.color='var(--muted)';">
++          onblur="this.style.borderColor='var(--border)'; this.style.color='var(--muted)';">
+       </td>
+       <td style="padding: 1.15rem 1rem;">
+         <div style="display: flex; flex-direction: column; gap: 6px;">
+@@ -302,7 +302,7 @@
+               ${isConcluido ? 'disabled' : ''}>
+             <input type="number" class="rl05-perc-input" data-id="${r.id}" data-original="${perc}"
+               min="0" max="100" step="1" value="${perc}"
+-              style="width: 52px; background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: var(--text); padding: 3px 6px; text-align: center; font-size: 0.85rem; font-weight: 600; outline: none;"
++              style="width: 52px; background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 6px; color: var(--text); padding: 3px 6px; text-align: center; font-size: 0.85rem; font-weight: 600; outline: none;"
+               ${isConcluido ? 'disabled style="cursor:default; opacity:0.6;"' : ''}>
+             <span style="color: var(--muted); font-size: 0.8rem;">%</span>
+           </div>
+diff --git a/read_excel.py b/read_excel.py
+index 20b722c..0a01ac6 100644
+--- a/read_excel.py
++++ b/read_excel.py
+@@ -1,66 +1,23 @@
+ import pandas as pd
+-
+-filepath = r"C:\Users\VMORAES1\Downloads\Relat├│rio de Paradas 2026-06.xlsx"
+-df = pd.read_excel(filepath, engine='calamine', header=0)
+-
+-col_grupo = df.columns[3]   # 'Grupos de Paradas'
+-col_linha = df.columns[4]   # 'Linha'
+-col_data = df.columns[7]    # 'Data'
+-col_inicio = df.columns[8]  # 'In├¡cio'
+-col_fim = df.columns[9]     # 'Fim'
+-col_dur = df.columns[10]    # 'Dura├º├úo'
+-
+-# Filtra apenas Reparos Mec├ónicos e El├®tricos
+-df_rep = df[df[col_grupo].str.contains('Reparos', na=False, case=False)].copy()
+-
+-# Converte Dura├º├úo (string HH:MM:SS) para minutos
+-def hms_to_min(s):
+-    try:
+-        parts = str(s).strip().split(':')
+-        h, m, sec = int(parts[0]), int(parts[1]), float(parts[2])
+-        return h*60 + m + sec/60
+-    except:
+-        return 0.0
+-
+-df_rep['dur_min'] = df_rep[col_dur].apply(hms_to_min)
+-
+-# Converte data
+-df_rep['data_dt'] = pd.to_datetime(df_rep[col_data], errors='coerce')
+-df_rep['semana_iso'] = df_rep['data_dt'].dt.isocalendar().week.astype(int)
+-df_rep['mes'] = df_rep['data_dt'].dt.month
+-df_rep['ano'] = df_rep['data_dt'].dt.year
+-
+-print("=== DADOS LIMPOS ===")
+-print(df_rep[[col_grupo, col_linha, 'data_dt', 'semana_iso', 'dur_min']].head(10).to_string())
+-
+-# Calcula MTBF, MTTR e Indisponibilidade por Linha no m├¬s
+-# Tempo dispon├¡vel no m├¬s: 30 dias * 24h * 60min = 43200 min (assumindo 24/7)
+-TEMPO_MES_MIN = 30 * 24 * 60
+-
+-print("\n=== KPIs POR LINHA (JUNHO) ===")
+-grupos = df_rep.groupby(col_linha)
+-for linha, g in grupos:
+-    n_falhas = len(g)
+-    tempo_parado_min = g['dur_min'].sum()
+-    tempo_func_min = TEMPO_MES_MIN - tempo_parado_min
+-    mtbf = tempo_func_min / n_falhas if n_falhas > 0 else 0
+-    mttr = tempo_parado_min / n_falhas if n_falhas > 0 else 0
+-    indisponibilidade = (tempo_parado_min / TEMPO_MES_MIN) * 100
+-    print(f"\n{linha}:")
+-    print(f"  Falhas: {n_falhas}")
+-    print(f"  Tempo parado total: {tempo_parado_min:.1f} min ({tempo_parado_min/60:.1f}h)")
+-    print(f"  MTBF: {mtbf:.2f} min ({mtbf/60:.2f}h)")
+-    print(f"  MTTR: {mttr:.2f} min ({mttr/60:.2f}h)")
+-    print(f"  Indisponibilidade: {indisponibilidade:.2f}%")
+-
+-print("\n=== KPIs POR SEMANA (LINHA 4) ===")
+-df_l4 = df_rep[df_rep[col_linha] == 'Linha 4']
+-TEMPO_SEM_MIN = 7 * 24 * 60
+-for sem, g in df_l4.groupby('semana_iso'):
+-    n = len(g)
+-    tp = g['dur_min'].sum()
+-    tf = TEMPO_SEM_MIN - tp
+-    mtbf = tf / n if n > 0 else 0
+-    mttr = tp / n if n > 0 else 0
+-    indisp = (tp / TEMPO_SEM_MIN) * 100
+-    print(f"  Semana {sem}: {n} falhas | MTBF={mtbf/60:.2f}h | MTTR={mttr/60:.2f}h | Indisp={indisp:.2f}%")
++excel_file = pd.ExcelFile(r'C:\Users\VMORAES1\Documents\Financeiro_1607.xlsx')
++print("Sheet names:", excel_file.sheet_names)
++sheet_name = next(s for s in excel_file.sheet_names if 'moviment' in s.lower())
++df = pd.read_excel(excel_file, sheet_name=sheet_name)
++print("Initial columns:", df.columns.tolist()[:10])
++
++# find the real header
++for i, row in df.head(20).iterrows():
++    row_str = ' '.join(str(x).lower() for x in row)
++    if 'it-codigo' in row_str or 'item' in row_str or 'ordem' in row_str:
++        print(f"Header at row {i}")
++        df = pd.read_excel(excel_file, sheet_name=sheet_name, header=i+1)
++        break
++
++print("Actual columns:", df.columns.tolist())
++check_col = next((c for c in df.columns if str(c).lower().strip() == 'check'), None)
++custo_col = next((c for c in df.columns if 'custo' in str(c).lower() and 'm' in str(c).lower() and not 'anterior' in str(c).lower()), None)
++print(f"Check col: {check_col}, Custo col: {custo_col}")
++
++if check_col and custo_col:
++    df[custo_col] = pd.to_numeric(df[custo_col], errors='coerce').fillna(0)
++    print(df.groupby(check_col)[custo_col].sum())

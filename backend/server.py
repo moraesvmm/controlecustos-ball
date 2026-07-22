@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -6,6 +6,13 @@ import os
 import sqlite3
 import json
 import asyncio
+import tempfile
+import shutil
+try:
+    import openpyxl
+    OPENPYXL_OK = True
+except ImportError:
+    OPENPYXL_OK = False
 
 ROOT_DIR = os.path.join(os.path.dirname(__file__), "..")
 DB_PATH = os.path.join(os.path.dirname(__file__), "database", "database.sqlite")
@@ -44,6 +51,240 @@ async def sse_trigger_middleware(request: Request, call_next):
                 except Exception:
                     pass
     return response
+
+@app.get("/api/custo-geral/movimentacoes")
+def get_custo_geral_movimentacoes():
+    try:
+        conn = get_db()
+        
+        # Lê as movimentacoes reais da tabela SQLite
+        res_rows = conn.execute("SELECT * FROM custo_geral").fetchall()
+        res = [dict(r) for r in res_rows]
+        
+        covered_months = set()
+        for d in res:
+            if d.get("mes"):
+                covered_months.add(str(int(d["mes"])))
+        
+        # Lê os agregados historicos dos meses passados
+        rows = conn.execute("SELECT mes, manutencao, ferramentaria, facilities FROM custo_geral_mensal").fetchall()
+        
+        mes_map = {'jan': '1', 'fev': '2', 'mar': '3', 'abr': '4', 'mai': '5', 'jun': '6', 'jul': '7', 'ago': '8', 'set': '9', 'out': '10', 'nov': '11', 'dez': '12'}
+        
+        for r in rows:
+            m_str = mes_map.get(str(r['mes']).lower(), '1')
+            
+            # Pular se o mês atual já tem dados reais importados
+            if m_str in covered_months:
+                continue
+                
+            # Adicionar agregados historicos
+            if r['manutencao'] and r['manutencao'] > 0:
+                res.append({'mes': m_str, 'custo_do_mes': r['manutencao'], 'check': 'MANUTENÇÃO - Real Consumo', 'descricao_conta': 'MANUTENCAO', 'grupo': 'Histórico', 'area': 'MANUTENÇÃO', 'dt_trans': f"2026-{int(m_str):02d}-01"})
+            if r['ferramentaria'] and r['ferramentaria'] > 0:
+                res.append({'mes': m_str, 'custo_do_mes': r['ferramentaria'], 'check': 'FERRAMENTARIA - Real Consumo', 'descricao_conta': 'FERRAMENTAS', 'grupo': 'Histórico', 'area': 'FERRAMENTARIA', 'dt_trans': f"2026-{int(m_str):02d}-01"})
+            if r['facilities'] and r['facilities'] > 0:
+                res.append({'mes': m_str, 'custo_do_mes': r['facilities'], 'check': 'FACILITIES - Real Consumo', 'descricao_conta': 'FACILITIES', 'grupo': 'Histórico', 'area': 'FACILITIES', 'dt_trans': f"2026-{int(m_str):02d}-01"})
+                
+        return res
+    except Exception as e:
+        print(f"Erro ao buscar movimentacoes: {e}")
+        return [{"error": str(e)}]
+
+
+# Caminho onde guardamos o ultimo arquivo xlsm enviado (por maquina)
+EXCEL_CACHE_PATH = os.path.join(os.path.dirname(__file__), "database", "last_upload.xlsm")
+HISTORICO_DIR = r"C:\Users\VMORAES1\Documents\A ALIMENTAR\2026"
+
+def _parse_excel(filepath: str) -> dict:
+    """Le o arquivo xlsm e extrai dashboard + movimentacoes."""
+    if not OPENPYXL_OK:
+        return {"error": "openpyxl nao instalado. Execute: pip install openpyxl"}
+    try:
+        wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
+        result = {"dashboard": {}, "movimentacoes": [], "sheetNames": wb.sheetnames}
+
+        # ---- ABA DASHBOARD ----
+        dash_sheet = None
+        for name in wb.sheetnames:
+            if "dashboard" in name.lower():
+                dash_sheet = wb[name]
+                break
+
+        if dash_sheet:
+            # Varrer todas as celulas procurando valores-chave
+            # Estrategia: procurar labels de texto e pegar o valor da celula adjacente (direita ou baixo)
+            dashboard_data = {}
+            meses = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez']
+            mes_map = {m: i for i, m in enumerate(meses)}
+
+            # Acumular dados mensais por area
+            evolucao = {"manutencao": [0]*12, "ferramentaria": [0]*12, "facilities": [0]*12, "budget": [0]*12}
+
+            for row in dash_sheet.iter_rows(values_only=True):
+                row_vals = [str(v).strip() if v is not None else '' for v in row]
+                row_str = ' '.join(row_vals).lower()
+
+                # Procurar budget total anual
+                for i, cell in enumerate(row):
+                    if cell is None:
+                        continue
+                    cell_str = str(cell).lower().strip()
+
+                    # Budget / Orcamento
+                    if any(k in cell_str for k in ['budget', 'orçamento', 'orcamento', 'meta anual']) and i + 1 < len(row):
+                        next_val = row[i+1]
+                        if isinstance(next_val, (int, float)) and next_val > 1000:
+                            dashboard_data.setdefault('budget_anual', float(next_val))
+
+                    # Realizado por area
+                    if 'manutenção' in cell_str or 'manutencao' in cell_str:
+                        for j in range(i+1, min(i+14, len(row))):
+                            v = row[j]
+                            if isinstance(v, (int, float)) and v != 0:
+                                col_idx = j - i - 1
+                                if 0 <= col_idx < 12:
+                                    evolucao['manutencao'][col_idx] += abs(float(v))
+
+                    if 'ferramentaria' in cell_str:
+                        for j in range(i+1, min(i+14, len(row))):
+                            v = row[j]
+                            if isinstance(v, (int, float)) and v != 0:
+                                col_idx = j - i - 1
+                                if 0 <= col_idx < 12:
+                                    evolucao['ferramentaria'][col_idx] += abs(float(v))
+
+                    if 'facilities' in cell_str or 'facilidades' in cell_str:
+                        for j in range(i+1, min(i+14, len(row))):
+                            v = row[j]
+                            if isinstance(v, (int, float)) and v != 0:
+                                col_idx = j - i - 1
+                                if 0 <= col_idx < 12:
+                                    evolucao['facilities'][col_idx] += abs(float(v))
+
+                    if 'budget' in cell_str and 'mensal' in cell_str:
+                        for j in range(i+1, min(i+14, len(row))):
+                            v = row[j]
+                            if isinstance(v, (int, float)) and v > 0:
+                                col_idx = j - i - 1
+                                if 0 <= col_idx < 12:
+                                    evolucao['budget'][col_idx] = float(v)
+
+            dashboard_data['evolucao'] = evolucao
+
+            # Extrair KPIs principais: realizado total por area (soma dos meses ja realizados)
+            hoje_mes = __import__('datetime').datetime.now().month - 1  # 0-indexed
+            dashboard_data['realizado_manutencao'] = sum(evolucao['manutencao'][:hoje_mes+1])
+            dashboard_data['realizado_ferramentaria'] = sum(evolucao['ferramentaria'][:hoje_mes+1])
+            dashboard_data['realizado_facilities'] = sum(evolucao['facilities'][:hoje_mes+1])
+            dashboard_data['realizado_total'] = (
+                dashboard_data['realizado_manutencao'] +
+                dashboard_data['realizado_ferramentaria'] +
+                dashboard_data['realizado_facilities']
+            )
+
+            result['dashboard'] = dashboard_data
+
+        # ---- ABA MOVIMENTACOES ----
+        mov_sheet = None
+        for name in wb.sheetnames:
+            n = name.lower()
+            if 'movimenta' in n or 'custo geral' in n:
+                mov_sheet = wb[name]
+                break
+
+        if mov_sheet:
+            rows_iter = mov_sheet.iter_rows(values_only=True)
+            header = None
+            records = []
+            for row in rows_iter:
+                if header is None:
+                    # Primeiro row nao-vazio com pelo menos 3 celulas preenchidas = header
+                    non_null = [c for c in row if c is not None and str(c).strip() != '']
+                    if len(non_null) >= 3:
+                        header = [str(c).strip().lower().replace(' ', '_').replace('-','_') if c else f'col{i}'
+                                  for i, c in enumerate(row)]
+                    continue
+                if all(c is None or str(c).strip() == '' for c in row):
+                    continue
+                rec = {header[i]: (row[i] if i < len(row) else None) for i in range(len(header))}
+                # Converter datas
+                for k, v in rec.items():
+                    if hasattr(v, 'strftime'):
+                        rec[k] = v.strftime('%Y-%m-%d')
+                    elif isinstance(v, float) and v == int(v) and 'custo' not in k and 'valor' not in k and 'material' not in k:
+                        rec[k] = int(v)
+                records.append(rec)
+
+            result['movimentacoes'] = records
+
+        wb.close()
+        return result
+    except Exception as e:
+        import traceback
+        return {"error": str(e), "trace": traceback.format_exc()}
+
+
+@app.get("/api/custo-geral/movimentacoes")
+def get_custo_geral_movimentacoes():
+    """Releitura do ultimo Excel enviado — retorna dados do dashboard + movimentacoes."""
+    if os.path.exists(EXCEL_CACHE_PATH):
+        return _parse_excel(EXCEL_CACHE_PATH)
+    # Fallback: banco SQLite legado
+    try:
+        conn = get_db()
+        res_rows = conn.execute("SELECT * FROM custo_geral LIMIT 5000").fetchall()
+        return {"movimentacoes": [dict(r) for r in res_rows], "dashboard": {}, "source": "sqlite_fallback"}
+    except Exception as e:
+        return {"movimentacoes": [], "dashboard": {}, "error": str(e)}
+
+
+
+
+@app.get("/api/custo-geral/historico")
+def get_custo_geral_historico():
+    """Varre a pasta A ALIMENTAR\2026 e consolida os dados mensais historicos."""
+    if not OPENPYXL_OK:
+        return {"error": "openpyxl nao instalado"}
+    if not os.path.exists(HISTORICO_DIR):
+        return {"meses": [], "error": f"Pasta nao encontrada: {HISTORICO_DIR}"}
+    consolidado = {}  # {mes_idx: {manutencao, ferramentaria, facilities, budget}}
+    try:
+        for root, dirs, files in os.walk(HISTORICO_DIR):
+            for fname in files:
+                if not fname.endswith('.xlsm') and not fname.endswith('.xlsx'):
+                    continue
+                if fname.startswith('~'):
+                    continue
+                fpath = os.path.join(root, fname)
+                try:
+                    parsed = _parse_excel(fpath)
+                    ev = parsed.get('dashboard', {}).get('evolucao', {})
+                    for i in range(12):
+                        if i not in consolidado:
+                            consolidado[i] = {'manutencao': 0, 'ferramentaria': 0, 'facilities': 0, 'budget': 0}
+                        consolidado[i]['manutencao'] += ev.get('manutencao', [0]*12)[i]
+                        consolidado[i]['ferramentaria'] += ev.get('ferramentaria', [0]*12)[i]
+                        consolidado[i]['facilities'] += ev.get('facilities', [0]*12)[i]
+                        b = ev.get('budget', [0]*12)[i]
+                        if b > 0:
+                            consolidado[i]['budget'] = b
+                except Exception:
+                    continue
+        meses_label = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+        return {"meses": [{"mes": meses_label[i], "mes_idx": i, **consolidado.get(i, {})} for i in range(12)]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/custo-geral/mensal")
+def get_custo_geral_mensal(ano: int = 2026):
+    try:
+        conn = get_db()
+        rows = conn.execute("SELECT * FROM custo_geral_mensal WHERE ano=? ORDER BY id", (ano,)).fetchall()
+        return [dict(r) for r in rows]
+    except Exception as e:
+        return []
 
 app.add_middleware(
     CORSMiddleware,

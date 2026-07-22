@@ -1,5 +1,6 @@
-import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js';
-import { renderConfiabilidadeCharts, destroyConfiabCharts } from './charts.js?v=1002';
+import { carregarAlbuns, salvarAlbum, excluirAlbum, carregarEvidenciasDoAlbum, salvarEvidencia, excluirEvidencia } from './db.js?v=13';
+import { renderConfiabilidadeCharts, destroyConfiabCharts, themeColors } from './charts.js?v=1002';
+import { initIA } from './ia_dashboard.js?v=3';
 
 export async function initIndicadores() {
   const btnUploadKPI = document.getElementById('btnUploadKPI');
@@ -7,6 +8,13 @@ export async function initIndicadores() {
   if (btnUploadKPI && fileImportKPI) {
     btnUploadKPI.addEventListener('click', () => fileImportKPI.click());
     fileImportKPI.addEventListener('change', handleExcelUpload);
+  }
+
+  const btnUploadProducao = document.getElementById('btnUploadProducao');
+  const fileImportProducao = document.getElementById('fileImportProducao');
+  if (btnUploadProducao && fileImportProducao) {
+    btnUploadProducao.addEventListener('click', () => fileImportProducao.click());
+    fileImportProducao.addEventListener('change', handleProducaoUpload);
   }
 
   // TABS LOGIC
@@ -111,6 +119,88 @@ export async function initIndicadores() {
   }
 
   await carregarEAtualizarPainel();
+
+  // Inicializar painel de IA (chama os endpoints quando a aba for aberta)
+  try { await initIA(); } catch(e) { console.warn('[IA] initIA falhou:', e); }
+}
+
+
+async function handleProducaoUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (window.toast) window.toast('Lendo arquivo de Produção...', 'info');
+
+  try {
+    const data = await file.arrayBuffer();
+    const workbook = window.XLSX.read(data, { type: 'array' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const json = window.XLSX.utils.sheet_to_json(worksheet, { defval: null });
+
+    if (!json || json.length === 0) throw new Error("Planilha de produção vazia.");
+
+    const rows = [];
+    let ano = new Date().getFullYear();
+    const match = file.name.match(/(\d{4})-(\d{2})/);
+    if (match) ano = parseInt(match[1]);
+
+    for (let row of json) {
+      // Procura chaves independentemente de caixa
+      const keys = Object.keys(row);
+      const kData = keys.find(k => k.toLowerCase() === 'data');
+      const kLinha = keys.find(k => k.toLowerCase() === 'linha');
+      const kTt = keys.find(k => k.toLowerCase().includes('trabalhado'));
+      const kTd = keys.find(k => k.toLowerCase().includes('dispon'));
+      
+      if (!kData || !kLinha) continue;
+      
+      const tt = row[kTt];
+      const td = row[kTd];
+      
+      if (tt !== null && tt !== undefined && td !== null && td !== undefined) {
+        // Formatar data caso venha do Excel (número de série)
+        let dataFormatada = row[kData];
+        if (typeof dataFormatada === 'number') {
+            const dt = new Date((dataFormatada - (25567 + 2)) * 86400 * 1000);
+            dataFormatada = dt.toISOString().split('T')[0];
+        } else {
+            dataFormatada = String(dataFormatada).substring(0,10);
+        }
+
+        rows.push({
+          data: dataFormatada,
+          linha: String(row[kLinha]).trim(),
+          tempo_trabalhado: parseFloat(tt) || 0,
+          tempo_disponivel: parseFloat(td) || 0
+        });
+      }
+    }
+
+    if (rows.length === 0) throw new Error("Nenhum dado válido de Tempo Trabalhado/Disponível encontrado.");
+
+    const resp = await fetch('/api/import/producao', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ rows, ano })
+    });
+    const result = await resp.json();
+    if (!resp.ok) throw new Error(result.detail || 'Erro no servidor');
+
+    if (window.Swal) {
+      Swal.fire({
+        icon: 'success',
+        title: 'Produção Importada!',
+        html: `<b>${result.importados}</b> linhas processadas.`,
+        confirmButtonText: 'Ok'
+      }).then(() => location.reload());
+    }
+  } catch (e) {
+    console.error(e);
+    if (window.Swal) Swal.fire('Erro na Importação', e.message, 'error');
+  } finally {
+    event.target.value = '';
+  }
 }
 
 async function handleExcelUpload(event) {
@@ -489,41 +579,59 @@ function renderKpiOfensores(semana) {
   if (!ctxEl) return;
   
   let data = kpiDataOfensores.filter(d => d.semana === semana);
-  data.sort((a, b) => a.breakdown_pct - b.breakdown_pct); // Ascending for echarts horizontal bar
+  data.sort((a, b) => (a.tempo_total_min || 0) - (b.tempo_total_min || 0)); // Ascending for echarts horizontal bar
   
   if (chartOfensoresInstance && !chartOfensoresInstance.isDisposed()) {
       chartOfensoresInstance.dispose();
   }
   chartOfensoresInstance = echarts.init(ctxEl);
   
+  const th = themeColors();
+  
   chartOfensoresInstance.setOption({
     tooltip: {
       trigger: 'item',
-      backgroundColor: 'rgba(15, 23, 42, 0.9)', textStyle: { color: '#f8fafc', fontFamily: 'Inter' }, borderColor: 'rgba(255,255,255,0.1)'
+      backgroundColor: th.tooltipBg, textStyle: { color: th.tooltipText, fontFamily: 'Inter' }, borderColor: th.borderColor
     },
     toolbox: {
       feature: {
-        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: '#0f172a', textareaColor: '#0f172a', textareaBorderColor: 'rgba(255,255,255,0.1)', textColor: '#e2e8f0', buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+        dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: document.body.classList.contains('light-mode') ? '#f8fafc' : '#0f172a', textareaColor: document.body.classList.contains('light-mode') ? '#ffffff' : '#0f172a', textareaBorderColor: th.borderColor, textColor: th.titleColor, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
         saveAsImage: { show: true, title: 'Salvar' }
       },
-      iconStyle: { borderColor: '#94a3b8' }
+      iconStyle: { borderColor: th.tickColor }
     },
     dataZoom: [
       { type: 'slider', yAxisIndex: 0, show: true, right: '2%', width: 12, startValue: data.length > 15 ? data.length - 15 : 0, endValue: data.length - 1, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
       { type: 'inside', yAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
     ],
-    grid: { left: '3%', right: '10%', bottom: '3%', containLabel: true },
-    xAxis: { type: 'value', splitLine: { lineStyle: { color: 'rgba(255,255,255,0.05)', type: 'dashed' } }, axisLabel: { color: '#94a3b8', formatter: '{value}%' } },
-    yAxis: { type: 'category', data: data.map(d => d.maquina), axisLine: { show: false }, axisTick: { show: false }, axisLabel: { color: '#e2e8f0', fontWeight: '500' } },
+    grid: { left: '2%', right: '8%', bottom: '2%', containLabel: true },
+    xAxis: { 
+      type: 'value', 
+      splitLine: { lineStyle: { color: th.gridColor, type: 'dashed' } }, 
+      axisLabel: { color: th.tickColor, formatter: '{value}m' },
+      splitNumber: 4
+    },
+    yAxis: { 
+      type: 'category', 
+      data: data.map(d => d.maquina), 
+      axisLine: { show: false }, 
+      axisTick: { show: false }, 
+      axisLabel: { 
+        color: th.titleColor, 
+        fontWeight: '500',
+        width: 160,
+        overflow: 'truncate'
+      } 
+    },
     series: [{
-      name: 'Breakdown (%)',
+      name: 'Tempo Parado (min)',
       type: 'bar',
 
       data: data.map((d, i) => {
           // data is sorted ascending, so top offenders are at the end (highest index)
           const isTop3 = i >= data.length - 3;
           return {
-              value: (d.breakdown_pct * 100).toFixed(2),
+              value: Number((d.tempo_total_min || 0).toFixed(0)),
               itemStyle: {
                   color: new echarts.graphic.LinearGradient(1, 0, 0, 0, [
                       {offset:0, color: isTop3 ? 'rgba(244, 63, 94, 0.9)' : 'rgba(99, 102, 241, 0.9)'},
@@ -1408,6 +1516,8 @@ window.abrirDrilldownMaquinas = async function(periodo) {
   document.getElementById('modalDrilldownSub').textContent = `Período: ${periodo}`;
   document.getElementById('modal-drilldown-maquinas').style.display = 'flex';
   
+  const tc = themeColors();
+  
   const chartEl = document.getElementById('chartDrilldownMaquinas');
   let inst = echarts.getInstanceByDom(chartEl);
   if(!inst) inst = echarts.init(chartEl);
@@ -1417,7 +1527,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
     if (inst) inst.resize();
   }, 10);
   
-  inst.showLoading({ text: 'Carregando...', color: '#10b981', textColor: '#f1f5f9', maskColor: 'rgba(15, 23, 42, 0.8)' });
+  inst.showLoading({ text: 'Carregando...', color: '#10b981', textColor: tc.titleColor, maskColor: tc.tooltipBg });
   
   try {
     const resp = await fetch(`/api/kpi/drilldown_maquinas?semana=${encodeURIComponent(periodo)}&linha=${encodeURIComponent(_confiabLinha)}&ano=${encodeURIComponent(_confiabAno)}`);
@@ -1454,14 +1564,14 @@ window.abrirDrilldownMaquinas = async function(periodo) {
        const borderColors = ['rgba(212,175,55,0.4)', 'rgba(192,192,192,0.3)', 'rgba(205,127,50,0.3)'];
        const labels = ['1º MAIOR', '2º MAIOR', '3º MAIOR'];
        return `
-         <div style="background: ${colors[index] || 'rgba(15,23,42,0.5)'}; border: 1px solid ${borderColors[index] || 'rgba(255,255,255,0.05)'}; padding: 0.85rem 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+         <div style="background: ${colors[index] || 'var(--bg3)'}; border: 1px solid ${borderColors[index] || 'var(--border)'}; padding: 0.85rem 1.25rem; border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-             <span style="font-size: 0.65rem; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px;">${labels[index]}</span>
-             <strong style="color: #e2e8f0; font-size: 0.95rem; text-transform: uppercase;">${d.maquina}</strong>
+             <span style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; letter-spacing: 0.5px;">${labels[index]}</span>
+             <strong style="color: var(--text-primary); font-size: 0.95rem; text-transform: uppercase;">${d.maquina}</strong>
            </div>
            <div style="text-align: right;">
              <div style="color: #f43f5e; font-weight: 700; font-family: monospace; font-size: 1.15rem;">${formatTime(d.tempo_total_min)}</div>
-             <div style="color: #94a3b8; font-size: 0.75rem; font-weight: 500;">${percent}% do impacto • ${d.n_falhas} falhas</div>
+             <div style="color: var(--text-secondary); font-size: 0.75rem; font-weight: 500;">${percent}% do impacto • ${d.n_falhas} falhas • MTBF: ${d.mtbf_h ? d.mtbf_h.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1}) + 'h' : '--'}</div>
            </div>
          </div>
        `;
@@ -1483,26 +1593,33 @@ window.abrirDrilldownMaquinas = async function(periodo) {
       tooltip: { 
         trigger: 'axis', 
         axisPointer: { type: 'shadow' },
-        backgroundColor: 'rgba(15, 23, 42, 0.95)', 
-        borderColor: 'rgba(212,175,55,0.4)',
+        backgroundColor: tc.tooltipBg, 
+        borderColor: tc.borderColor,
         borderWidth: 1,
         padding: [12, 16],
-        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'Inter, sans-serif' },
+        textStyle: { color: tc.tooltipText, fontSize: 13, fontFamily: 'Inter, sans-serif' },
         formatter: (params) => {
-          let s = `<div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 8px;">
+          let s = `<div style="border-bottom: 1px solid ${tc.borderColor}; padding-bottom: 6px; margin-bottom: 8px;">
                      <strong style="color: #d4af37; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;">${params[0].name}</strong>
                    </div>`;
           params.forEach(p => {
-            const val = p.seriesIndex === 0 ? `<strong>${formatTime(p.value)}</strong>` : `<strong>${p.value}</strong> <span style="font-size:0.85em;color:#94a3b8">ocorrências</span>`;
+            const val = p.seriesIndex === 0 ? `<strong>${formatTime(p.value)}</strong>` : `<strong>${p.value}</strong> <span style="font-size:0.85em;color:var(--text-secondary)">ocorrências</span>`;
             s += `<div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 4px;">
                     <span>${p.marker} ${p.seriesName}</span>
-                    <span style="font-family: monospace; font-size: 14px;">${val}</span>
+                    <span style="font-family: monospace; font-size: 14px; color: ${tc.titleColor}">${val}</span>
                   </div>`;
           });
+          const rowData = data[params[0].dataIndex];
+          if(rowData && rowData.mtbf_h) {
+            s += `<div style="display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-top: 8px; padding-top: 8px; border-top: 1px dashed ${tc.borderColor}">
+                    <span><span style="display:inline-block;margin-right:4px;border-radius:10px;width:10px;height:10px;background-color:#10b981;"></span> MTBF (Estimado)</span>
+                    <span style="font-family: monospace; font-size: 14px; color: #10b981"><strong>${rowData.mtbf_h.toLocaleString('pt-BR', {minimumFractionDigits:1, maximumFractionDigits:1})}h</strong></span>
+                  </div>`;
+          }
           return s;
         }
       },
-      legend: { textStyle: { color: '#e2e8f0', fontWeight: '500' }, top: 5, itemGap: 20 },
+      legend: { textStyle: { color: tc.legendColor, fontWeight: '500' }, top: 5, itemGap: 20 },
       grid: { left: '2%', right: '10%', bottom: '5%', top: 60, containLabel: true },
       xAxis: [
         { 
@@ -1510,9 +1627,9 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           name: 'Tempo Total (min)', 
           nameLocation: 'middle',
           nameGap: 30,
-          nameTextStyle: { color: '#94a3b8', fontSize: 12, fontWeight: '500' },
-          axisLabel: { color: '#94a3b8', fontFamily: 'monospace' }, 
-          splitLine: { lineStyle: { color: 'rgba(255,255,255,0.03)', type: 'solid' } } 
+          nameTextStyle: { color: tc.tickColor, fontSize: 12, fontWeight: '500' },
+          axisLabel: { color: tc.tickColor, fontFamily: 'monospace' }, 
+          splitLine: { lineStyle: { color: tc.gridColor, type: 'solid' } } 
         },
         { 
           type: 'value', 
@@ -1535,7 +1652,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           end: 100,
           borderColor: 'transparent',
           fillerColor: 'rgba(212,175,55,0.4)',
-          backgroundColor: 'rgba(255,255,255,0.02)',
+          backgroundColor: tc.gridColor,
           handleSize: '100%',
           showDetail: false,
           showDataShadow: false
@@ -1552,7 +1669,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
         type: 'category', 
         data: data.map(d => d.maquina), 
         axisLabel: { 
-          color: '#e2e8f0', 
+          color: tc.titleColor, 
           fontWeight: '600', 
           fontSize: 12, 
           margin: 12,
@@ -1561,7 +1678,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           }
         },
         axisTick: { show: false },
-        axisLine: { lineStyle: { color: 'rgba(255,255,255,0.1)' } }
+        axisLine: { lineStyle: { color: tc.borderColor } }
       },
       series: [
         {
@@ -1583,7 +1700,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
           label: { 
             show: true, 
             position: 'right', 
-            color: '#f1f5f9', 
+            color: tc.titleColor, 
             formatter: (p) => formatTime(p.value),
             fontWeight: '600',
             fontSize: 13,
@@ -1619,7 +1736,7 @@ window.abrirDrilldownMaquinas = async function(periodo) {
             show: false, 
             position: 'top', 
             color: '#38bdf8', 
-            backgroundColor: 'rgba(15, 23, 42, 0.7)',
+            backgroundColor: tc.tooltipBg,
             padding: [4, 8],
             borderRadius: 4,
             borderWidth: 1,

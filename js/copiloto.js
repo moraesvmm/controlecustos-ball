@@ -1,10 +1,10 @@
-import { getClient } from './db.js';
+import { getClient } from './db.js?v=13';
 import { GROQ_API_KEY } from './keys.js?v=1';
 import { agregarRecebidosPrevistos } from './logic.js?v=9';
 
 // Proxy local — resolve bloqueio de CORS da Cloudflare.
 // O proxy roda em localhost:8001 e repassa para a Cloudflare.
-const GROQ_URL = 'http://localhost:8080/groq';
+const GROQ_URL = '';
 const GROQ_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
 
 let conversationHistory = [];

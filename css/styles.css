@@ -19,21 +19,21 @@
 
 /* ===== LIGHT MODE ===== */
 body.light-mode {
-  --bg: #f0f2f7;
-  --bg2: #e4e8f2;
-  --surface: rgba(255, 255, 255, 0.85);
+  --bg: #f8fafc;
+  --bg2: #f1f5f9;
+  --surface: rgba(255, 255, 255, 0.95);
   --surface-solid: #ffffff;
-  --border: rgba(100, 116, 139, 0.18);
+  --border: rgba(15, 23, 42, 0.08);
   --text: #0f172a;
-  --muted: #64748b;
+  --muted: #475569;
   --gold: #b8860b;
   --gold-rgb: 184, 134, 11;
   --gold-dim: rgba(184, 134, 11, 0.12);
   --accent: #0284c7;
   --danger: #dc2626;
   --success: #059669;
-  --warning: #f59e0b;
-  --shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --warning: #d97706;
+  --shadow: 0 12px 32px rgba(15, 23, 42, 0.05);
 }
 
 
@@ -46,6 +46,7 @@ body {
   min-height: 100vh;
   line-height: 1.5;
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .app-bg {
@@ -70,6 +71,7 @@ body {
   border-bottom: 1px solid var(--border);
   backdrop-filter: blur(12px);
   background: rgba(8, 12, 20, 0.6);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .brand { display: flex; align-items: center; gap: 1rem; }
@@ -152,6 +154,7 @@ nav.tabs button.active {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   backdrop-filter: blur(16px);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 /* KPI */
@@ -237,7 +240,7 @@ nav.tabs button.active {
 }
 
 .status-chip {
-  background: rgba(255,255,255,0.06);
+  background: var(--surface-solid);
   border: 1px solid var(--border);
   color: var(--text);
   padding: 0.25rem 0.6rem;
@@ -473,7 +476,7 @@ select option {
 
 .alerta-item small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 0.2rem; }
 
-/* CRUD Table â scroll melhorado */
+/* CRUD Table â€” scroll melhorado */
 body.view-crud .main-layout {
   display: flex;
   flex-direction: column;
@@ -699,7 +702,7 @@ body.view-crud .main-layout {
 .badge-ENTREGUE { background: rgba(52, 211, 153, 0.2); color: #6ee7b7; }
 .badge-PENDENTE-DE-ENTREGA { background: rgba(59, 130, 246, 0.2); color: #93c5fd; } /* Azul */
 .badge-PENDENTE-DE-PEDIDO { background: rgba(168, 85, 247, 0.2); color: #d8b4fe; } /* Roxo */
-.badge-PENDENTE-DE-ORCAMENTO, .badge-PENDENTE-DE-ORÃAMENTO { background: rgba(249, 115, 22, 0.2); color: #fdba74; } /* Laranja */
+.badge-PENDENTE-DE-ORCAMENTO, .badge-PENDENTE-DE-ORÃ‡AMENTO { background: rgba(249, 115, 22, 0.2); color: #fdba74; } /* Laranja */
 .badge-PENDENTE-DE-RC, .badge-PENDENTE-RC { background: rgba(234, 179, 8, 0.2); color: #fde047; } /* Amarelo */
 .badge-PENDENTE { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
 .badge-CRITICA { background: rgba(248, 113, 113, 0.25); color: #fca5a5; }
@@ -1325,6 +1328,7 @@ body.view-crud .main-layout {
   border: 1px solid rgba(212,175,55,0.18);
   position: relative;
   overflow: hidden;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
   animation: fadeInUserPanel 0.5s ease;
 }
 
@@ -1832,16 +1836,18 @@ body.light-mode .form-grid input,
 body.light-mode .form-grid select,
 body.light-mode .form-grid textarea,
 body.light-mode .filters select,
-body.light-mode .filters input {
-  background: #ffffff;
-  border-color: rgba(100, 116, 139, 0.3);
-  color: var(--text);
+body.light-mode .filters input,
+body.light-mode .rl05-filter-input {
+  background: #ffffff !important;
+  border-color: rgba(100, 116, 139, 0.3) !important;
+  color: var(--text) !important;
 }
 body.light-mode .form-grid input:focus,
 body.light-mode .form-grid select:focus,
 body.light-mode .form-grid textarea:focus,
 body.light-mode .filters select:focus,
-body.light-mode .filters input:focus {
+body.light-mode .filters input:focus,
+body.light-mode .rl05-filter-input:focus {
   outline: 2px solid rgba(184, 134, 11, 0.5);
   border-color: var(--gold);
 }
@@ -2107,6 +2113,27 @@ body.light-mode .swal2-html-container {
    Inline styles com cores claras fixas que ficam
    invisíveis sobre fundo branco.
    =================================================== */
+
+/* Correções específicas para Retomada Linha 05 */
+body.light-mode #rl05-header {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05) !important;
+}
+body.light-mode #rl05-content {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+}
+body.light-mode .rl05-kpi-card {
+  background: var(--surface) !important;
+  border: 1px solid var(--border) !important;
+}
+body.light-mode .rl05-group-body {
+  background: var(--surface) !important;
+}
+body.light-mode .rl05-table-row {
+  border-bottom-color: var(--border) !important;
+}
 
 /* Títulos e textos da sidebar com cores hardcoded */
 body.light-mode aside.sidebar h1,
@@ -2410,4 +2437,402 @@ select#selectKpiLinha option {
 }
 @keyframes spin { 
   100% { transform: rotate(360deg); } 
+}
+
+
+/* --- HYPER BENTO / AURORA GLASS UI --- */
+
+.glass-panel {
+  background: linear-gradient(135deg, rgba(22, 32, 52, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+.glass-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.03), transparent);
+  transform: skewX(-25deg);
+  animation: shine 8s infinite;
+}
+@keyframes shine {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+
+.animated-gradient-text {
+  background: linear-gradient(to right, #3b82f6, #8b5cf6, #3b82f6);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textShine 4s linear infinite;
+}
+@keyframes textShine {
+  to { background-position: 200% center; }
+}
+
+.badge-glow {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.badge-blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+}
+.badge-purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+}
+.badge-green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #ef4444);
+  width: 0%;
+  transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+
+
+/* --- HYPER BENTO / AURORA GLASS UI --- */
+
+.glass-panel {
+  background: linear-gradient(135deg, rgba(22, 32, 52, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  overflow: hidden;
+  position: relative;
+}
+.glass-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.glass-panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%; width: 50%; height: 100%;
+  background: linear-gradient(to right, transparent, rgba(255,255,255,0.03), transparent);
+  transform: skewX(-25deg);
+  animation: shine 8s infinite;
+}
+@keyframes shine {
+  0% { left: -100%; }
+  20% { left: 200%; }
+  100% { left: 200%; }
+}
+
+.animated-gradient-text {
+  background: linear-gradient(to right, #3b82f6, #8b5cf6, #3b82f6);
+  background-size: 200% auto;
+  color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: textShine 4s linear infinite;
+}
+@keyframes textShine {
+  to { background-position: 200% center; }
+}
+
+.badge-glow {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.85rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.badge-blue {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+}
+.badge-purple {
+  background: rgba(139, 92, 246, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.2);
+}
+.badge-green {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b82f6, #ef4444);
+  width: 0%;
+  transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+}
+
+.table-premium {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+}
+.table-premium th {
+  padding: 0.5rem 1.25rem;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border: none;
+}
+.table-premium td {
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.table-premium tr td:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 12px 0 0 12px;
+}
+.table-premium tr td:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 0 12px 12px 0;
+}
+.table-premium tr:hover td {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ==========================================================================
+   APEX-FINANCE DESIGN SYSTEM (Stripe / Bloomberg / Apple)
+   ========================================================================== */
+
+.apex-grid-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .apex-grid-hero {
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+.apex-grid-tactical {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.apex-card {
+  background: #0a0a0c;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.apex-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.apex-card-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #8b8d98;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.apex-card-value {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.apex-card-value.hero-value {
+  font-size: 4rem;
+  font-weight: 800;
+  letter-spacing: -2px;
+  background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.apex-trend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.apex-trend-positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.apex-trend-negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.apex-trend-neutral {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.apex-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 1rem 0;
+  width: 100%;
+}
+
+.apex-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.apex-row-label {
+  color: #8b8d98;
+  font-weight: 500;
+}
+
+.apex-row-value {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.apex-sparkline-container {
+  height: 60px;
+  width: 100%;
+  margin-top: auto;
+  position: relative;
+  pointer-events: none;
+}
+
+.apex-progress-ring-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.apex-progress-ring {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.apex-progress-ring circle {
+  fill: transparent;
+  stroke-width: 6;
+}
+
+.apex-progress-ring-bg {
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+.apex-progress-ring-fill {
+  stroke: url(#apex-gradient);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apex-progress-ring-text {
+  position: absolute;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+}
+
+.apex-progress-ring-label {
+  position: absolute;
+  top: 65%;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: #8b8d98;
+  letter-spacing: 1px;
 }

@@ -1,4 +1,4 @@
-import { getClient } from './db.js';
+import { getClient } from './db.js?v=13';
 import { toast } from './ui.js';
 
 export function initImportPlanoMestre() {

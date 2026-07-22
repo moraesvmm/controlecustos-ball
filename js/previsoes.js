@@ -1,5 +1,5 @@
 // js/previsoes.js
-import { getClient } from './db.js';
+import { getClient } from './db.js?v=13';
 import { showAITooltip } from './ai_tooltip.js';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
