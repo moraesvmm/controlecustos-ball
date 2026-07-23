@@ -5224,8 +5224,11 @@ async function checkPrazosAlerts() {
 
     listaEl.innerHTML = unread.map(u => {
       const badgeColor = u.faixa_prazo === 'Em dias' ? '#10b981' : (u.faixa_prazo === 'Pendente de retorno' ? '#f59e0b' : '#ef4444');
+      const isAtrasado = u.faixa_prazo === 'Atrasado para retorno';
+      const borderColor = isAtrasado ? 'border-left: 4px solid #ef4444; border-top: 1px solid rgba(255,255,255,0.05); border-right: 1px solid rgba(255,255,255,0.05); border-bottom: 1px solid rgba(255,255,255,0.05);' : 'border: 1px solid rgba(255,255,255,0.05);';
+      
       return `
-        <li style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.25rem;">
+        <li style="background: rgba(10, 15, 25, 0.6); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); ${borderColor} padding: 0.75rem; border-radius: 8px; display: flex; flex-direction: column; gap: 0.25rem;">
           <div style="display: flex; justify-content: space-between; align-items: center;">
             <strong style="color: var(--primary);">${u.rc || 'Sem RC'}</strong>
             <span style="font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; background: ${badgeColor}; color: #fff;">
