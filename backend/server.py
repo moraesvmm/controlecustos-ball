@@ -286,6 +286,249 @@ def get_custo_geral_mensal(ano: int = 2026):
     except Exception as e:
         return []
 
+# ==============================================================================
+# NOVO MÓDULO: MOVIMENTAÇÕES (Inteligência Financeira)
+# ==============================================================================
+
+@app.post("/api/movimentacoes/import")
+async def import_movimentacoes_post(file: UploadFile = File(...)):
+    if not OPENPYXL_OK:
+        raise HTTPException(status_code=400, detail="Pandas/Openpyxl não estão instalados no servidor.")
+    
+    import pandas as pd
+    from io import BytesIO
+    content = await file.read()
+    
+    try:
+        # Puxa o mês e ano do nome do arquivo ou da aba (aqui assumiremos 2026 e mes fixo para o teste se não houver)
+        # Tenta achar o mês a partir da aba DADOS, que tem o "CUSTO MÊS". Mas para garantir, podemos
+        # pedir pro usuário passar o mês/ano no form. Como estamos fazendo um upload direto,
+        # vamos tentar inferir ou usar o cache atual (ano 2026).
+        # A forma mais segura é extrair o valor da data da própria transação.
+        
+        # 1. Parse DASHBOARD para pegar o summary EXATAMENTE igual ao visualizado
+        df_dash = pd.read_excel(BytesIO(content), sheet_name='DASHBOARD', engine='openpyxl')
+        
+        conn = get_db()
+        conn.execute("PRAGMA foreign_keys = OFF;")
+        
+        # 2. Parse Transações
+        df_mov = pd.read_excel(BytesIO(content), sheet_name='Custo Geral - Movimentação', engine='openpyxl')
+        
+        # --- LEITURA ROBUSTA DE TRANSAÇÕES ---
+        # Tenta achar o cabeçalho iterando pelas linhas
+        header_row_idx = []
+        for i, row in df_mov.head(100).iterrows():
+            row_str = ' '.join(row.dropna().astype(str).str.strip().str.lower())
+            if 'it-codigo' in row_str and 'dt-trans' in row_str:
+                header_row_idx = [i]
+                break
+
+        if len(header_row_idx) > 0:
+            df_mov.columns = df_mov.iloc[header_row_idx[0]]
+            df_mov = df_mov.iloc[header_row_idx[0]+1:].reset_index(drop=True)
+            
+        # Converte todas as colunas para minúsculo e sem espaços sobrando
+        df_mov.columns = df_mov.columns.astype(str).str.strip().str.lower()
+        
+        # DEBUG: Salvar as colunas encontradas para auditoria
+        with open("import_debug.log", "w", encoding="utf-8") as f:
+            f.write(f"Header encontrado na linha: {header_row_idx}\n")
+            f.write(f"Colunas: {df_mov.columns.tolist()}\n")
+            f.write(f"Total de linhas no df_mov: {len(df_mov)}\n")
+        
+        # ... month parsing logic ...
+        mes_ref = 1
+        ano_ref = 2026
+        
+        meses_str = {
+            'JANEIRO': 1, 'FEVEREIRO': 2, 'MARÇO': 3, 'MARCO': 3, 'ABRIL': 4,
+            'MAIO': 5, 'JUNHO': 6, 'JULHO': 7, 'AGOSTO': 8, 'SETEMBRO': 9,
+            'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
+        }
+        
+        found_date = False
+        for _, row in df_dash.iterrows():
+            row_str = ' '.join([str(x).upper() for x in row if pd.notnull(x)])
+            if 'REPORT DE CUSTOS' in row_str:
+                for m_name, m_num in meses_str.items():
+                    if m_name in row_str:
+                        mes_ref = m_num
+                        import re
+                        ano_match = re.search(r'(202\d)', row_str)
+                        if ano_match:
+                            ano_ref = int(ano_match.group(1))
+                        found_date = True
+                        break
+            if found_date: break
+            
+        if not found_date and 'dt-trans' in df_mov.columns:
+            valid_dates = df_mov['dt-trans'].dropna()
+            if len(valid_dates) > 0:
+                first_date = pd.to_datetime(valid_dates.iloc[0], errors='coerce')
+                if pd.notnull(first_date):
+                    mes_ref = first_date.month
+                    ano_ref = first_date.year
+
+        conn.execute("DELETE FROM movimentacoes_summary WHERE mes=? AND ano=?", (mes_ref, ano_ref))
+        
+        current_area = None
+        for _, row in df_dash.iterrows():
+            row_str = ' '.join([str(x).lower() for x in row if pd.notnull(x)])
+            for cell in row:
+                if pd.notnull(cell) and isinstance(cell, str):
+                    c = cell.strip().lower()
+                    if c in ['manutenção', 'manutencao']: current_area = 'MANUTENÇÃO'
+                    elif c == 'ferramentaria': current_area = 'FERRAMENTARIA'
+                    elif c == 'facilities': current_area = 'FACILITIES'
+            classificacao = None
+            if 'serviço' in row_str or 'servico' in row_str: classificacao = 'Serviço'
+            elif 'consumo' in row_str: classificacao = 'Consumo'
+            if current_area and classificacao:
+                nums = [x for x in row if pd.notnull(x) and isinstance(x, (int, float))]
+                budget = 0.0
+                custo = 0.0
+                if classificacao == 'Serviço' and len(nums) >= 2:
+                    budget = float(nums[0])
+                    custo = float(nums[1])
+                elif classificacao == 'Consumo' and len(nums) >= 1:
+                    custo = float(nums[0])
+                conn.execute("""
+                    INSERT INTO movimentacoes_summary 
+                    (mes, ano, area_id, classificacao, budget_total, meta_mensal, consumo_realizado, delta_saldo)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (mes_ref, ano_ref, current_area, classificacao, budget, budget, custo, 0.0))
+
+        conn.execute("DELETE FROM movimentacoes_transaction WHERE substr(data_transacao, 1, 7) = ?", (f"{ano_ref}-{mes_ref:02d}",))
+        
+        inserted_count = 0
+        skipped_count = 0
+        
+        for _, row in df_mov.iterrows():
+            it_codigo = row.get('it-codigo')
+            if pd.isna(it_codigo) or str(it_codigo).strip() == '': 
+                skipped_count += 1
+                continue
+            
+            dt_trans = pd.to_datetime(row.get('dt-trans'), errors='coerce')
+            dt_str = dt_trans.strftime('%Y-%m-%d') if pd.notnull(dt_trans) else None
+            if not dt_str: 
+                skipped_count += 1
+                continue
+            
+            # Buscar valores com chaves minúsculas (pois forçamos as colunas pra minúsculas)
+            def safe_get(keys, default=0):
+                for k in keys:
+                    if k in df_mov.columns:
+                        return row.get(k)
+                return default
+            
+            val_raw = safe_get(['custo do mês', 'custo do mes', 'custo mês', 'custo mes', 'valor', 'custo'], 0)
+            try:
+                val = float(val_raw)
+            except:
+                val = 0.0
+            
+            area_id = str(safe_get(['área', 'area', 'departamento'], '')).upper()
+            classificacao = str(safe_get(['class.diver', 'class. diver', 'classificação'], ''))
+            descricao = str(safe_get(['descriação codigo', 'descrição codigo', 'descrição código', 'descrição'], ''))
+            
+            conn.execute("""
+                INSERT OR IGNORE INTO movimentacoes_transaction 
+                (data_transacao, codigo_item, descricao, valor_total, tipo, documento, numero_ordem, area_id, category_id, cost_center_id, collaborator_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                dt_str,
+                str(it_codigo),
+                descricao,
+                val,
+                str(safe_get(['ent/sai', 'tipo'], '')),
+                str(safe_get(['nro-docto', 'documento'], '')),
+                str(safe_get(['numero-ordem', 'ordem'], '')),
+                area_id,
+                classificacao,
+                str(safe_get(['cc', 'centro de custo', 'centro de custos'], '')),
+                str(safe_get(['nome', 'colaborador', 'solicitante'], ''))
+            ))
+            inserted_count += 1
+            
+        with open("import_debug.log", "a", encoding="utf-8") as f:
+            f.write(f"Linhas inseridas: {inserted_count}\n")
+            f.write(f"Linhas ignoradas: {skipped_count}\n")
+
+        conn.commit()
+        return {"status": "success", "mes": mes_ref, "ano": ano_ref, "message": "Importação concluída com sucesso."}
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
+@app.get("/api/movimentacoes/dashboard")
+def get_mov_dashboard():
+    conn = get_db()
+    try:
+        # Retorna o histórico de summary agrupado por mes/ano para a evolução
+        rows = conn.execute("SELECT * FROM movimentacoes_summary ORDER BY ano ASC, mes ASC").fetchall()
+        
+        # Agrupar por mes
+        timeline = {}
+        for r in rows:
+            chave = f"{r['ano']}-{r['mes']:02d}"
+            if chave not in timeline:
+                timeline[chave] = {
+                    "ano": r["ano"], "mes": r["mes"], "budget": 0, "consumo": 0,
+                    "manutencao": 0, "ferramentaria": 0, "facilities": 0
+                }
+            
+            timeline[chave]["budget"] += r["meta_mensal"] or 0
+            consumo = r["consumo_realizado"] or 0
+            timeline[chave]["consumo"] += consumo
+            
+            area = str(r["area_id"]).upper()
+            if "MANUTEN" in area: timeline[chave]["manutencao"] += consumo
+            elif "FERRAMEN" in area: timeline[chave]["ferramentaria"] += consumo
+            elif "FACILIT" in area: timeline[chave]["facilities"] += consumo
+
+        return {"timeline": list(timeline.values()), "raw_summary": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+@app.get("/api/movimentacoes/grid")
+def get_mov_grid(mes: int = None, ano: int = None, limite: int = 500, offset: int = 0):
+    conn = get_db()
+    try:
+        query = "SELECT * FROM movimentacoes_transaction WHERE 1=1"
+        params = []
+        if ano:
+            query += " AND substr(data_transacao, 1, 4) = ?"
+            params.append(str(ano))
+        if mes:
+            query += " AND substr(data_transacao, 6, 2) = ?"
+            params.append(f"{mes:02d}")
+            
+        query += " ORDER BY data_transacao DESC LIMIT ? OFFSET ?"
+        params.extend([limite, offset])
+        
+        rows = conn.execute(query, params).fetchall()
+        
+        # Contagem total para paginacao
+        total_q = "SELECT COUNT(*) FROM movimentacoes_transaction WHERE 1=1"
+        total_p = []
+        if ano:
+            total_q += " AND substr(data_transacao, 1, 4) = ?"
+            total_p.append(str(ano))
+        if mes:
+            total_q += " AND substr(data_transacao, 6, 2) = ?"
+            total_p.append(f"{mes:02d}")
+        total = conn.execute(total_q, total_p).fetchone()[0]
+        
+        return {"data": [dict(r) for r in rows], "total": total}
+    finally:
+        conn.close()
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -481,6 +724,40 @@ def init_db():
             status      TEXT DEFAULT NULL,
             created_at  TEXT,
             updated_at  TEXT
+        )
+    ''')
+
+    # Novas tabelas para o Módulo de Movimentações (Custo Geral)
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS movimentacoes_summary (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            mes INTEGER,
+            ano INTEGER,
+            area_id TEXT,
+            classificacao TEXT,
+            budget_total REAL,
+            meta_mensal REAL,
+            consumo_realizado REAL,
+            delta_saldo REAL,
+            UNIQUE(mes, ano, area_id, classificacao)
+        )
+    ''')
+
+    conn.execute('''
+        CREATE TABLE IF NOT EXISTS movimentacoes_transaction (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data_transacao TEXT,
+            codigo_item TEXT,
+            descricao TEXT,
+            valor_total REAL,
+            tipo TEXT,
+            documento TEXT,
+            numero_ordem TEXT,
+            area_id TEXT,
+            category_id TEXT,
+            cost_center_id TEXT,
+            collaborator_id TEXT,
+            UNIQUE(data_transacao, codigo_item, documento, numero_ordem, valor_total)
         )
     ''')
 
@@ -1335,4 +1612,4 @@ app.mount("/", StaticFiles(directory=ROOT_DIR, html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8080)
+    uvicorn.run(app, host="127.0.0.1", port=8081)
