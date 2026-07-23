@@ -3441,6 +3441,41 @@ body.light-mode .insight-strip {
   border-color: rgba(184,134,11,0.15);
 }
 
+.alerta-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: 4px solid #ef4444;
+  border-radius: 8px;
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.alerta-item:hover {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-left: 4px solid #f87171;
+  transform: translateX(4px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.alerta-item:last-child {
+  margin-bottom: 0;
+}
+
+.alerta-item small { 
+  display: block; 
+  color: var(--muted); 
+  font-size: 0.72rem; 
+  margin-top: 0.3rem; 
+}
 
 #btnExportDashboardPdf {
   background: rgba(0, 0, 0, 0.4);
