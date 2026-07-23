@@ -84,7 +84,7 @@ export function themeColors() {
     legendColor:  isLight ? '#475569' : '#cbd5e1',
     titleColor:   isLight ? '#0f172a' : (isNavy ? '#eff6ff' : (isPurple ? '#faf5ff' : '#f8fafc')),
     tickColor:    isLight ? '#94a3b8' : (isNavy ? '#93c5fd' : (isPurple ? '#d8b4fe' : '#94a3b8')),
-    gridColor:    isLight ? 'rgba(15,23,42,0.06)' : (isNavy ? 'rgba(59,130,246,0.1)' : (isPurple ? 'rgba(168,85,247,0.1)' : 'rgba(148,163,184,0.08)')),
+    gridColor:    isLight ? 'rgba(15,23,42,0.03)' : (isNavy ? 'rgba(59,130,246,0.03)' : (isPurple ? 'rgba(168,85,247,0.03)' : 'rgba(255,255,255,0.02)')),
     tooltipBg:    isLight ? 'rgba(255,255,255,0.98)' : (isNavy ? 'rgba(15,23,42,0.95)' : (isPurple ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.95)')),
     tooltipTitle: isLight ? '#0f172a' : (isNavy ? '#93c5fd' : (isPurple ? '#d8b4fe' : '#f1f5f9')),
     tooltipText:  isLight ? '#475569' : '#cbd5e1',
@@ -398,7 +398,7 @@ export function renderDashboardCharts(registros) {
       },
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          backgroundColor: 'rgba(9, 14, 23, 0.45)',
           borderColor: 'rgba(255,255,255,0.08)',
           borderWidth: 1,
           borderRadius: 10,
@@ -457,7 +457,7 @@ export function renderDashboardCharts(registros) {
       },
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          backgroundColor: 'rgba(9, 14, 23, 0.45)',
           borderColor: 'rgba(255,255,255,0.08)',
           borderWidth: 1,
           borderRadius: 10,
@@ -517,7 +517,7 @@ export function renderDashboardCharts(registros) {
       ],
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          backgroundColor: 'rgba(9, 14, 23, 0.45)',
           borderColor: 'rgba(255,255,255,0.08)',
           borderWidth: 1,
           borderRadius: 10,
@@ -571,7 +571,7 @@ export function renderDashboardCharts(registros) {
       },
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          backgroundColor: 'rgba(9, 14, 23, 0.45)',
           borderColor: 'rgba(255,255,255,0.08)',
           borderWidth: 1,
           borderRadius: 10,

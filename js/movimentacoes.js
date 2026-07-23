@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const formData = new FormData();
                 formData.append('file', file);
                 
-                const url = (window.ENV && window.ENV.API_BASE_URL) ? `${window.ENV.API_BASE_URL}/api/movimentacoes/import` : 'http://127.0.0.1:8080/api/movimentacoes/import';
+                const url = (window.__ENV && window.__ENV.SUPABASE_URL) ? `${window.__ENV.SUPABASE_URL}/api/movimentacoes/import` : 'http://localhost:8080/api/movimentacoes/import';
 
                 const response = await fetch(url, {
                     method: 'POST',
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(dashboardView.style.display === 'none') return;
         
         try {
-            const url = (window.ENV && window.ENV.API_BASE_URL) ? `${window.ENV.API_BASE_URL}/api/movimentacoes/dashboard` : 'http://127.0.0.1:8080/api/movimentacoes/dashboard';
+            const url = (window.__ENV && window.__ENV.SUPABASE_URL) ? `${window.__ENV.SUPABASE_URL}/api/movimentacoes/dashboard` : 'http://localhost:8080/api/movimentacoes/dashboard';
             const res = await fetch(url);
             if (!res.ok) throw new Error('Erro ao buscar dados do dashboard.');
             const data = await res.json();
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const qMes = movFiltroMes.value;
         const qArea = movFiltroArea.value;
 
-        let urlStr = (window.ENV && window.ENV.API_BASE_URL) ? `${window.ENV.API_BASE_URL}/api/movimentacoes/grid?limite=${limit}&offset=${offset}` : `http://127.0.0.1:8080/api/movimentacoes/grid?limite=${limit}&offset=${offset}`;
+        let urlStr = (window.__ENV && window.__ENV.SUPABASE_URL) ? `${window.__ENV.SUPABASE_URL}/api/movimentacoes/grid?limite=${limit}&offset=${offset}` : `http://localhost:8080/api/movimentacoes/grid?limite=${limit}&offset=${offset}`;
         if(qAno) urlStr += `&ano=${qAno}`;
         if(qMes) urlStr += `&mes=${qMes}`;
 

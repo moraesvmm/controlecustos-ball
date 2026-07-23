@@ -599,21 +599,31 @@ body.light-mode .panel-accent-top {
 
 .filters select,
 .filters input {
-  background: rgba(0,0,0,0.2);
-  border: 1px solid var(--border);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-strong);
   color: var(--text);
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius-sm);
+  padding: 0.5rem 20px 0.5rem 0;
+  border-radius: 0;
   min-width: 130px;
   font-family: inherit;
   font-size: 0.86rem;
   transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
 }
+
+.filters select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url('data:image/svg+xml;utf8,<svg fill="%238b9ab5" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/></svg>');
+  background-repeat: no-repeat;
+  background-position: right 0px center;
+}
+
 .filters select:focus,
 .filters input:focus {
-  border-color: rgba(var(--gold-rgb), 0.4);
-  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.06);
+  border-bottom-color: var(--accent);
+  box-shadow: none;
 }
 
 .search-field input { min-width: 100%; }
@@ -798,14 +808,25 @@ select option {
   display: block;
   width: 100%;
   text-align: left;
-  background: rgba(248, 113, 113, 0.08);
-  border: 1px solid rgba(248, 113, 113, 0.2);
-  border-radius: 8px;
-  padding: 0.6rem 0.75rem;
-  margin-bottom: 0.5rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0;
+  padding: 0.75rem 0.2rem;
+  margin-bottom: 0;
   color: var(--text);
   cursor: pointer;
   font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.alerta-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+  padding-left: 0.5rem;
+}
+
+.alerta-item:last-child {
+  border-bottom: none;
 }
 
 .alerta-item small { display: block; color: var(--muted); font-size: 0.72rem; margin-top: 0.2rem; }
@@ -3238,6 +3259,32 @@ select#selectKpiLinha option {
   pointer-events: none;
 }
 
+.status-chip {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.status-chip:hover,
+.status-chip.active {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.1);
+}
+
+.status-chip em {
+  font-style: normal;
+  color: inherit;
+  opacity: 0.7;
+  margin-left: 0.25rem;
+}
+
 .view-content {
   flex: 1;
   overflow-y: auto;
@@ -3394,3 +3441,20 @@ body.light-mode .insight-strip {
   border-color: rgba(184,134,11,0.15);
 }
 
+
+#btnExportDashboardPdf {
+  background: rgba(0, 0, 0, 0.4);
+  border: none !important;
+  color: var(--gold) !important;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.15), inset 0 1px 0 rgba(255,255,255,0.05) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: all 0.3s ease;
+}
+
+#btnExportDashboardPdf:hover {
+  background: rgba(0, 0, 0, 0.6);
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.25), inset 0 1px 0 rgba(255,255,255,0.1) !important;
+  color: #fff !important;
+  transform: translateY(-1px);
+}
