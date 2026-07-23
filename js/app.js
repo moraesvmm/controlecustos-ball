@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA, GITHUB_PAT, GITHUB_REPO_OWNER, GITHUB_REPO_NAME, GITHUB_WORKFLOW_ID } from './config.js';
+import { SUPABASE_URL, SUPABASE_ANON_KEY, USE_LOCAL_DATA, GITHUB_PAT, GITHUB_REPO_OWNER, GITHUB_REPO_NAME, GITHUB_WORKFLOW_ID } from './config.js?v=4';
 import {
   aplicarFiltros,
   opcoesUnicas,
@@ -20,7 +20,7 @@ import {
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync } from './db.js';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync } from './db.js?v=14';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js';
 import {
   COLUNAS_TABELA,
@@ -126,6 +126,87 @@ function renderKPIs() {
   $('#kpiRecebido').classList.remove('skeleton');
   $('#kpiAtrasados').textContent = atrasados.length;
   $('#kpiAtrasados').classList.remove('skeleton');
+
+  let diff = 0;
+  if (k.totalPrevisto > 0) {
+    diff = ((k.totalRecebido / k.totalPrevisto) - 1) * 100;
+  }
+  const diffEl = $('#kpiPrevRecDiff');
+  if (diffEl) {
+    diffEl.textContent = (diff > 0 ? '+' : '') + diff.toFixed(1) + '%';
+    diffEl.classList.remove('positive', 'negative');
+    diffEl.classList.add(diff >= 0 ? 'positive' : 'negative');
+  }
+
+  const badgeEl = $('#kpiPrevRecBadge');
+  if (badgeEl) {
+      if (diff > 5) {
+          badgeEl.textContent = 'OVER BUDGET';
+          badgeEl.style.color = '#ef4444';
+          badgeEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+          badgeEl.style.background = 'rgba(239, 68, 68, 0.1)';
+      } else if (diff < -5) {
+          badgeEl.textContent = 'UNDER BUDGET';
+          badgeEl.style.color = '#10b981';
+          badgeEl.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+          badgeEl.style.background = 'rgba(16, 185, 129, 0.1)';
+      } else {
+          badgeEl.textContent = 'ON TRACK';
+          badgeEl.style.color = '#f59e0b';
+          badgeEl.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+          badgeEl.style.background = 'rgba(245, 158, 11, 0.1)';
+      }
+  }
+
+  const healthScore = k.totalPrevisto > 0 ? Math.min(Math.round((k.totalRecebido / k.totalPrevisto) * 100), 100) : 100;
+  const healthScoreEl = $('#healthScoreValue');
+  if (healthScoreEl) {
+    healthScoreEl.textContent = `${healthScore}/100`;
+  }
+  
+  const healthBadgeEl = $('#healthScoreBadge');
+  if (healthBadgeEl) {
+      if (healthScore >= 80) {
+          healthBadgeEl.textContent = 'LOW RISK';
+          healthBadgeEl.style.color = '#10b981';
+          healthBadgeEl.style.borderColor = 'rgba(16, 185, 129, 0.3)';
+      } else if (healthScore >= 50) {
+          healthBadgeEl.textContent = 'MEDIUM RISK';
+          healthBadgeEl.style.color = '#f59e0b';
+          healthBadgeEl.style.borderColor = 'rgba(245, 158, 11, 0.3)';
+      } else {
+          healthBadgeEl.textContent = 'HIGH RISK';
+          healthBadgeEl.style.color = '#ef4444';
+          healthBadgeEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+      }
+  }
+  
+  const insightsList = $('#executiveInsightsList');
+  if (insightsList) {
+      let insights = [];
+      if (k.totalPrevisto > 0) {
+          insights.push(`<li><span style="color: var(--muted);">›</span> Execução do Previsto está em <strong style="color: var(--text);">${(k.totalRecebido/k.totalPrevisto * 100).toFixed(1)}%</strong> da meta.</li>`);
+      }
+      if (atrasados.length > 0) {
+          insights.push(`<li><span style="color: var(--muted);">›</span> <strong style="color: var(--danger);">${atrasados.length}</strong> entregas atrasadas estão afetando a confiabilidade.</li>`);
+      } else {
+          insights.push(`<li><span style="color: var(--muted);">›</span> Nenhuma entrega em atraso identificada.</li>`);
+      }
+      const pendencias = k.porStatus['PENDENTE DE PEDIDO'] || 0;
+      if (pendencias > 0) {
+          insights.push(`<li><span style="color: var(--muted);">›</span> <strong style="color: var(--warning);">${pendencias}</strong> ordens bloqueadas na etapa de pedido.</li>`);
+      }
+      
+      insightsList.innerHTML = insights.slice(0, 3).join('') || '<li><span style="color: var(--muted);">›</span> Operação fluindo dentro da normalidade.</li>';
+  }
+
+  if (window.renderHeroEcharts) {
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.renderHeroEcharts(k.totalPrevisto, k.totalRecebido, healthScore);
+      }, 50);
+    });
+  }
 
   const chips = Object.entries(k.porStatus)
     .map(([s, n]) => `<button type="button" class="status-chip" data-status="${s}">${s} <em>${n}</em></button>`)
@@ -985,7 +1066,8 @@ function showView(name) {
   const crud = ['rc', 'consertos', 'compras', 'fabricacao'].includes(name);
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
-                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'plano-mestre', 'indicadores'].includes(name);
+                     'planos-manutencao-frontend', 'plano-preventiva-frontend', 'plano-mestre', 'indicadores',
+                     'movimentacoes-dashboard', 'movimentacoes-grid'].includes(name);
 
   const isTask = ['gestao-tarefas', 'minhas-tarefas'].includes(name);
 
@@ -1037,8 +1119,8 @@ function showView(name) {
     'por-maquina': 'Máquinas & Templates',
     'plano-preventiva': 'Gerador de Planos — Back-end',
     'plano-preventiva-frontend': 'Gerador de Planos — Front-end',
-    'custo-geral': 'Custo Geral',
-    'custo-previsoes': 'Previsões Preditivas',
+    'movimentacoes-dashboard': 'Custo Geral',
+    'movimentacoes-grid': 'Movimentações',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
@@ -2360,6 +2442,12 @@ showView = function(name) {
   }
 };
 window.showView = showView;
+
+window.addEventListener('themeChanged', () => {
+  if (viewAtual === 'dashboard' || viewAtual === 'consertos' || viewAtual === 'compras' || viewAtual === 'fabricacao') {
+    refresh();
+  }
+});
 
 // ==========================================
 // DRILL-DOWN: Planos de Manutenção

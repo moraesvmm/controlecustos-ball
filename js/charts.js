@@ -7,6 +7,13 @@ import {
 import { abrirDrilldown, registrosPorClique } from './drilldown.js?v=999';
 import { fmtMoeda } from './ui.js?v=999';
 
+export function getThemeMode() {
+  if (document.body.classList.contains('navy-mode')) return 'navy';
+  if (document.body.classList.contains('purple-mode')) return 'purple';
+  if (document.body.classList.contains('light-mode')) return 'light';
+  return 'dark';
+}
+
 const COLORS = {
   ENTREGUE: ['rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'],
   'PENDENTE DE ENTREGA': ['rgba(251, 191, 36, 0.9)', 'rgba(245, 158, 11, 0.35)'],
@@ -20,20 +27,71 @@ let chartInstances = [];
 let registrosRef = [];
 let crudMesChartInstance = null;
 
+export function getThemePalette() {
+  const mode = getThemeMode();
+  if (mode === 'navy') {
+    return {
+      primary: ['rgba(37, 99, 235, 0.95)', 'rgba(30, 64, 175, 0.45)'],     // Blue 600
+      secondary: ['rgba(59, 130, 246, 0.95)', 'rgba(37, 99, 235, 0.45)'],  // Blue 500 (Brighter Blue)
+      tertiary: ['rgba(30, 58, 138, 0.95)', 'rgba(23, 37, 84, 0.45)'],     // Blue 900 (Deep Navy)
+      accent: ['rgba(14, 165, 233, 0.95)', 'rgba(2, 132, 199, 0.45)']       // Light Blue
+    };
+  }
+  if (mode === 'purple') {
+    return {
+      primary: ['rgba(124, 58, 237, 0.95)', 'rgba(109, 40, 217, 0.45)'],    // Violet
+      secondary: ['rgba(236, 72, 153, 0.95)', 'rgba(219, 39, 119, 0.45)'],  // Pink
+      tertiary: ['rgba(168, 85, 247, 0.95)', 'rgba(147, 51, 234, 0.45)'],   // Purple
+      accent: ['rgba(99, 102, 241, 0.95)', 'rgba(79, 70, 229, 0.45)']       // Indigo
+    };
+  }
+  // Default legacy palette for dark/light (Golden/Green/Blue)
+  return {
+    primary: ['rgba(212, 175, 55, 0.95)', 'rgba(180, 140, 40, 0.45)'], // Gold
+    secondary: ['rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'], // Green
+    tertiary: ['rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.35)'],  // Blue
+    accent: ['rgba(251, 191, 36, 0.9)', 'rgba(245, 158, 11, 0.35)']     // Yellow
+  };
+}
+
+export function getColorsByStatus(status) {
+  const mode = getThemeMode();
+  const base = {
+    ENTREGUE: ['rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'],
+    'PENDENTE DE ENTREGA': ['rgba(251, 191, 36, 0.9)', 'rgba(245, 158, 11, 0.35)'],
+    'PENDENTE DE PEDIDO': ['rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.35)'],
+    'PENDENTE DE ORCAMENTO': ['rgba(192, 132, 252, 0.9)', 'rgba(168, 85, 247, 0.35)'],
+    PENDENTE: ['rgba(148, 163, 184, 0.9)', 'rgba(100, 116, 139, 0.35)'],
+  };
+
+  if (mode === 'dark' || mode === 'light') return base[status] || base.PENDENTE;
+
+  const palette = getThemePalette();
+  if (status === 'ENTREGUE') return palette.primary;
+  if (status === 'PENDENTE DE ENTREGA') return palette.tertiary;
+  if (status === 'PENDENTE DE PEDIDO') return palette.secondary;
+  if (status === 'PENDENTE DE ORCAMENTO') return palette.accent;
+  return ['rgba(148, 163, 184, 0.9)', 'rgba(100, 116, 139, 0.35)'];
+}
+
 export function themeColors() {
-  const isLight = document.body.classList.contains('light-mode');
+  const mode = getThemeMode();
+  const isLight = mode === 'light';
+  const isNavy = mode === 'navy';
+  const isPurple = mode === 'purple';
+  
   return {
     legendColor:  isLight ? '#475569' : '#cbd5e1',
-    titleColor:   isLight ? '#0f172a' : '#f8fafc',
-    tickColor:    isLight ? '#94a3b8' : '#94a3b8',
-    gridColor:    isLight ? 'rgba(15,23,42,0.06)' : 'rgba(148,163,184,0.08)',
-    tooltipBg:    isLight ? 'rgba(255,255,255,0.98)' : 'rgba(15,23,42,0.95)',
-    tooltipTitle: isLight ? '#0f172a' : '#f1f5f9',
+    titleColor:   isLight ? '#0f172a' : (isNavy ? '#eff6ff' : (isPurple ? '#faf5ff' : '#f8fafc')),
+    tickColor:    isLight ? '#94a3b8' : (isNavy ? '#93c5fd' : (isPurple ? '#d8b4fe' : '#94a3b8')),
+    gridColor:    isLight ? 'rgba(15,23,42,0.06)' : (isNavy ? 'rgba(59,130,246,0.1)' : (isPurple ? 'rgba(168,85,247,0.1)' : 'rgba(148,163,184,0.08)')),
+    tooltipBg:    isLight ? 'rgba(255,255,255,0.98)' : (isNavy ? 'rgba(15,23,42,0.95)' : (isPurple ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.95)')),
+    tooltipTitle: isLight ? '#0f172a' : (isNavy ? '#93c5fd' : (isPurple ? '#d8b4fe' : '#f1f5f9')),
     tooltipText:  isLight ? '#475569' : '#cbd5e1',
-    borderColor:  isLight ? 'rgba(15,23,42,0.1)' : 'rgba(255,255,255,0.1)',
-    pointerShadow: isLight ? 'rgba(15,23,42,0.03)' : 'rgba(255,255,255,0.04)',
+    borderColor:  isLight ? 'rgba(15,23,42,0.1)' : (isNavy ? 'rgba(59,130,246,0.2)' : (isPurple ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)')),
+    pointerShadow: isLight ? 'rgba(15,23,42,0.03)' : (isNavy ? 'rgba(59,130,246,0.05)' : (isPurple ? 'rgba(168,85,247,0.05)' : 'rgba(255,255,255,0.04)')),
     pieBorder:    isLight ? '#ffffff' : '#0f172a',
-    shadowColor:  isLight ? 'rgba(15,23,42,0.1)' : 'rgba(0,0,0,0.4)',
+    shadowColor:  isLight ? 'rgba(15,23,42,0.1)' : (isNavy ? 'rgba(30,64,175,0.5)' : (isPurple ? 'rgba(109,40,217,0.5)' : 'rgba(0,0,0,0.4)')),
   };
 }
 
@@ -142,6 +200,99 @@ function makeClickHandler(chartId) {
   };
 }
 
+let heroHealthChartInstance = null;
+let heroSparklineChartInstance = null;
+
+window.renderHeroEcharts = function (previsto, recebido, healthScore) {
+  const tc = themeColors();
+  
+  const healthCtx = document.getElementById('chartHealthScore');
+  if (healthCtx) {
+    if (heroHealthChartInstance && !heroHealthChartInstance.isDisposed()) {
+      heroHealthChartInstance.dispose();
+    }
+    heroHealthChartInstance = echarts.init(healthCtx);
+    const color = healthScore >= 80 ? '#10b981' : healthScore >= 50 ? '#f59e0b' : '#ef4444';
+    
+    heroHealthChartInstance.setOption({
+      series: [
+        {
+          type: 'gauge',
+          startAngle: 180,
+          endAngle: 0,
+          center: ['50%', '70%'],
+          radius: '100%',
+          min: 0,
+          max: 100,
+          splitNumber: 1,
+          itemStyle: {
+            color: color,
+            shadowColor: 'rgba(0,0,0,0.2)',
+            shadowBlur: 5,
+            shadowOffsetX: 1,
+            shadowOffsetY: 1
+          },
+          progress: {
+            show: true,
+            roundCap: true,
+            width: 8
+          },
+          pointer: { show: false },
+          axisLine: {
+            roundCap: true,
+            lineStyle: { width: 8, color: [[1, tc.gridColor]] }
+          },
+          axisTick: { show: false },
+          splitLine: { show: false },
+          axisLabel: { show: false },
+          title: { show: false },
+          detail: { show: false },
+          data: [{ value: healthScore }]
+        }
+      ]
+    });
+    // Adiciona na lista de instâncias para resize automático
+    if (!chartInstances.includes(heroHealthChartInstance)) {
+        chartInstances.push(heroHealthChartInstance);
+    }
+  }
+
+  const sparkCtx = document.getElementById('kpiPrevRecSparkline');
+  if (sparkCtx) {
+    if (heroSparklineChartInstance && !heroSparklineChartInstance.isDisposed()) {
+      heroSparklineChartInstance.dispose();
+    }
+    heroSparklineChartInstance = echarts.init(sparkCtx);
+    heroSparklineChartInstance.setOption({
+      grid: { left: 0, right: 0, top: 0, bottom: 0 },
+      xAxis: { type: 'category', show: false, data: ['Previsto', 'Recebido'] },
+      yAxis: { type: 'value', show: false },
+      tooltip: {
+        trigger: 'axis',
+        backgroundColor: tc.tooltipBg,
+        textStyle: { color: tc.tooltipText, fontSize: 10 },
+        borderColor: tc.borderColor,
+        padding: [4, 8],
+        formatter: (p) => `${p[0].name}: ${fmtMoeda(p[0].value)}`,
+        axisPointer: { type: 'none' }
+      },
+      series: [
+        {
+          data: [
+            { value: previsto, itemStyle: { color: tc.tickColor, borderRadius: [2, 2, 0, 0] } },
+            { value: recebido, itemStyle: { color: '#10b981', borderRadius: [2, 2, 0, 0] } }
+          ],
+          type: 'bar',
+          barWidth: '60%'
+        }
+      ]
+    });
+    if (!chartInstances.includes(heroSparklineChartInstance)) {
+        chartInstances.push(heroSparklineChartInstance);
+    }
+  }
+};
+
 export function destroyCharts() {
   chartInstances.forEach((c) => {
     if (c && !c.isDisposed()) c.dispose();
@@ -192,14 +343,14 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
         type: 'bar',
         data: byMes.map((x) => x.previsto),
 
-        itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [8, 8, 0, 0] }
+        itemStyle: { color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]), borderRadius: [8, 8, 0, 0] }
       },
       {
         name: 'Valor Recebido',
         type: 'bar',
         data: byMes.map((x) => x.recebido),
 
-        itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [8, 8, 0, 0] }
+        itemStyle: { color: gradient(getThemePalette().secondary[0], getThemePalette().secondary[1]), borderRadius: [8, 8, 0, 0] }
       }
     ]
   };
@@ -226,12 +377,15 @@ export function renderDashboardCharts(registros) {
   if (ctx1) {
     const ch1 = echarts.init(ctx1);
     ch1.setOption({
-      title: { text: 'STATUS × CUSTO', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+      title: { text: 'STATUS × CUSTO', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 13, fontWeight: 600 } },
       toolbox: {
+        top: 25,
+        left: 0,
+        itemSize: 12,
         feature: {
           magicType: { type: ['line', 'bar'] },
-          dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
-          saveAsImage: { show: true, title: 'Salvar Imagem' }
+          dataView: { show: true, readOnly: true, title: 'Dados' },
+          saveAsImage: { show: true, title: 'Salvar' }
         },
         iconStyle: { borderColor: tc.tickColor }
       },
@@ -240,15 +394,15 @@ export function renderDashboardCharts(registros) {
           backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
           valueFormatter: (value) => fmtMoeda(value)
       },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'category', data: byStatusFiltered.map(x => x.status), axisLabel: { color: tc.tickColor, ...CHART_FONT, interval: 0, formatter: (v) => v.replace(' DE ', '\nDE ') }, axisTick: { show: false }, axisLine: { show: false } },
+      grid: { left: '3%', right: '4%', bottom: '8%', containLabel: true },
+      xAxis: { type: 'category', data: byStatusFiltered.map(x => x.status), axisLabel: { color: tc.tickColor, ...CHART_FONT, interval: 0, rotate: 45, width: 80, overflow: 'break', formatter: (v) => v.replace(' DE ', '\nDE ') }, axisTick: { show: false }, axisLine: { show: false } },
       yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
       series: [{
         name: 'Soma de VALOR',
         type: 'bar',
 
         data: byStatusFiltered.map((x) => {
-            const colorTuple = COLORS[x.status] || COLORS['PENDENTE'];
+            const colorTuple = getColorsByStatus(x.status);
             return {
                 value: x.valor,
                 itemStyle: { color: gradient(colorTuple[0], colorTuple[1]), borderRadius: [8, 8, 0, 0] }
@@ -275,11 +429,14 @@ export function renderDashboardCharts(registros) {
   if (ctx2) {
     const ch2 = echarts.init(ctx2);
     ch2.setOption({
-      title: { text: 'RECEBIDOS E PREVISTOS', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
+      title: { text: 'RECEBIDOS E PREVISTOS', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 13, fontWeight: 600 } },
       toolbox: {
+        top: 0,
+        right: 0,
+        itemSize: 12,
         feature: {
           magicType: { type: ['line', 'bar'] },
-          dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+          dataView: { show: true, readOnly: true, title: 'Dados' },
           saveAsImage: { show: true, title: 'Salvar' }
         },
         iconStyle: { borderColor: tc.tickColor }
@@ -289,8 +446,8 @@ export function renderDashboardCharts(registros) {
           backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
           valueFormatter: (value) => fmtMoeda(value)
       },
-      legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, top: 25 },
-      grid: { left: '3%', right: '4%', bottom: '3%', containLabel: true },
+      legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, bottom: 0, padding: 0 },
+      grid: { left: '3%', right: '4%', bottom: '12%', top: '15%', containLabel: true },
       xAxis: { type: 'category', data: byMes.map((x) => x.mes), axisLabel: { color: tc.tickColor, ...CHART_FONT }, axisTick: { show: false }, axisLine: { show: false } },
       yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
       series: [
@@ -299,7 +456,7 @@ export function renderDashboardCharts(registros) {
           type: 'bar',
           data: byMes.map((x) => x.previsto),
   
-          itemStyle: { color: gradient('rgba(96, 165, 250, 0.9)', 'rgba(59, 130, 246, 0.4)'), borderRadius: [8, 8, 0, 0] },
+          itemStyle: { color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]), borderRadius: [8, 8, 0, 0] },
           animationDelay: (idx) => idx * 50
         },
         {
@@ -307,7 +464,7 @@ export function renderDashboardCharts(registros) {
           type: 'bar',
           data: byMes.map((x) => x.recebido),
   
-          itemStyle: { color: gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.35)'), borderRadius: [8, 8, 0, 0] },
+          itemStyle: { color: gradient(getThemePalette().secondary[0], getThemePalette().secondary[1]), borderRadius: [8, 8, 0, 0] },
           animationDelay: (idx) => idx * 50 + 20
         }
       ]
@@ -324,8 +481,11 @@ export function renderDashboardCharts(registros) {
     ch3.setOption({
       title: { text: 'GASTOS POR MÁQUINA / LINHA', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
       toolbox: {
+        top: 25,
+        left: 0,
+        itemSize: 12,
         feature: {
-          dataView: { show: true, readOnly: true, title: 'Tabela de Dados', lang: ['Visualização de Dados', 'Fechar', 'Atualizar'], backgroundColor: tc.tooltipBg, textareaColor: tc.tooltipBg, textareaBorderColor: tc.borderColor, textColor: tc.tooltipText, buttonColor: '#38bdf8', buttonTextColor: '#0f172a', optionToContent: formatDataView },
+          dataView: { show: true, readOnly: true, title: 'Dados' },
           saveAsImage: { show: true, title: 'Salvar' }
         },
         iconStyle: { borderColor: tc.tickColor }
@@ -348,7 +508,7 @@ export function renderDashboardCharts(registros) {
         data: byMaquina.map(x => ({ value: x.valor, name: x.maquina_linha })), // Keep full name in data point
         barWidth: '60%',
 
-        itemStyle: { color: gradient('rgba(212, 175, 55, 0.95)', 'rgba(180, 140, 40, 0.45)', true), borderRadius: [0, 8, 8, 0] },
+        itemStyle: { color: gradient(getThemePalette().primary[0], getThemePalette().primary[1], true), borderRadius: [0, 8, 8, 0] },
         animationDelay: (idx) => idx * 30
       }]
     });
@@ -361,9 +521,9 @@ export function renderDashboardCharts(registros) {
 
   // --- Gráficos de Pizza (Prazos de Retorno) ---
   const prazosColors = {
-    'Em dias': gradient('rgba(52, 211, 153, 0.9)', 'rgba(16, 185, 129, 0.4)'),
-    'Pendente de retorno': gradient('rgba(251, 191, 36, 0.9)', 'rgba(245, 158, 11, 0.4)'),
-    'Atrasado para retorno': gradient('rgba(248, 113, 113, 0.9)', 'rgba(239, 68, 68, 0.4)')
+    'Em dias': gradient('rgba(16, 185, 129, 0.9)', 'rgba(5, 150, 105, 0.4)'), // Emerald Green
+    'Pendente de retorno': gradient('rgba(245, 158, 11, 0.9)', 'rgba(217, 119, 6, 0.4)'), // Amber/Yellow
+    'Atrasado para retorno': gradient('rgba(248, 113, 113, 0.9)', 'rgba(239, 68, 68, 0.4)') // Red
   };
 
   function renderPrazoChart(canvasId, title, natureza) {
@@ -525,7 +685,7 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
         type: 'bar',
         data: dados.map(d => d.enviado),
 
-        itemStyle: { color: gradient('rgba(251,191,36,0.9)', 'rgba(245,158,11,0.35)'), borderRadius: [8, 8, 0, 0] },
+        itemStyle: { color: gradient(getThemePalette().accent[0], getThemePalette().accent[1]), borderRadius: [8, 8, 0, 0] },
         animationDelay: (idx) => idx * 50
       },
       {
@@ -533,7 +693,7 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
         type: 'bar',
         data: dados.map(d => d.recebido),
 
-        itemStyle: { color: gradient('rgba(52,211,153,0.9)', 'rgba(16,185,129,0.35)'), borderRadius: [8, 8, 0, 0] },
+        itemStyle: { color: gradient(getThemePalette().secondary[0], getThemePalette().secondary[1]), borderRadius: [8, 8, 0, 0] },
         animationDelay: (idx) => idx * 50 + 20
       }
     ]
