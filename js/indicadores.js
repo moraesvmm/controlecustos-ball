@@ -590,8 +590,15 @@ function renderKpiOfensores(semana) {
   
   chartOfensoresInstance.setOption({
     tooltip: {
-      trigger: 'item',
-      backgroundColor: th.tooltipBg, textStyle: { color: th.tooltipText, fontFamily: 'Inter' }, borderColor: th.borderColor
+        trigger: 'item',
+        backgroundColor: 'rgba(9, 14, 23, 0.95)',
+        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: [12, 16],
+        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+        axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+        extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);'
     },
     toolbox: {
       feature: {
@@ -1591,11 +1598,15 @@ window.abrirDrilldownMaquinas = async function(periodo) {
     inst.setOption({
       backgroundColor: 'transparent',
       tooltip: { 
-        trigger: 'axis', 
-        axisPointer: { type: 'shadow' },
-        backgroundColor: tc.tooltipBg, 
-        borderColor: tc.borderColor,
+        trigger: 'axis',
+        backgroundColor: 'rgba(9, 14, 23, 0.95)',
+        borderColor: 'rgba(255,255,255,0.08)',
         borderWidth: 1,
+        borderRadius: 10,
+        padding: [12, 16],
+        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+        axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+        extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
         padding: [12, 16],
         textStyle: { color: tc.tooltipText, fontSize: 13, fontFamily: 'Inter, sans-serif' },
         formatter: (params) => {

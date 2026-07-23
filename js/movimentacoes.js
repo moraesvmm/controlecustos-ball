@@ -321,10 +321,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if(chartEvolucao) {
             chartEvolucao.setOption({
                 tooltip: {
-                    trigger: 'axis', axisPointer: { type: 'cross', label: { backgroundColor: '#2563eb' } },
-                    backgroundColor: 'rgba(24, 24, 27, 0.95)', borderColor: 'rgba(255,255,255,0.1)',
-                    textStyle: { color: '#fafafa', fontFamily: 'Inter, sans-serif', fontSize: 13 },
-                    padding: [12, 16],
+                trigger: 'axis',
+                backgroundColor: 'rgba(9, 14, 23, 0.95)',
+                borderColor: 'rgba(255,255,255,0.08)',
+                borderWidth: 1,
+                borderRadius: 10,
+                padding: [12, 16],
+                textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+                axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+                extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
                     formatter: function(params) {
                         let html = `<div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 6px; margin-bottom: 8px;">
                                         <strong style="color: #a1a1aa; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em;">Referência: ${params[0].axisValue}</strong>
@@ -432,9 +437,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         chartAreasInstance.setOption({
             tooltip: {
-                trigger: 'item',
-                backgroundColor: 'rgba(24, 24, 27, 0.95)', borderColor: 'rgba(255,255,255,0.1)',
-                textStyle: { color: '#fafafa', fontFamily: 'Inter' },
+            trigger: 'item',
+            backgroundColor: 'rgba(9, 14, 23, 0.95)',
+            borderColor: 'rgba(255,255,255,0.08)',
+            borderWidth: 1,
+            borderRadius: 10,
+            padding: [12, 16],
+            textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+            axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+            extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
                 formatter: p => `<strong style="color:#60a5fa">${p.name}</strong><br/>${formatBRL(p.value)} (${p.percent}%)`
             },
             legend: {

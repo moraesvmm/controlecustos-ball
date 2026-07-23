@@ -330,7 +330,14 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
     title: { text: titulo, textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
     tooltip: { 
         trigger: 'item', 
-        backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
+        backgroundColor: 'rgba(9, 14, 23, 0.95)',
+        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: [12, 16],
+        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+        axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+        extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
         valueFormatter: (value) => fmtMoeda(value)
     },
     legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, top: 25 },
@@ -391,7 +398,14 @@ export function renderDashboardCharts(registros) {
       },
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
+          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          borderColor: 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
+          borderRadius: 10,
+          padding: [12, 16],
+          textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+          axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+          extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
           valueFormatter: (value) => fmtMoeda(value)
       },
       grid: { left: '3%', right: '4%', bottom: '8%', containLabel: true },
@@ -443,7 +457,14 @@ export function renderDashboardCharts(registros) {
       },
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
+          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          borderColor: 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
+          borderRadius: 10,
+          padding: [12, 16],
+          textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+          axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+          extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
           valueFormatter: (value) => fmtMoeda(value)
       },
       legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, bottom: 0, padding: 0 },
@@ -496,7 +517,14 @@ export function renderDashboardCharts(registros) {
       ],
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
+          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          borderColor: 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
+          borderRadius: 10,
+          padding: [12, 16],
+          textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+          axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+          extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
           valueFormatter: (value) => fmtMoeda(value)
       },
       grid: { left: '3%', right: '12%', bottom: '3%', containLabel: true },
@@ -543,9 +571,15 @@ export function renderDashboardCharts(registros) {
       },
       tooltip: { 
           trigger: 'item', 
-          backgroundColor: tc.tooltipBg, borderColor: tc.borderColor,
-          formatter: '{b}: {c} item(ns) ({d}%)',
-          textStyle: { color: tc.tooltipText, fontWeight: 500 }
+          backgroundColor: 'rgba(9, 14, 23, 0.95)',
+          borderColor: 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
+          borderRadius: 10,
+          padding: [12, 16],
+          textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+          axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+          extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
+          formatter: '{b}: {c} item(ns) ({d}%)'
       },
       legend: { bottom: 0, textStyle: { color: tc.legendColor, ...CHART_FONT } },
       series: [{
@@ -672,7 +706,14 @@ export function renderConsertoFluxoChart(canvasId, registros, anoAlvo, mesAlvo =
     ],
     tooltip: { 
         trigger: 'item', 
-        backgroundColor: tc.tooltipBg, textStyle: { color: tc.tooltipText }, borderColor: tc.borderColor,
+        backgroundColor: 'rgba(9, 14, 23, 0.95)',
+        borderColor: 'rgba(255,255,255,0.08)',
+        borderWidth: 1,
+        borderRadius: 10,
+        padding: [12, 16],
+        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+        axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+        extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
         valueFormatter: (value) => fmtMoeda(value)
     },
     legend: { textStyle: { color: tc.legendColor, ...CHART_FONT }, top: 25 },
@@ -886,13 +927,15 @@ export function renderConfiabilidadeCharts(dados, metas, linha = 'TODAS') {
       },
       tooltip: {
         trigger: 'axis',
-        backgroundColor: tc.tooltipBg,
-        borderColor: tc.borderColor,
+        backgroundColor: 'rgba(9, 14, 23, 0.95)',
+        borderColor: 'rgba(255,255,255,0.08)',
         borderWidth: 1,
-        padding: 10,
-        textStyle: { color: tc.tooltipText },
-        formatter: tooltipFormatter,
-        extraCssText: 'backdrop-filter: blur(8px); border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);'
+        borderRadius: 10,
+        padding: [12, 16],
+        textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
+        axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
+        extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
+        formatter: tooltipFormatter
       },
       grid: { left: '12%', right: '8%', top: '22%', bottom: tooManyPoints ? '22%' : '12%', containLabel: false },
       dataZoom: tooManyPoints ? [
