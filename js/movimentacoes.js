@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ultimoMes = timeline[timeline.length - 1];
         const penultimoMes = timeline.length > 1 ? timeline[timeline.length - 2] : null;
 
-        // --- 1. Insights Motor (Foco: Manutenção) ---
+        // --- 1. Consolidação Motor (Foco: Manutenção) ---
         let consumoManutencao = 0;
         let budgetManutencao = 0;
         let hasBudgetArea = false;
@@ -166,99 +166,16 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Fallback: Se o backend não separar o budget por área, assume o budget global mensal como referência
         if (!hasBudgetArea || budgetManutencao === 0) {
             budgetManutencao = ultimoMes.budget;
         }
 
-        const percManutencao = budgetManutencao > 0 ? ((consumoManutencao / budgetManutencao) * 100).toFixed(1) : 0;
+        const percManutencao = budgetManutencao > 0 ? (consumoManutencao / budgetManutencao) * 100 : 0;
         
-        let insightsHTML = `<span>No mês vigente (<strong>${ultimoMes.mes.toString().padStart(2, '0')}/${ultimoMes.ano}</strong>), o consumo registrado da Manutenção é de <strong>${formatBRL(consumoManutencao)}</strong>.</span>`;
-        
-        if (budgetManutencao > 0) {
-            insightsHTML += `<span>Isso representa <strong>${percManutencao}%</strong> do budget disponível da manutenção.</span>`;
-        }
-        
-        if (consumoManutencao > budgetManutencao && budgetManutencao > 0) {
-            insightsHTML += `<span style="color: var(--danger); font-weight: 600;">Risco atual: Estouro orçamentário na manutenção.</span>`;
-        } else {
-            insightsHTML += `<span style="color: var(--success); font-weight: 600;">Risco atual: Consumo de manutenção controlado.</span>`;
-        }
-        document.getElementById('movInsightsText').innerHTML = insightsHTML;
-        document.getElementById('movInsightsBanner').style.display = 'flex';
-
-        // --- 2. KPIs e Tendências ---
-        document.getElementById('movKpiBudget').innerText = formatBRL(ultimoMes.budget);
-        document.getElementById('movKpiConsumido').innerText = formatBRL(ultimoMes.consumo);
-
-        if (penultimoMes) {
-            const varBudget = penultimoMes.budget > 0 ? ((ultimoMes.budget - penultimoMes.budget) / penultimoMes.budget) * 100 : 0;
-            const varConsumo = penultimoMes.consumo > 0 ? ((ultimoMes.consumo - penultimoMes.consumo) / penultimoMes.consumo) * 100 : 0;
-            
-            document.getElementById('movKpiBudgetTrend').innerHTML = `<span style="color: ${varBudget >= 0 ? 'var(--success)' : 'var(--muted)'};">${varBudget >= 0 ? '↑' : '↓'} ${Math.abs(varBudget).toFixed(1)}%</span> vs mês anterior`;
-            document.getElementById('movKpiConsumoTrend').innerHTML = `<span style="color: ${varConsumo > 0 ? 'var(--error)' : 'var(--success)'};">${varConsumo > 0 ? '↑' : '↓'} ${Math.abs(varConsumo).toFixed(1)}%</span> vs mês anterior`;
-        }
-
-        // --- 3. Sparklines ---
-        const sparklineOptions = (data, color, areaColor) => ({
-            grid: { left: 0, right: 0, top: 5, bottom: 0 },
-            xAxis: { type: 'category', show: false },
-            yAxis: { type: 'value', show: false, min: 'dataMin' },
-            series: [{
-                data: data, type: 'line', smooth: true, symbol: 'none',
-                lineStyle: { color: color, width: 2 },
-                areaStyle: {
-                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                        { offset: 0, color: areaColor },
-                        { offset: 1, color: 'rgba(0,0,0,0)' }
-                    ])
-                }
-            }]
-        });
-
-        if(!sparklineBudgetInstance) sparklineBudgetInstance = echarts.init(document.getElementById('sparklineBudget'));
-        sparklineBudgetInstance.setOption(sparklineOptions(timeline.map(t => t.budget), '#a1a1aa', 'rgba(161, 161, 170, 0.2)'));
-
-        if(!sparklineConsumoInstance) sparklineConsumoInstance = echarts.init(document.getElementById('sparklineConsumo'));
-        sparklineConsumoInstance.setOption(sparklineOptions(timeline.map(t => t.consumo), '#2563eb', 'rgba(37, 99, 235, 0.2)'));
-
-        // --- 4. Gauge Chart (Utilização) ---
-        let perc = budgetManutencao > 0 ? (consumoManutencao / budgetManutencao) * 100 : 0;
-        document.getElementById('movKpiUtilizacaoText').innerText = `${perc.toFixed(1)}%`;
-        
-        let utilGaugeColor = '#10b981';
-        if (perc > 100) utilGaugeColor = '#ef4444';
-        else if (perc > 85) utilGaugeColor = '#f59e0b';
-
-        if(!chartUtilizacaoInstance) chartUtilizacaoInstance = echarts.init(document.getElementById('chartUtilizacao'));
-        chartUtilizacaoInstance.setOption({
-            series: [{
-                type: 'gauge', startAngle: 90, endAngle: -270,
-                pointer: { show: false }, 
-                progress: { 
-                    show: true, overlap: false, roundCap: true, clip: false, 
-                    itemStyle: { color: utilGaugeColor, shadowBlur: 10, shadowColor: utilGaugeColor + '66' } 
-                },
-                axisLine: { lineStyle: { width: 6, color: [[1, 'rgba(255,255,255,0.05)']] } },
-                splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
-                data: [{ value: Math.min(perc, 100) }],
-                detail: { show: false }
-            }]
-        });
-
-        // --- 4.1 Health Score Orçamentário (Ex-Status Risco) ---
-        let healthScore = 100;
-        let healthLabel = '';
-        let healthColor = '';
-        let healthInsight = '';
-        let healthTrend = '↑ Estável';
-        let trendColor = '#a1a1aa';
-
-        // Lógica de Pacing (Run Rate): Projeção de fechamento do mês
-        let projectedPerc = perc;
+        // --- 2. Lógica de Pacing (Run Rate): Projeção de fechamento ---
+        let projectedPerc = percManutencao;
         const today = new Date();
         
-        // Verifica se o mês no gráfico é o mês atual vigente
         if (ultimoMes.mes === (today.getMonth() + 1) && ultimoMes.ano === today.getFullYear()) {
             const currentDay = today.getDate();
             const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
@@ -269,6 +186,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 projectedPerc = budgetManutencao > 0 ? (projectedConsumption / budgetManutencao) * 100 : 0;
             }
         }
+
+        let healthScore = 100;
+        let healthLabel = '';
+        let healthColor = '';
+        let healthInsight = '';
+        let healthTrend = '↑ Estável';
+        let trendColor = '#a1a1aa';
 
         if (projectedPerc <= 90) {
             healthScore = Math.round(100 - (projectedPerc / 90) * 5); // 95-100
@@ -307,6 +231,84 @@ document.addEventListener('DOMContentLoaded', () => {
             trendColor = '#ef4444';
         }
 
+        // --- 3. Insights Banner ---
+        let insightsHTML = `<span>No mês vigente (<strong>${ultimoMes.mes.toString().padStart(2, '0')}/${ultimoMes.ano}</strong>), o consumo registrado da Manutenção é de <strong>${formatBRL(consumoManutencao)}</strong>.</span>`;
+        
+        if (budgetManutencao > 0) {
+            insightsHTML += `<span>Isso representa <strong>${percManutencao.toFixed(1)}%</strong> do budget disponível da manutenção.</span>`;
+        }
+        
+        if (projectedPerc > 100) {
+            insightsHTML += `<span style="color: var(--danger, #ef4444); font-weight: 600;">Risco atual: Estouro orçamentário previsto. ${healthInsight}</span>`;
+        } else if (projectedPerc > 90) {
+            insightsHTML += `<span style="color: var(--warning, #f59e0b); font-weight: 600;">Risco atual: Consumo próximo ao teto mensal.</span>`;
+        } else {
+            insightsHTML += `<span style="color: var(--success, #10b981); font-weight: 600;">Risco atual: Consumo de manutenção controlado.</span>`;
+        }
+        
+        document.getElementById('movInsightsText').innerHTML = insightsHTML;
+        document.getElementById('movInsightsBanner').style.display = 'flex';
+
+        // --- 4. KPIs Básicos ---
+        document.getElementById('movKpiBudget').innerText = formatBRL(ultimoMes.budget);
+        document.getElementById('movKpiConsumido').innerText = formatBRL(ultimoMes.consumo);
+
+        if (penultimoMes) {
+            const varBudget = penultimoMes.budget > 0 ? ((ultimoMes.budget - penultimoMes.budget) / penultimoMes.budget) * 100 : 0;
+            const varConsumo = penultimoMes.consumo > 0 ? ((ultimoMes.consumo - penultimoMes.consumo) / penultimoMes.consumo) * 100 : 0;
+            
+            document.getElementById('movKpiBudgetTrend').innerHTML = `<span style="color: ${varBudget >= 0 ? 'var(--success)' : 'var(--muted)'};">${varBudget >= 0 ? '↑' : '↓'} ${Math.abs(varBudget).toFixed(1)}%</span> vs mês anterior`;
+            document.getElementById('movKpiConsumoTrend').innerHTML = `<span style="color: ${varConsumo > 0 ? 'var(--error)' : 'var(--success)'};">${varConsumo > 0 ? '↑' : '↓'} ${Math.abs(varConsumo).toFixed(1)}%</span> vs mês anterior`;
+        }
+
+        // --- 5. Sparklines ---
+        const sparklineOptions = (data, color, areaColor) => ({
+            grid: { left: 0, right: 0, top: 5, bottom: 0 },
+            xAxis: { type: 'category', show: false },
+            yAxis: { type: 'value', show: false, min: 'dataMin' },
+            series: [{
+                data: data, type: 'line', smooth: true, symbol: 'none',
+                lineStyle: { color: color, width: 2 },
+                areaStyle: {
+                    color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                        { offset: 0, color: areaColor },
+                        { offset: 1, color: 'rgba(0,0,0,0)' }
+                    ])
+                }
+            }]
+        });
+
+        if(!sparklineBudgetInstance) sparklineBudgetInstance = echarts.init(document.getElementById('sparklineBudget'));
+        sparklineBudgetInstance.setOption(sparklineOptions(timeline.map(t => t.budget), '#a1a1aa', 'rgba(161, 161, 170, 0.2)'));
+
+        if(!sparklineConsumoInstance) sparklineConsumoInstance = echarts.init(document.getElementById('sparklineConsumo'));
+        sparklineConsumoInstance.setOption(sparklineOptions(timeline.map(t => t.consumo), '#2563eb', 'rgba(37, 99, 235, 0.2)'));
+
+        // --- 6. Gauge Chart (Utilização Geral) ---
+        let percGeral = ultimoMes.budget > 0 ? (ultimoMes.consumo / ultimoMes.budget) * 100 : 0;
+        document.getElementById('movKpiUtilizacaoText').innerText = `${percGeral.toFixed(1)}%`;
+        
+        let utilGaugeColor = '#10b981';
+        if (percGeral > 100) utilGaugeColor = '#ef4444';
+        else if (percGeral > 85) utilGaugeColor = '#f59e0b';
+
+        if(!chartUtilizacaoInstance) chartUtilizacaoInstance = echarts.init(document.getElementById('chartUtilizacao'));
+        chartUtilizacaoInstance.setOption({
+            series: [{
+                type: 'gauge', startAngle: 90, endAngle: -270,
+                pointer: { show: false }, 
+                progress: { 
+                    show: true, overlap: false, roundCap: true, clip: false, 
+                    itemStyle: { color: utilGaugeColor, shadowBlur: 10, shadowColor: utilGaugeColor + '66' } 
+                },
+                axisLine: { lineStyle: { width: 6, color: [[1, 'rgba(255,255,255,0.05)']] } },
+                splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
+                data: [{ value: Math.min(percGeral, 100), itemStyle: { color: utilGaugeColor } }],
+                detail: { show: false }
+            }]
+        });
+
+        // --- 7. Health Score Orçamentário Visual ---
         document.getElementById('healthScoreValue').innerText = healthScore;
         document.getElementById('healthScoreValue').style.color = healthColor;
         document.getElementById('healthScoreLabel').innerText = healthLabel;
@@ -326,10 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 },
                 axisLine: { lineStyle: { width: 5, color: [[1, 'rgba(255,255,255,0.05)']] } },
                 splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
-                data: [{ value: healthScore }],
+                data: [{ value: healthScore, itemStyle: { color: healthColor } }],
                 detail: { show: false }
-            }]
-        });
+            }],
+            color: [healthColor] // Forçar cor no ECharts
+        }, true); // Adicionar "true" limpa propriedades residuais do echarts
+
 
         // --- 5. Master Evolution Chart ---
         const labels = timeline.map(t => `${t.mes.toString().padStart(2, '0')}/${t.ano}`);
