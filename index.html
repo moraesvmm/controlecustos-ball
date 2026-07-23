@@ -268,6 +268,12 @@
               <span style="font-size: 0.8rem; opacity: 0.8; background: var(--border); padding: 2px 6px; border-radius: 50%;">?</span>
             </div>
             <div class="value skeleton" id="kpiValor">R$ 000.000,00</div>
+            <div id="kpiMicroTicket" class="micro-info tooltip-container" style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.35rem; display: none; cursor: help;">
+              <span class="micro-text"></span>
+              <div class="tooltip-card" style="width: 250px; font-weight: normal; text-transform: none; letter-spacing: normal; text-align: left;">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Valor financeiro médio de cada Requisição de Compra no filtro atual.</p>
+              </div>
+            </div>
             <div class="tooltip-card" style="width: 250px;">
               <h4 style="margin-bottom:0.5rem;color:var(--text-primary);font-size:0.95rem;">Valor Total</h4>
               <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Soma do valor financeiro de todas as RCs filtradas no momento (exceto Canceladas).</p>
@@ -276,14 +282,32 @@
           <div class="kpi-card">
             <div class="label">Previsto (mês+)</div>
             <div class="value skeleton" id="kpiPrevisto">R$ 000.000,00</div>
+            <div id="kpiMicroPrevisto" class="micro-info tooltip-container" style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.35rem; display: none; cursor: help;">
+              <span class="micro-text"></span>
+              <div class="tooltip-card" style="width: 250px; font-weight: normal; text-transform: none; letter-spacing: normal; text-align: left;">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Peso do valor financeiro que ainda está previsto para faturar/receber em relação ao total movimentado.</p>
+              </div>
+            </div>
           </div>
           <div class="kpi-card">
             <div class="label">Recebido</div>
             <div class="value skeleton" id="kpiRecebido">R$ 000.000,00</div>
+            <div id="kpiMicroRecebido" class="micro-info tooltip-container" style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.35rem; display: none; cursor: help;">
+              <span class="micro-text"></span>
+              <div class="tooltip-card" style="width: 250px; font-weight: normal; text-transform: none; letter-spacing: normal; text-align: left;">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Taxa de eficiência na conversão de pedidos em recebimentos reais, com base no orçamento total solicitado.</p>
+              </div>
+            </div>
           </div>
           <div class="kpi-card kpi-alert kpi-clickable" id="kpiCardAtrasados" role="button" tabindex="0" title="Clique para ver itens atrasados">
             <div class="label">Atrasados</div>
             <div class="value skeleton" id="kpiAtrasados">000</div>
+            <div id="kpiMicroAtrasados" class="micro-info tooltip-container" style="font-size: 0.65rem; color: var(--text-secondary); margin-top: 0.35rem; display: none; cursor: help;">
+              <span class="micro-text"></span>
+              <div class="tooltip-card" style="width: 250px; font-weight: normal; text-transform: none; letter-spacing: normal; text-align: left;">
+                <p style="font-size:0.85rem;color:var(--text-secondary);margin:0;line-height:1.4;">Percentual de pedidos com o prazo de entrega já estourado, indicando risco operacional à manutenção.</p>
+              </div>
+            </div>
           </div>
           <div class="kpi-card kpi-wide">
             <div class="label">Por status (clique para filtrar)</div>

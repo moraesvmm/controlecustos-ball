@@ -138,6 +138,47 @@ function renderKPIs() {
     diffEl.classList.add(diff >= 0 ? 'positive' : 'negative');
   }
 
+  // Lógica das micro-infos premium
+  const ticketMedio = k.total > 0 ? (k.totalValor / k.total) : 0;
+  const kpiMicroTicket = $('#kpiMicroTicket');
+  if (kpiMicroTicket) {
+    kpiMicroTicket.style.display = 'inline-block';
+    const txt = kpiMicroTicket.querySelector('.micro-text');
+    if (txt) {
+      txt.innerHTML = `<span style="opacity:0.5; font-weight:400; letter-spacing:0.02em;">Ticket médio</span> &nbsp;<span style="color:var(--text-primary); font-weight:500; opacity:0.9;">${ticketMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>`;
+    }
+  }
+
+  const prevPerc = k.totalValor > 0 ? (k.totalPrevisto / k.totalValor) * 100 : 0;
+  const kpiMicroPrevisto = $('#kpiMicroPrevisto');
+  if (kpiMicroPrevisto) {
+    kpiMicroPrevisto.style.display = 'inline-block';
+    const txt = kpiMicroPrevisto.querySelector('.micro-text');
+    if (txt) {
+      txt.innerHTML = `<span style="opacity:0.5; font-weight:400; letter-spacing:0.02em;">Representa</span> &nbsp;<span style="color:var(--text-primary); font-weight:500; opacity:0.9;">${prevPerc.toFixed(1)}%</span>`;
+    }
+  }
+
+  const recPerc = k.totalValor > 0 ? (k.totalRecebido / k.totalValor) * 100 : 0;
+  const kpiMicroRecebido = $('#kpiMicroRecebido');
+  if (kpiMicroRecebido) {
+    kpiMicroRecebido.style.display = 'inline-block';
+    const txt = kpiMicroRecebido.querySelector('.micro-text');
+    if (txt) {
+      txt.innerHTML = `<span style="opacity:0.5; font-weight:400; letter-spacing:0.02em;">Conversão</span> &nbsp;<span style="color:var(--text-primary); font-weight:500; opacity:0.9;">${recPerc.toFixed(1)}%</span>`;
+    }
+  }
+
+  const riscoAtraso = k.total > 0 ? (atrasados.length / k.total) * 100 : 0;
+  const kpiMicroAtrasados = $('#kpiMicroAtrasados');
+  if (kpiMicroAtrasados) {
+    kpiMicroAtrasados.style.display = 'inline-block';
+    const txt = kpiMicroAtrasados.querySelector('.micro-text');
+    if (txt) {
+      txt.innerHTML = `<span style="opacity:0.5; font-weight:400; letter-spacing:0.02em;">Risco</span> &nbsp;<span style="color:var(--text-primary); font-weight:500; opacity:0.9;">${riscoAtraso.toFixed(1)}%</span>`;
+    }
+  }
+
   const badgeEl = $('#kpiPrevRecBadge');
   if (badgeEl) {
       if (diff > 5) {

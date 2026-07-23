@@ -223,7 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sparklineConsumoInstance.setOption(sparklineOptions(timeline.map(t => t.consumo), '#2563eb', 'rgba(37, 99, 235, 0.2)'));
 
         // --- 4. Gauge Chart (Utilização) ---
-        let perc = ultimoMes.budget > 0 ? (ultimoMes.consumo / ultimoMes.budget) * 100 : 0;
+        let perc = budgetManutencao > 0 ? (consumoManutencao / budgetManutencao) * 100 : 0;
         document.getElementById('movKpiUtilizacaoText').innerText = `${perc.toFixed(1)}%`;
         
         let utilGaugeColor = '#10b981';
@@ -254,37 +254,55 @@ document.addEventListener('DOMContentLoaded', () => {
         let healthTrend = '↑ Estável';
         let trendColor = '#a1a1aa';
 
-        if (perc <= 80) {
-            healthScore = Math.round(100 - (perc / 80) * 5); // 95-100
+        // Lógica de Pacing (Run Rate): Projeção de fechamento do mês
+        let projectedPerc = perc;
+        const today = new Date();
+        
+        // Verifica se o mês no gráfico é o mês atual vigente
+        if (ultimoMes.mes === (today.getMonth() + 1) && ultimoMes.ano === today.getFullYear()) {
+            const currentDay = today.getDate();
+            const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+            
+            if (currentDay > 0 && currentDay <= daysInMonth) {
+                const runRate = consumoManutencao / currentDay;
+                const projectedConsumption = runRate * daysInMonth;
+                projectedPerc = budgetManutencao > 0 ? (projectedConsumption / budgetManutencao) * 100 : 0;
+            }
+        }
+
+        if (projectedPerc <= 90) {
+            healthScore = Math.round(100 - (projectedPerc / 90) * 5); // 95-100
             healthLabel = 'Excelente';
             healthColor = '#10b981'; // Emerald
-            healthInsight = 'Consumo abaixo do teto. Excelente folga operacional para o período.';
+            healthInsight = `Projeção de fechamento: ${projectedPerc.toFixed(1)}%. Ritmo de consumo da manutenção (Run Rate) indica folga operacional.`;
             healthTrend = '↑ Otimizado';
             trendColor = '#10b981';
-        } else if (perc <= 90) {
-            healthScore = Math.round(94 - ((perc - 80) / 10) * 14); // 80-94
+        } else if (projectedPerc <= 98) {
+            healthScore = Math.round(94 - ((projectedPerc - 90) / 8) * 14); // 80-94
             healthLabel = 'Baixo Risco';
             healthColor = '#3b82f6'; // Blue
-            healthInsight = 'Orçamento sendo utilizado conforme o previsto. Sem indicação de estouro até o momento.';
-        } else if (perc <= 100) {
-            healthScore = Math.round(79 - ((perc - 90) / 10) * 19); // 60-79
+            healthInsight = `Projeção de fechamento: ${projectedPerc.toFixed(1)}%. Consumo da manutenção dentro do pace esperado.`;
+            healthTrend = '→ Estável';
+            trendColor = '#3b82f6';
+        } else if (projectedPerc <= 105) {
+            healthScore = Math.round(79 - ((projectedPerc - 98) / 7) * 19); // 60-79
             healthLabel = 'Atenção';
             healthColor = '#f59e0b'; // Amber
-            healthInsight = 'Consumo se aproximando rapidamente do teto. Requer acompanhamento nas próximas semanas.';
+            healthInsight = `Projeção de fechamento: ${projectedPerc.toFixed(1)}%. O ritmo atual (Burn Rate) aponta leve estouro de manutenção no fechamento do mês.`;
             healthTrend = '↓ Declínio leve';
             trendColor = '#f59e0b';
-        } else if (perc <= 110) {
-            healthScore = Math.round(59 - ((perc - 100) / 10) * 19); // 40-59
+        } else if (projectedPerc <= 115) {
+            healthScore = Math.round(59 - ((projectedPerc - 105) / 10) * 19); // 40-59
             healthLabel = 'Risco Moderado';
             healthColor = '#f97316'; // Orange
-            healthInsight = 'Estouro orçamentário iminente. Necessidade imediata de contenção de gastos.';
+            healthInsight = `Projeção de fechamento: ${projectedPerc.toFixed(1)}%. O teto de manutenção será ultrapassado se ordens de serviço não forem contidas.`;
             healthTrend = '↓ Instável';
             trendColor = '#f97316';
         } else {
-            healthScore = Math.max(0, Math.round(39 - ((perc - 110) / 20) * 39)); // 0-39
+            healthScore = Math.max(0, Math.round(39 - ((projectedPerc - 115) / 35) * 39)); // 0-39
             healthLabel = 'Risco Alto';
             healthColor = '#ef4444'; // Red
-            healthInsight = 'Alerta crítico: Estouro significativo de budget. Risco operacional elevado para o fechamento.';
+            healthInsight = `Alerta crítico fabril! Projeção aponta fechamento em ${projectedPerc.toFixed(1)}%. Estouro massivo de manutenção esperado se o ritmo continuar.`;
             healthTrend = '↓ Crítico';
             trendColor = '#ef4444';
         }
