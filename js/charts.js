@@ -383,54 +383,79 @@ export function renderDashboardCharts(registros) {
   const ctx1 = document.getElementById('chartStatus');
   if (ctx1) {
     const ch1 = echarts.init(ctx1);
-    ch1.setOption({
-      title: { text: 'STATUS × CUSTO', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 13, fontWeight: 600 } },
-      toolbox: {
-        top: 25,
-        left: 0,
-        itemSize: 12,
-        feature: {
-          magicType: { type: ['line', 'bar'] },
-          dataView: { show: true, readOnly: true, title: 'Dados' },
-          saveAsImage: { show: true, title: 'Salvar' }
-        },
-        iconStyle: { borderColor: tc.tickColor }
-      },
-      tooltip: { 
-          trigger: 'item', 
-          backgroundColor: 'rgba(9, 14, 23, 0.45)',
-          borderColor: 'rgba(255,255,255,0.08)',
-          borderWidth: 1,
-          borderRadius: 10,
-          padding: [12, 16],
-          textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
-          axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
-          extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
-          valueFormatter: (value) => fmtMoeda(value)
-      },
-      grid: { left: '3%', right: '4%', bottom: '8%', containLabel: true },
-      xAxis: { type: 'category', data: byStatusFiltered.map(x => x.status), axisLabel: { color: tc.tickColor, ...CHART_FONT, interval: 0, rotate: 45, width: 80, overflow: 'break', formatter: (v) => v.replace(' DE ', '\nDE ') }, axisTick: { show: false }, axisLine: { show: false } },
-      yAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
-      series: [{
-        name: 'Soma de VALOR',
-        type: 'bar',
+    const totalValorStatus = byStatusFiltered.reduce((sum, x) => sum + x.valor, 0);
+    const mediaValorStatus = byStatusFiltered.length ? totalValorStatus / byStatusFiltered.length : 0;
 
+    ch1.setOption({
+      title: { text: 'STATUS × CUSTO', subtext: 'Média por status: ' + fmtMoeda(mediaValorStatus), textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }, subtextStyle: { color: tc.tickColor, fontSize: 11, marginTop: 4 } },
+      tooltip: { 
+          trigger: 'axis', 
+          backgroundColor: tc.tooltipBg,
+          borderColor: tc.borderColor,
+          borderWidth: 1,
+          borderRadius: 6,
+          padding: [8, 12],
+          textStyle: { color: tc.tooltipText, fontSize: 12, fontFamily: 'Inter, sans-serif' },
+          axisPointer: { type: 'none' },
+          extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.1);',
+          formatter: function(params) {
+            const p = params[0];
+            return `<div style="display:flex; flex-direction:column; gap:4px;">
+                      <span style="font-size:0.7rem; color:${tc.tickColor}; font-weight:500; text-transform:uppercase;">${p.name}</span>
+                      <strong style="font-size:1rem; color:${tc.titleColor};">${fmtMoeda(p.value)}</strong>
+                    </div>`;
+          }
+      },
+      grid: { left: '0%', right: '5%', bottom: '5%', top: '22%', containLabel: true },
+      xAxis: { 
+        type: 'category', 
+        data: byStatusFiltered.map(x => x.status), 
+        axisLabel: { color: tc.tickColor, ...CHART_FONT, interval: 0, rotate: 0, width: 80, overflow: 'break', formatter: (v) => v.replace(' DE ', '\nDE ') }, 
+        axisTick: { show: false }, 
+        axisLine: { show: false } 
+      },
+      yAxis: { 
+        type: 'value', 
+        axisLabel: { color: tc.tickColor, fontSize: 10, formatter: fmtLabel }, 
+        splitLine: { lineStyle: { type: 'solid', color: tc.gridColor } } 
+      },
+      series: [{
+        name: 'Valor',
+        type: 'bar',
+        barWidth: '40%',
+        showBackground: false,
+        emphasis: { focus: 'series', blurScope: 'coordinateSystem' },
+        label: {
+            show: true,
+            position: 'top',
+            formatter: (p) => fmtLabel(p.value),
+            color: tc.titleColor,
+            fontSize: 10,
+            fontWeight: 500,
+            distance: 8
+        },
+        markLine: {
+            data: [{ type: 'average', name: 'Média' }],
+            symbol: ['none', 'none'],
+            label: { show: true, position: 'end', formatter: 'Média', color: tc.tickColor, fontSize: 10 },
+            lineStyle: { type: 'dashed', color: tc.tickColor, width: 1, opacity: 0.5 }
+        },
         data: byStatusFiltered.map((x) => {
             const colorTuple = getColorsByStatus(x.status);
             return {
                 value: x.valor,
-                itemStyle: { color: gradient(colorTuple[0], colorTuple[1]), borderRadius: [8, 8, 0, 0] }
+                itemStyle: { 
+                  color: gradient(colorTuple[0], colorTuple[1]), 
+                  borderRadius: [8, 8, 0, 0],
+                  shadowBlur: 12,
+                  shadowColor: 'rgba(0, 0, 0, 0.4)',
+                  shadowOffsetY: 4
+                }
             }
         }),
-        markPoint: {
-          data: [
-            { type: 'max', name: 'Maior Custo' },
-            { type: 'min', name: 'Menor Custo' }
-          ],
-          label: { color: '#fff', fontSize: 10, fontWeight: 600, formatter: (p) => fmtLabel(p.value) }
-        },
-        animationDelay: (idx) => idx * 100,
-        animationEasing: 'elasticOut'
+        animationDelay: (idx) => idx * 50,
+        animationEasing: 'cubicOut',
+        animationDuration: 800
       }]
     });
     ch1.on('click', makeClickHandler('status'));
@@ -499,45 +524,79 @@ export function renderDashboardCharts(registros) {
   const ctx3 = document.getElementById('chartMaquina');
   if (ctx3) {
     const ch3 = echarts.init(ctx3);
+    const totalValorMaquina = byMaquina.reduce((sum, x) => sum + x.valor, 0);
+    const topMaquina = byMaquina.length > 0 ? byMaquina[byMaquina.length - 1] : null;
+    const pctTop = topMaquina && totalValorMaquina > 0 ? ((topMaquina.valor / totalValorMaquina) * 100).toFixed(1) : 0;
+
     ch3.setOption({
-      title: { text: 'GASTOS POR MÁQUINA / LINHA', textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 14, fontWeight: 600 } },
-      toolbox: {
-        top: 25,
-        left: 0,
-        itemSize: 12,
-        feature: {
-          dataView: { show: true, readOnly: true, title: 'Dados' },
-          saveAsImage: { show: true, title: 'Salvar' }
-        },
-        iconStyle: { borderColor: tc.tickColor }
-      },
+      title: { text: 'GASTOS POR MÁQUINA / LINHA', subtext: `O ofensor principal representa ${pctTop}% do total`, textStyle: { color: tc.titleColor, ...CHART_FONT, fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }, subtextStyle: { color: tc.tickColor, fontSize: 11, marginTop: 4 } },
       dataZoom: [
-        { type: 'slider', yAxisIndex: 0, show: true, right: '2%', width: 12, startValue: byMaquina.length > 10 ? byMaquina.length - 10 : 0, endValue: byMaquina.length - 1, fillerColor: 'rgba(99,102,241,0.2)', borderColor: 'none', handleSize: 0, showDetail: false },
+        { type: 'slider', yAxisIndex: 0, show: true, right: '2%', width: 8, startValue: byMaquina.length > 10 ? byMaquina.length - 10 : 0, endValue: byMaquina.length - 1, fillerColor: 'rgba(255,255,255,0.1)', borderColor: 'none', handleSize: 0, showDetail: false, backgroundColor: 'rgba(255,255,255,0.02)' },
         { type: 'inside', yAxisIndex: 0, zoomOnMouseWheel: true, moveOnMouseMove: true }
       ],
       tooltip: { 
-          trigger: 'item', 
-          backgroundColor: 'rgba(9, 14, 23, 0.45)',
-          borderColor: 'rgba(255,255,255,0.08)',
+          trigger: 'axis', 
+          backgroundColor: tc.tooltipBg,
+          borderColor: tc.borderColor,
           borderWidth: 1,
-          borderRadius: 10,
-          padding: [12, 16],
-          textStyle: { color: '#f1f5f9', fontSize: 13, fontFamily: 'DM Sans, sans-serif' },
-          axisPointer: { type: 'cross', crossStyle: { color: 'rgba(255,255,255,0.15)', width: 1 }, lineStyle: { color: 'rgba(212,175,55,0.3)', width: 1, type: 'dashed' } },
-          extraCssText: 'box-shadow: 0 16px 40px rgba(0,0,0,0.6); backdrop-filter: blur(12px);',
-          valueFormatter: (value) => fmtMoeda(value)
+          borderRadius: 6,
+          padding: [8, 12],
+          textStyle: { color: tc.tooltipText, fontSize: 12, fontFamily: 'Inter, sans-serif' },
+          axisPointer: { type: 'none' },
+          extraCssText: 'box-shadow: 0 4px 12px rgba(0,0,0,0.1);',
+          formatter: function(params) {
+            const p = params[0];
+            return `<div style="display:flex; flex-direction:column; gap:4px;">
+                      <span style="font-size:0.7rem; color:${tc.tickColor}; font-weight:500; text-transform:uppercase;">${p.name}</span>
+                      <strong style="font-size:1rem; color:${tc.titleColor};">${fmtMoeda(p.value)}</strong>
+                    </div>`;
+          }
       },
-      grid: { left: '3%', right: '12%', bottom: '3%', containLabel: true },
-      xAxis: { type: 'value', axisLabel: { color: tc.tickColor, ...CHART_FONT, formatter: fmtLabel }, splitLine: { lineStyle: { color: tc.gridColor } } },
-      yAxis: { type: 'category', data: byMaquina.map(x => x.maquina_linha.length > 25 ? x.maquina_linha.substring(0,25) + '...' : x.maquina_linha), axisLabel: { color: tc.tickColor, ...CHART_FONT }, axisTick: { show: false }, axisLine: { show: false } },
+      grid: { left: '0%', right: '10%', bottom: '2%', top: '22%', containLabel: true },
+      xAxis: { 
+        type: 'value', 
+        axisLabel: { show: false }, 
+        splitLine: { show: false } 
+      },
+      yAxis: { 
+        type: 'category', 
+        data: byMaquina.map(x => x.maquina_linha.length > 25 ? x.maquina_linha.substring(0,25) + '...' : x.maquina_linha), 
+        axisLabel: { color: tc.titleColor, ...CHART_FONT, fontWeight: 500 }, 
+        axisTick: { show: false }, 
+        axisLine: { show: false } 
+      },
       series: [{
         name: 'Valor Recebido',
         type: 'bar',
-        data: byMaquina.map(x => ({ value: x.valor, name: x.maquina_linha })), // Keep full name in data point
-        barWidth: '60%',
-
-        itemStyle: { color: gradient(getThemePalette().primary[0], getThemePalette().primary[1], true), borderRadius: [0, 8, 8, 0] },
-        animationDelay: (idx) => idx * 30
+        barWidth: '40%',
+        showBackground: false,
+        emphasis: { focus: 'series', blurScope: 'coordinateSystem' },
+        label: {
+            show: true,
+            position: 'right',
+            formatter: (p) => fmtLabel(p.value),
+            color: tc.titleColor,
+            fontSize: 10,
+            fontWeight: 500,
+            distance: 8
+        },
+        markLine: {
+            data: [{ type: 'average', name: 'Média' }],
+            symbol: ['none', 'none'],
+            label: { show: true, position: 'end', formatter: 'Média', color: tc.tickColor, fontSize: 10 },
+            lineStyle: { type: 'dashed', color: tc.tickColor, width: 1, opacity: 0.5 }
+        },
+        data: byMaquina.map(x => ({ value: x.valor, name: x.maquina_linha })),
+        itemStyle: { 
+          color: gradient(getThemePalette().primary[0], getThemePalette().primary[1], false), 
+          borderRadius: [0, 8, 8, 0],
+          shadowBlur: 12,
+          shadowColor: 'rgba(0, 0, 0, 0.4)',
+          shadowOffsetY: 4
+        },
+        animationDelay: (idx) => idx * 10,
+        animationEasing: 'cubicOut',
+        animationDuration: 800
       }]
     });
     ch3.on('click', (params) => {

@@ -24,7 +24,32 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
   if (!panel) return;
 
   let stats = [];
-  if (meta.isPlanoMestre) {
+  if (titulo === 'Itens atrasados') {
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    let crit = 0, mod = 0, baixo = 0;
+    
+    registros.forEach(r => {
+      let dias = 0;
+      if (r.previsao_entrega) {
+        const prev = new Date(r.previsao_entrega);
+        if (today > prev) {
+            dias = Math.floor((today - prev) / (1000 * 60 * 60 * 24));
+        }
+      }
+      r._calculatedDelay = dias;
+      if (r.criticidade === 'ALTA' || dias > 30) crit++;
+      else if (dias >= 15 && dias <= 30) mod++;
+      else baixo++;
+    });
+
+    stats = [
+      { label: 'Total Atrasados', value: registros.length },
+      { label: 'Críticos', value: crit, warn: true, color: 'var(--danger)' },
+      { label: 'Moderados', value: mod, color: 'var(--warning)' },
+      { label: 'Baixos', value: baixo, color: 'var(--info)' },
+    ];
+  } else if (meta.isPlanoMestre) {
     const totalHH = registros.reduce((s, r) => s + (Number(r.hh) || 0), 0);
     stats = [
       { label: 'Atividades', value: registros.length },
@@ -59,8 +84,8 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
     .map(
       (s) => `
     <div class="drill-stat ${s.warn ? 'warn' : ''}">
-      <span>${s.label}</span>
-      <strong>${s.value}</strong>
+      <span style="${s.color ? `color: ${s.color}; opacity: 0.8;` : ''}">${s.label}</span>
+      <strong style="${s.color ? `color: ${s.color};` : ''}">${s.value}</strong>
     </div>`
     )
     .join('');
@@ -223,6 +248,34 @@ export function abrirDrilldown({ titulo, subtitulo, registros, meta = {} }) {
           </div>
         </div>
       </article>`;
+        }
+
+        if (titulo === 'Itens atrasados') {
+          const d = r._calculatedDelay || 0;
+          let delayColor = (d > 30 || r.criticidade === 'ALTA') ? 'var(--danger)' : (d >= 15 ? 'var(--warning)' : 'var(--info)');
+          
+          return `
+      <div class="executive-alert-row" data-id="${r.id}">
+        <div class="alert-row-content">
+          <div class="alert-row-top">
+            <span class="alert-delay-badge" style="color: ${delayColor};">■ ${d} dias</span>
+            <strong class="alert-item-name" title="${r.item || ''}">${r.item || '—'}</strong>
+            <span class="alert-item-value">${fmtMoeda(r.valor || r.custo_do_mes || 0)}</span>
+          </div>
+          <div class="alert-row-bottom">
+            <span class="alert-crit" style="color: ${delayColor}; opacity: 0.9;">${r.criticidade || 'Normal'}</span>
+            <span class="alert-sep">·</span>
+            <span class="alert-info">RC ${r.rc || '—'}</span>
+            <span class="alert-sep">·</span>
+            <span class="alert-info">Fornecedor: ${r.fornecedor || '—'}</span>
+            <span class="alert-info-push"></span>
+            <span class="alert-prev">Prev: ${fmtData(r.previsao_entrega)}</span>
+          </div>
+        </div>
+        <div class="alert-row-actions">
+          ${r.rc ? `<button type="button" class="btn-ghost btn-drill-rc" data-id="${r.id}" title="Ver detalhes da RC">Detalhes</button>` : ''}
+        </div>
+      </div>`;
         }
 
         return `

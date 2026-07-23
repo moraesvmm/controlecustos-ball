@@ -1061,22 +1061,78 @@ function refresh() {
 function renderAlertas() {
   const el = $('#alertasLista');
   if (!el) return;
-  const atrasados = registrosAtrasados(getFiltrados()).slice(0, 8);
+  
+  const atrasadosRaw = registrosAtrasados(getFiltrados());
+  // Sort by delay (oldest first)
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  
+  const atrasados = atrasadosRaw.map(r => {
+    let dias = 0;
+    if (r.previsao_entrega) {
+      const prev = new Date(r.previsao_entrega + 'T12:00:00');
+      dias = Math.floor((hoje - prev) / (1000 * 60 * 60 * 24));
+    }
+    return { ...r, _diasAtraso: dias > 0 ? dias : 0 };
+  }).sort((a, b) => b._diasAtraso - a._diasAtraso).slice(0, 8);
+
   if (!atrasados.length) {
-    el.innerHTML = '<p class="muted">Nenhum item atrasado no filtro atual.</p>';
+    el.innerHTML = '<p class="muted" style="padding: 1rem; font-size: 0.9rem;">Nenhum item atrasado no filtro atual.</p>';
     return;
   }
-  el.innerHTML = atrasados
-    .map(
-      (r) => `
-    <button type="button" class="alerta-item" data-id="${r.id}">
-      <span>${r.item?.slice(0, 42) || '—'}</span>
-      <small>${r.previsao_entrega} · ${r.status}</small>
-    </button>`
-    )
-    .join('');
-  el.querySelectorAll('.alerta-item').forEach((b) =>
-    b.addEventListener('click', () => abrirModal(b.dataset.id))
+  
+  const totalAtrasado = atrasadosRaw.reduce((acc, curr) => acc + (Number(curr.valor) || 0), 0);
+  const formatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  let html = `
+    <div style="margin-bottom: 1.5rem;">
+      <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; margin-bottom: 0.25rem;">Capital Retido em Atraso</div>
+      <div style="font-size: 1.85rem; color: var(--danger, #ef4444); font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: -0.02em;">${formatter.format(totalAtrasado)}</div>
+      <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.25rem;">Total de ${atrasadosRaw.length} ordens impactadas</div>
+    </div>
+    <div class="executive-late-list" style="display: flex; flex-direction: column; gap: 0.25rem;">
+  `;
+
+  html += atrasados.map(r => {
+    const val = Number(r.valor) || 0;
+    const isCritico = r.criticidade === 'ALTA' || r._diasAtraso > 30;
+    const dotColor = isCritico ? '#ef4444' : (r._diasAtraso > 15 ? '#f59e0b' : '#3b82f6');
+    const bgHover = 'rgba(255,255,255,0.02)';
+    
+    return `
+      <div class="late-row" data-id="${r.id}" style="display: flex; align-items: flex-start; justify-content: space-between; padding: 0.85rem 0.5rem; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; transition: background 0.2s; border-radius: 4px;" onmouseover="this.style.background='${bgHover}'" onmouseout="this.style.background='transparent'">
+        <div style="display: flex; gap: 0.75rem; align-items: flex-start; flex: 1; min-width: 0;">
+          <div style="width: 6px; height: 6px; border-radius: 50%; background: ${dotColor}; margin-top: 0.45rem; flex-shrink: 0; box-shadow: 0 0 8px ${dotColor}40;"></div>
+          <div style="display: flex; flex-direction: column; min-width: 0;">
+            <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; letter-spacing: 0.01em;">${r.item || '—'}</span>
+            <div style="display: flex; gap: 0.75rem; align-items: center; margin-top: 0.2rem; font-size: 0.75rem; color: var(--text-secondary);">
+              <span style="color: ${dotColor}; font-weight: 500;">+${r._diasAtraso} dias</span>
+              <span style="opacity: 0.5;">|</span>
+              <span>${r.maquina_linha || 'Geral'}</span>
+            </div>
+          </div>
+        </div>
+        <div style="text-align: right; padding-left: 1rem; flex-shrink: 0; display: flex; flex-direction: column; justify-content: center;">
+          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); font-family: 'DM Sans', sans-serif;">${val > 0 ? formatter.format(val) : '-'}</span>
+          <span style="font-size: 0.7rem; color: var(--muted); margin-top: 0.2rem; text-transform: uppercase;">${r.natureza || 'PO'}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  if (atrasadosRaw.length > 8) {
+    html += `
+      <div style="text-align: center; margin-top: 1rem;">
+        <button type="button" style="background: none; border: none; color: var(--muted); font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; transition: color 0.2s;" onmouseover="this.style.color='var(--text-primary)'" onmouseout="this.style.color='var(--muted)'" onclick="abrirPainelAtrasados()">+ Ver todos os ${atrasadosRaw.length} itens</button>
+      </div>
+    `;
+  }
+
+  html += `</div>`;
+  el.innerHTML = html;
+  
+  el.querySelectorAll('.late-row').forEach((b) =>
+    b.addEventListener('click', () => abrirDetalhe(b.dataset.id))
   );
 }
 
