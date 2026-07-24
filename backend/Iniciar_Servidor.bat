@@ -33,6 +33,11 @@ if not exist "%PY_DIR%\python.exe" (
     )
 ) else (
     echo  [OK] Ambiente de execucao detectado.
+    if not exist "%PY_DIR%\.multipart_ok" (
+        echo  [INFO] Instalando pacotes adicionais para upload de arquivos...
+        "%PY_DIR%\Scripts\pip.exe" install python-multipart openpyxl pandas -q
+        echo OK > "%PY_DIR%\.multipart_ok"
+    )
 )
 
 echo.

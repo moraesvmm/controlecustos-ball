@@ -20,6 +20,6 @@ Invoke-WebRequest -Uri "https://bootstrap.pypa.io/get-pip.py" -OutFile "$pyDir\g
 & "$pyDir\python.exe" "$pyDir\get-pip.py"
 
 Write-Host "Instalando dependencias (FastAPI, Uvicorn, SQLAlchemy)..."
-& "$pyDir\Scripts\pip.exe" install fastapi uvicorn sqlalchemy pydantic cors
+& "$pyDir\Scripts\pip.exe" install fastapi uvicorn sqlalchemy pydantic cors python-multipart openpyxl pandas
 
 Write-Host "Ambiente pronto!"
