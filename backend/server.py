@@ -679,6 +679,20 @@ def init_db():
     ''')
 
     conn.execute('''
+        CREATE TABLE IF NOT EXISTS kpi_producao_raw (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            linha TEXT,
+            data TEXT,
+            semana_iso INTEGER,
+            mes INTEGER,
+            ano INTEGER,
+            tempo_trabalhado_min REAL,
+            tempo_disponivel_min REAL,
+            UNIQUE(linha, data)
+        )
+    ''')
+
+    conn.execute('''
         CREATE TABLE IF NOT EXISTS kpi_confiabilidade (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             linha TEXT,
@@ -1174,6 +1188,67 @@ async def proxy_groq(req: Request):
 # MÓDULO CONFIABILIDADE: MTBF / MTTR
 # ==========================================
 
+@app.post("/api/import/producao")
+async def import_producao(req: Request):
+    """Recebe JSON do front com dados de Tempo Trabalhado e Tempo Disponível por linha/data."""
+    import datetime
+    data = await req.json()
+    rows = data.get("rows", [])
+    if not rows:
+        return {"status": "ok", "importados": 0}
+        
+    def semana_iso(data_str):
+        if not data_str: return None
+        try:
+            d = datetime.datetime.strptime(str(data_str)[:10], '%Y-%m-%d')
+            return d.isocalendar()[1]
+        except: return None
+        
+    def mes_num(data_str):
+        if not data_str: return None
+        try: return int(str(data_str).split('-')[1])
+        except: return None
+        
+    def ano_num(data_str):
+        if not data_str: return None
+        try: return int(str(data_str).split('-')[0])
+        except: return None
+
+    conn = get_db()
+    try:
+        count = 0
+        for r in rows:
+            dt = str(r.get('data', ''))[:10]
+            ln = str(r.get('linha', '')).strip()
+            tt = float(r.get('tempo_trabalhado', 0) or 0)
+            td = float(r.get('tempo_disponivel', 0) or 0)
+            
+            sem = semana_iso(dt)
+            m = mes_num(dt)
+            a = ano_num(dt)
+            
+            if not ln or not dt: continue
+            
+            exists = conn.execute("SELECT id FROM kpi_producao_raw WHERE linha=? AND data=?", (ln, dt)).fetchone()
+            if exists:
+                conn.execute(
+                    "UPDATE kpi_producao_raw SET tempo_trabalhado_min=?, tempo_disponivel_min=? WHERE id=?", 
+                    (tt, td, exists['id'])
+                )
+            else:
+                conn.execute('''
+                    INSERT INTO kpi_producao_raw (linha, data, semana_iso, mes, ano, tempo_trabalhado_min, tempo_disponivel_min)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (ln, dt, sem, m, a, tt, td))
+            count += 1
+        conn.commit()
+        return {"status": "ok", "importados": count}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        conn.close()
+
 @app.post("/api/import/paradas")
 async def import_paradas(req: Request):
     """Recebe JSON com lista de registros do MGPRO já parseados no front (via SheetJS),
@@ -1185,8 +1260,8 @@ async def import_paradas(req: Request):
     file_mes = data.get("mes")
 
     GRUPOS_REPARO = ['Reparos Mecânicos', 'Reparos Elétricos']
-    TEMPO_MES_MIN = 30 * 24 * 60   # 43200 min - 30 dias 24h
-    TEMPO_SEM_MIN = 7 * 24 * 60    # 10080 min - 7 dias 24h
+    TEMPO_MES_MIN_DEFAULT = 30 * 24 * 60   # 43200 min fallback
+    TEMPO_SEM_MIN_DEFAULT = 7 * 24 * 60    # 10080 min fallback
 
     def hms_to_min(s):
         try:
@@ -1262,6 +1337,14 @@ async def import_paradas(req: Request):
         except:
             pass
 
+        # Helper to guess linha from historical data if missing
+        maquina_to_linha = {}
+        try:
+            for mr in conn.execute("SELECT maquina, linha FROM kpi_paradas_raw WHERE linha != '' AND linha IS NOT NULL").fetchall():
+                if mr['maquina']: maquina_to_linha[mr['maquina']] = mr['linha']
+        except:
+            pass
+
         # 2. Insere raw
         for r in reparos:
             dur = hms_to_min(r.get('duracao', '0:0:0'))
@@ -1271,9 +1354,17 @@ async def import_paradas(req: Request):
             mes = int(file_mes) if file_mes else mes_num(r.get('data', ''))
             parada_original = str(r.get('parada', '')).strip()
             maquina = extract_maquina(parada_original)
+            
+            # Guesses linha if missing
+            ln = str(r.get('linha', '')).strip()
+            if not ln:
+                ln = maquina_to_linha.get(maquina, '')
+                if not ln:
+                    ln = 'Linha 4' # Fallback default
+                    
             conn.execute(
                 "INSERT INTO kpi_paradas_raw (linha, grupo_parada, data, semana_iso, mes, ano, dur_min, maquina, parada_original, mtta_min) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (r.get('linha', ''), r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur, maquina, parada_original, mtta)
+                (ln, r.get('grupo', ''), str(r.get('data', ''))[:10], sem, mes, ano, dur, maquina, parada_original, mtta)
             )
 
         # 3. Calcula KPIs por Linha x Mês
@@ -1285,11 +1376,19 @@ async def import_paradas(req: Request):
         for r in rows_mes:
             ln, mes, n, tp = r['linha'], r['mes'], r['n'], r['tp'] or 0
             tmtta = r['tmtta'] or 0
-            tf = max(TEMPO_MES_MIN - tp, 0)
-            mtbf = (tf / n / 60) if n > 0 else 0
+            
+            # Buscar tempo disponível importado da produção
+            prod_row = conn.execute(
+                "SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND mes=? AND ano=?", 
+                (ln, mes, ano)
+            ).fetchone()
+            tempo_disponivel = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_MES_MIN_DEFAULT
+            
+            # MTBF: usando tempo_disponivel bruto
+            mtbf = (tempo_disponivel / n / 60) if n > 0 else (tempo_disponivel / 60)
             mttr = (tp / n / 60) if n > 0 else 0
             mtta = (tmtta / n) if n > 0 else 0
-            indisp = (tp / TEMPO_MES_MIN) * 100
+            indisp = (tp / tempo_disponivel) * 100 if tempo_disponivel > 0 else 0
             per_ref = MESES[mes - 1] if 1 <= mes <= 12 else str(mes)
             conn.execute('''
                 INSERT OR REPLACE INTO kpi_confiabilidade
@@ -1305,11 +1404,19 @@ async def import_paradas(req: Request):
         for r in rows_sem:
             ln, sem, n, tp = r['linha'], r['semana_iso'], r['n'], r['tp'] or 0
             tmtta = r['tmtta'] or 0
-            tf = max(TEMPO_SEM_MIN - tp, 0)
-            mtbf = (tf / n / 60) if n > 0 else 0
+            
+            # Buscar tempo disponível importado da produção
+            prod_row = conn.execute(
+                "SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND semana_iso=? AND ano=?", 
+                (ln, sem, ano)
+            ).fetchone()
+            tempo_disponivel = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_SEM_MIN_DEFAULT
+            
+            # MTBF: usando tempo_disponivel bruto
+            mtbf = (tempo_disponivel / n / 60) if n > 0 else (tempo_disponivel / 60)
             mttr = (tp / n / 60) if n > 0 else 0
             mtta = (tmtta / n) if n > 0 else 0
-            indisp = (tp / TEMPO_SEM_MIN) * 100
+            indisp = (tp / tempo_disponivel) * 100 if tempo_disponivel > 0 else 0
             per_ref = f'S{sem:02d}'
             conn.execute('''
                 INSERT OR REPLACE INTO kpi_confiabilidade
@@ -1319,7 +1426,7 @@ async def import_paradas(req: Request):
 
         # 5. Calcula KPIs de Ofensores (Máquinas) por Semana
         rows_maq_sem = conn.execute(
-            "SELECT semana_iso, maquina, SUM(dur_min) as tp, COUNT(*) as qtde FROM kpi_paradas_raw WHERE ano=? GROUP BY semana_iso, maquina",
+            "SELECT semana_iso, maquina, SUM(dur_min) as tp, COUNT(*) as qtde, linha FROM kpi_paradas_raw WHERE ano=? GROUP BY semana_iso, maquina, linha",
             (ano,)
         ).fetchall()
         
@@ -1329,8 +1436,15 @@ async def import_paradas(req: Request):
             pass
 
         for r in rows_maq_sem:
-            sem, maq, tp, qtde = r['semana_iso'], r['maquina'], r['tp'], r['qtde']
-            bd_pct = (tp / TEMPO_SEM_MIN) * 100
+            sem, maq, tp, qtde, ln = r['semana_iso'], r['maquina'], r['tp'], r['qtde'], r['linha']
+            
+            prod_row = conn.execute(
+                "SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND semana_iso=? AND ano=?", 
+                (ln, sem, ano)
+            ).fetchone()
+            tempo_disponivel = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_SEM_MIN_DEFAULT
+            
+            bd_pct = (tp / tempo_disponivel) * 100 if tempo_disponivel > 0 else 0
             
             # Checa se o registro já existe para atualizar
             exists = conn.execute("SELECT id FROM kpi_maquinas_ofensoras WHERE semana=? AND maquina=?", (f'S{sem:02d}', maq)).fetchone()
@@ -1344,17 +1458,24 @@ async def import_paradas(req: Request):
                     INSERT INTO kpi_maquinas_ofensoras
                     (semana, maquina, tempo_mecanico_min, tempo_total_min, tempo_disponivel_min, breakdown_pct, n_falhas)
                     VALUES (?,?,?,?,?,?,?)
-                ''', (f'S{sem:02d}', maq, 0, tp, TEMPO_SEM_MIN, round(bd_pct,4), qtde))
+                ''', (f'S{sem:02d}', maq, 0, tp, tempo_disponivel, round(bd_pct,4), qtde))
 
         # 6. Calcula KPIs de Ofensores (Máquinas) por MÊS (para o drilldown mensal)
         rows_maq_mes = conn.execute(
-            "SELECT mes, maquina, SUM(dur_min) as tp, COUNT(*) as qtde FROM kpi_paradas_raw WHERE ano=? GROUP BY mes, maquina",
+            "SELECT mes, maquina, SUM(dur_min) as tp, COUNT(*) as qtde, linha FROM kpi_paradas_raw WHERE ano=? GROUP BY mes, maquina, linha",
             (ano,)
         ).fetchall()
         for r in rows_maq_mes:
-            m, maq, tp, qtde = r['mes'], r['maquina'], r['tp'], r['qtde']
+            m, maq, tp, qtde, ln = r['mes'], r['maquina'], r['tp'], r['qtde'], r['linha']
             per_ref = MESES[m - 1] if 1 <= m <= 12 else str(m)
-            bd_pct = (tp / TEMPO_MES_MIN) * 100
+            
+            prod_row = conn.execute(
+                "SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND mes=? AND ano=?", 
+                (ln, m, ano)
+            ).fetchone()
+            tempo_disponivel = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_MES_MIN_DEFAULT
+            
+            bd_pct = (tp / tempo_disponivel) * 100 if tempo_disponivel > 0 else 0
             
             exists = conn.execute("SELECT id FROM kpi_maquinas_ofensoras WHERE semana=? AND maquina=?", (per_ref, maq)).fetchone()
             if exists:
@@ -1367,7 +1488,7 @@ async def import_paradas(req: Request):
                     INSERT INTO kpi_maquinas_ofensoras
                     (semana, maquina, tempo_mecanico_min, tempo_total_min, tempo_disponivel_min, breakdown_pct, n_falhas)
                     VALUES (?,?,?,?,?,?,?)
-                ''', (per_ref, maq, 0, tp, TEMPO_MES_MIN, round(bd_pct,4), qtde))
+                ''', (per_ref, maq, 0, tp, tempo_disponivel, round(bd_pct,4), qtde))
 
         conn.commit()
         total = len(reparos)
@@ -1446,14 +1567,18 @@ def get_kpi_mtbf_dynamic(ano: int = None):
             mq = m['maquina']
             ln = m['linha']
             
-            mec = conn.execute("SELECT COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE maquina=? AND ano=? AND grupo_parada LIKE '%Mecânica%'", (mq, ano)).fetchone()
-            ele = conn.execute("SELECT COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE maquina=? AND ano=? AND grupo_parada LIKE '%Elétrica%'", (mq, ano)).fetchone()
+            # Buscar o Tempo Disponível Bruto Real da Produção para a Linha (YTD)
+            prod_row = conn.execute("SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND ano=?", (ln, ano)).fetchone()
+            TEMPO_YTD = prod_row['td'] if (prod_row and prod_row['td']) else (cur_mes * 30 * 24 * 60)
+            
+            mec = conn.execute("SELECT COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE maquina=? AND ano=? AND (grupo_parada LIKE '%Mecânic%' OR grupo_parada LIKE '%mecanic%')", (mq, ano)).fetchone()
+            ele = conn.execute("SELECT COUNT(*) as n, SUM(dur_min) as tp FROM kpi_paradas_raw WHERE maquina=? AND ano=? AND (grupo_parada LIKE '%Elétric%' OR grupo_parada LIKE '%elétric%')", (mq, ano)).fetchone()
             
             n_mec, tp_mec = mec['n'] or 0, mec['tp'] or 0
             n_ele, tp_ele = ele['n'] or 0, ele['tp'] or 0
             
-            mtbf_mec = round(max((TEMPO_YTD - tp_mec) / n_mec / 60, 0), 2) if n_mec > 0 else '-'
-            mtbf_ele = round(max((TEMPO_YTD - tp_ele) / n_ele / 60, 0), 2) if n_ele > 0 else '-'
+            mtbf_mec = round((TEMPO_YTD / n_mec / 60), 2) if n_mec > 0 else '-'
+            mtbf_ele = round((TEMPO_YTD / n_ele / 60), 2) if n_ele > 0 else '-'
             
             linha_col = ln.lower().replace(' ', '_')
             tgt = mtbf_targets.get(mq, 100)
@@ -1500,7 +1625,42 @@ def get_kpi_drilldown_maquinas(semana: str, linha: str = 'TODAS', ano: int = Non
         q += " GROUP BY maquina ORDER BY tempo_total_min DESC"
         
         rows = conn.execute(q, vals).fetchall()
-        return [dict(r) for r in rows]
+        
+        # Calculate MTBF per machine
+        result = []
+        for r in rows:
+            d = dict(r)
+            maq = d['maquina']
+            tp = d['tempo_total_min']
+            n_falhas = d['n_falhas']
+            
+            # Find the line for this machine
+            ln = linha
+            if ln == 'TODAS':
+                ln_row = conn.execute("SELECT linha FROM kpi_paradas_raw WHERE maquina=? AND linha != '' LIMIT 1", (maq,)).fetchone()
+                ln = ln_row['linha'] if ln_row else 'Linha 4'
+                
+            # Fetch tempo disponivel
+            td_q = "SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND ano=?"
+            td_vals = [ln, ano]
+            if semana in MESES:
+                td_q += " AND mes=?"
+                td_vals.append(MESES[semana])
+            elif semana.startswith('S'):
+                td_q += " AND semana_iso=?"
+                td_vals.append(int(semana[1:]))
+            else:
+                td_q += " AND mes=?"
+                td_vals.append(int(semana))
+                
+            prod = conn.execute(td_q, td_vals).fetchone()
+            td = prod['td'] if (prod and prod['td'] and prod['td'] > 0) else (30 * 24 * 60 if semana in MESES else 7 * 24 * 60)
+            
+            mtbf = (td / n_falhas / 60) if n_falhas > 0 else (td / 60)
+            d['mtbf_h'] = round(mtbf, 2)
+            result.append(d)
+            
+        return result
     finally:
         conn.close()
 

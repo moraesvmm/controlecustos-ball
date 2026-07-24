@@ -129,7 +129,8 @@ async function handleProducaoUpload(event) {
   const file = event.target.files[0];
   if (!file) return;
 
-  if (window.toast) window.toast('Lendo arquivo de Produção...', 'info');
+  if (typeof window.toast === 'function') window.toast('Lendo arquivo de Produção...', 'info');
+  else if (window.Swal) window.Swal.fire({ title: 'Processando', text: 'Lendo arquivo de Produção...', icon: 'info', timer: 2000, showConfirmButton: false });
 
   try {
     const data = await file.arrayBuffer();
@@ -358,13 +359,19 @@ async function extrairRelatorioParadas(workbook) {
     
     if (!hasData || (!norm['paradas'] && !norm['data'])) continue;
 
+    const kLinha = Object.keys(norm).find(h => {
+        const l = h.toLowerCase();
+        return l === 'linha' || l === 'line' || l.includes('linha') || l.includes('setor');
+    });
+
     payloadRows.push({
       parada: norm['paradas'] || '',
       grupo: norm['grupos de paradas'] || norm['grupo de paradas'] || '',
       data: norm['data'] || '',
       inicio: norm['início'] || norm['inicio'] || '',
       fim: norm['fim'] || '',
-      duracao: norm['duração'] || norm['duracao'] || '00:00:00'
+      duracao: norm['duração'] || norm['duracao'] || '00:00:00',
+      linha: kLinha ? norm[kLinha] : ''
     });
   }
   
@@ -1392,7 +1399,10 @@ async function importarMGPRO(file) {
 
       // Detecta índices das colunas necessitárias
       const iGrupo = headers.findIndex(h => h.includes('Grupos'));
-      const iLinha = headers.findIndex(h => h.toLowerCase() === 'linha');
+      const iLinha = headers.findIndex(h => {
+        const l = h.toLowerCase();
+        return l === 'linha' || l === 'line' || l.includes('linha') || l.includes('setor');
+      });
       const iData  = headers.findIndex(h => h.toLowerCase() === 'data');
       const iDur   = headers.findIndex(h => h.toLowerCase().includes('ura'));
       const iInicio = headers.findIndex(h => h.toLowerCase() === 'início' || h.toLowerCase() === 'inicio');
