@@ -692,4 +692,168 @@ document.addEventListener('DOMContentLoaded', () => {
             loadDashboard();
         }
     });
+
+    // ==========================================
+    // LÓGICA DO MODAL DE NOVIDADES
+    // ==========================================
+    const btnMovNovidades = document.getElementById('btnMovNovidades');
+    const novidadesModalOverlay = document.getElementById('novidadesModalOverlay');
+    const btnNovidadesClose = document.getElementById('btnNovidadesClose');
+    const novTableBody = document.getElementById('novTableBody');
+    const novFiltroBusca = document.getElementById('novFiltroBusca');
+    const btnNovExportarCsv = document.getElementById('btnNovExportarCsv');
+    
+    let currentNovidadesData = [];
+
+    // Função para verificar se existem novidades (pode ser chamada após importar)
+    async function checkNovidades() {
+        if(!btnMovNovidades) return;
+        try {
+            const url = (window.__ENV && window.__ENV.SUPABASE_URL) ? `${window.__ENV.SUPABASE_URL}/api/movimentacoes/novidades` : 'http://localhost:8080/api/movimentacoes/novidades';
+            const res = await fetch(url);
+            if(res.ok) {
+                const data = await res.json();
+                const qtd = data.stats.quantidade || 0;
+                btnMovNovidades.style.display = 'block';
+                if(qtd > 0) {
+                    btnMovNovidades.innerHTML = `Entradas Recentes (${qtd})`;
+                } else {
+                    btnMovNovidades.innerHTML = `Entradas Recentes (0)`;
+                }
+            }
+        } catch(err) {
+            console.error('Erro ao buscar novidades:', err);
+        }
+    }
+
+    // Carrega novidades após a importação e também ao inicializar
+    checkNovidades();
+    const originalLoadGrid = loadGrid;
+    loadGrid = async function(page) {
+        await originalLoadGrid(page);
+        if(page === 1) checkNovidades(); // Recheck on tab open/filter
+    };
+
+    if(btnMovNovidades) {
+        btnMovNovidades.addEventListener('click', async () => {
+            if(novidadesModalOverlay) novidadesModalOverlay.classList.add('active');
+            await renderNovidades();
+        });
+    }
+
+    if(btnNovidadesClose) {
+        btnNovidadesClose.addEventListener('click', () => {
+            if(novidadesModalOverlay) novidadesModalOverlay.classList.remove('active');
+        });
+    }
+
+    if(novidadesModalOverlay) {
+        novidadesModalOverlay.addEventListener('click', (e) => {
+            if(e.target === novidadesModalOverlay) novidadesModalOverlay.classList.remove('active');
+        });
+    }
+
+    async function renderNovidades() {
+        try {
+            if(novTableBody) novTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem;">Carregando...</td></tr>`;
+            
+            const url = (window.__ENV && window.__ENV.SUPABASE_URL) ? `${window.__ENV.SUPABASE_URL}/api/movimentacoes/novidades` : 'http://localhost:8080/api/movimentacoes/novidades';
+            const res = await fetch(url);
+            if(!res.ok) throw new Error('Falha ao carregar novidades');
+            
+            const data = await res.json();
+            currentNovidadesData = data.novidades || [];
+            const stats = data.stats;
+            
+            // Atualiza Header
+            const sub = document.getElementById('novidadesSubtitle');
+            if(sub) {
+                if(stats.ultima_importacao) {
+                    const dt = new Date(stats.ultima_importacao);
+                    sub.innerText = `Comparação baseada na última importação em ${dt.toLocaleDateString('pt-BR')} às ${dt.toLocaleTimeString('pt-BR')}`;
+                } else {
+                    sub.innerText = `Comparação de importações mais recentes.`;
+                }
+            }
+            
+            // Atualiza KPIs
+            const getEl = id => document.getElementById(id);
+            if(getEl('novKpiTotal')) getEl('novKpiTotal').innerText = formatBRL(stats.total_valor || 0);
+            if(getEl('novKpiQtd')) getEl('novKpiQtd').innerText = `${stats.quantidade || 0} registros`;
+            
+            if(getEl('novKpiArea')) getEl('novKpiArea').innerText = stats.top_area?.nome || '-';
+            if(getEl('novKpiAreaVal')) getEl('novKpiAreaVal').innerText = formatBRL(stats.top_area?.valor || 0);
+            
+            if(getEl('novKpiSetor')) getEl('novKpiSetor').innerText = stats.top_setor?.nome || '-';
+            if(getEl('novKpiSetorVal')) getEl('novKpiSetorVal').innerText = formatBRL(stats.top_setor?.valor || 0);
+            
+            if(getEl('novKpiMaior')) getEl('novKpiMaior').innerText = stats.maior_lancamento?.descricao?.substring(0,20) || '-';
+            if(getEl('novKpiMaiorVal')) getEl('novKpiMaiorVal').innerText = formatBRL(stats.maior_lancamento?.valor_total || 0);
+            
+            renderNovidadesTable(currentNovidadesData);
+            
+        } catch(err) {
+            console.error(err);
+            if(novTableBody) novTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 2rem; color: #ef4444;">Erro ao carregar os dados.</td></tr>`;
+        }
+    }
+
+    function renderNovidadesTable(lista) {
+        if(!novTableBody) return;
+        novTableBody.innerHTML = '';
+        
+        if(lista.length === 0) {
+            novTableBody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                <div class="novidades-empty">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                    Nenhuma nova movimentação encontrada com base nestes filtros.
+                </div>
+            </td></tr>`;
+            return;
+        }
+        
+        lista.forEach(r => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="color: var(--muted);">${r.data_transacao || '-'}</td>
+                <td style="font-family: monospace;">${r.codigo_item || '-'}</td>
+                <td style="font-weight: 500;" title="${r.descricao || ''}">
+                    <span class="novidades-badge" style="margin-right: 0.5rem;">NOVO</span>
+                    ${(r.descricao || '').substring(0,40)}
+                </td>
+                <td style="color: var(--muted);">${r.area_id || '-'}</td>
+                <td style="color: var(--muted);">${r.cost_center_id || '-'}</td>
+                <td style="font-weight: 600; font-family: monospace; text-align: right; color: var(--text);">${formatBRL(r.valor_total || 0)}</td>
+                <td style="color: var(--muted);">${r.documento || r.numero_ordem || '-'}</td>
+                <td style="color: var(--muted);">${(r.collaborator_id || '-').substring(0,20)}</td>
+            `;
+            novTableBody.appendChild(tr);
+        });
+    }
+
+    if(novFiltroBusca) {
+        novFiltroBusca.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase();
+            const filtered = currentNovidadesData.filter(r => {
+                const searchStr = `${r.codigo_item} ${r.descricao} ${r.area_id} ${r.cost_center_id} ${r.documento} ${r.numero_ordem} ${r.collaborator_id}`.toLowerCase();
+                return searchStr.includes(q);
+            });
+            renderNovidadesTable(filtered);
+        });
+    }
+
+    if(btnNovExportarCsv) {
+        btnNovExportarCsv.addEventListener('click', () => {
+            const table = document.getElementById('novTable');
+            if(!table) return;
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const csv = rows.map(r => Array.from(r.querySelectorAll('th,td')).map(c => '"' + c.innerText.replace(/"/g, '""') + '"').join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "movimentacoes_recentes.csv";
+            link.click();
+        });
+    }
 });
+

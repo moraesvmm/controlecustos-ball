@@ -505,6 +505,9 @@
           <button id="btnMovExportarCsv" class="btn btn-outline" style="padding: 0.6rem 1.5rem; height: 39px; border-color: var(--border-strong); color: var(--text); font-weight: 600; background: var(--surface-solid);">
             📥 Exportar CSV
           </button>
+          <button id="btnMovNovidades" class="btn btn-outline" style="display: none; padding: 0.6rem 1.5rem; height: 39px; border-color: var(--border-strong); color: var(--text); font-weight: 600; background: var(--surface-solid);">
+            Entradas Recentes
+          </button>
         </div>
 
         <!-- Data Table -->
@@ -540,6 +543,68 @@
             <div style="display: flex; gap: 0.5rem;">
               <button class="btn btn-outline" id="movBtnPrevPage" disabled style="padding: 0.4rem 0.75rem; font-size: 0.85rem; border-color: var(--border-strong); background: var(--surface-solid); color: var(--muted);">Anterior</button>
               <button class="btn btn-outline" id="movBtnNextPage" disabled style="padding: 0.4rem 0.75rem; font-size: 0.85rem; border-color: var(--border-strong); background: var(--surface-solid); color: var(--muted);">Próxima</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- MODAL NOVIDADES -->
+      <div class="novidades-modal-overlay" id="novidadesModalOverlay">
+        <div class="novidades-modal">
+          <div class="novidades-header">
+            <div>
+              <h3 class="novidades-title">Entradas Recentes</h3>
+              <p class="novidades-subtitle" id="novidadesSubtitle">Carregando informações da última importação...</p>
+            </div>
+            <button class="novidades-close" id="btnNovidadesClose">×</button>
+          </div>
+          <div class="novidades-stats-grid">
+            <div class="novidades-stat-card">
+              <span class="novidades-stat-label">Valor Total</span>
+              <span class="novidades-stat-value" id="novKpiTotal">R$ 0,00</span>
+              <span class="novidades-stat-sub" id="novKpiQtd">0 registros</span>
+            </div>
+            <div class="novidades-stat-card">
+              <span class="novidades-stat-label">Área Impactada</span>
+              <span class="novidades-stat-value" id="novKpiArea">-</span>
+              <span class="novidades-stat-sub" id="novKpiAreaVal">R$ 0,00</span>
+            </div>
+            <div class="novidades-stat-card">
+              <span class="novidades-stat-label">Principal Centro de Custo</span>
+              <span class="novidades-stat-value" id="novKpiSetor">-</span>
+              <span class="novidades-stat-sub" id="novKpiSetorVal">R$ 0,00</span>
+            </div>
+            <div class="novidades-stat-card">
+              <span class="novidades-stat-label">Maior Lançamento</span>
+              <span class="novidades-stat-value" id="novKpiMaior">-</span>
+              <span class="novidades-stat-sub" id="novKpiMaiorVal">R$ 0,00</span>
+            </div>
+          </div>
+          <div class="novidades-body">
+            <div class="novidades-filters">
+              <input type="text" id="novFiltroBusca" class="novidades-search" placeholder="Buscar nas novidades (Ex: Item, Setor, Nota)..." />
+              <button id="btnNovExportarCsv" class="btn btn-outline" style="padding: 0.4rem 1rem; font-size: 0.8rem; border-color: var(--border); color: var(--text);">📥 CSV</button>
+            </div>
+            <div class="novidades-table-wrapper">
+              <table class="novidades-table" id="novTable">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Item (Código)</th>
+                    <th>Descrição</th>
+                    <th>Área</th>
+                    <th>Centro de Custo</th>
+                    <th style="text-align: right;">Valor (R$)</th>
+                    <th>NF / Ordem</th>
+                    <th>Colaborador</th>
+                  </tr>
+                </thead>
+                <tbody id="novTableBody">
+                  <tr>
+                    <td colspan="8" style="text-align: center; padding: 2rem;">Carregando...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -694,10 +759,11 @@
                   <option value="Linha 8">Linha 8</option>
                   <option value="Linha 9">Linha 9</option>
                 </select>
-                <!-- Filtro Ano -->
-                <select id="selectConfiabAno" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; outline: none;">
-                  <option value="2026">2026</option>
-                  <option value="2025">2025</option>
+                <!-- Filtro Tipo de Reparo -->
+                <select id="selectConfiabTipo" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; outline: none;">
+                  <option value="GERAL">Geral (Ambos)</option>
+                  <option value="MEC">Mecânica</option>
+                  <option value="ELE">Elétrica</option>
                 </select>
                 <!-- Filtro Mês/Semana -->
                 <select id="selectConfiabMesSemana" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; outline: none;">

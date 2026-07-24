@@ -399,7 +399,7 @@ async def import_movimentacoes_post(file: UploadFile = File(...)):
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (mes_ref, ano_ref, current_area, classificacao, budget, budget, custo, 0.0))
 
-        conn.execute("DELETE FROM movimentacoes_transaction WHERE substr(data_transacao, 1, 7) = ?", (f"{ano_ref}-{mes_ref:02d}",))
+        # conn.execute("DELETE FROM movimentacoes_transaction WHERE substr(data_transacao, 1, 7) = ?", (f"{ano_ref}-{mes_ref:02d}",))
         
         inserted_count = 0
         skipped_count = 0
@@ -433,10 +433,16 @@ async def import_movimentacoes_post(file: UploadFile = File(...)):
             classificacao = str(safe_get(['class.diver', 'class. diver', 'classificação'], ''))
             descricao = str(safe_get(['descriação codigo', 'descrição codigo', 'descrição código', 'descrição'], ''))
             
+            # Tracking de novidades via UPSERT
+            import datetime
+            current_batch = datetime.datetime.now().isoformat()
+            
             conn.execute("""
-                INSERT OR IGNORE INTO movimentacoes_transaction 
-                (data_transacao, codigo_item, descricao, valor_total, tipo, documento, numero_ordem, area_id, category_id, cost_center_id, collaborator_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO movimentacoes_transaction 
+                (data_transacao, codigo_item, descricao, valor_total, tipo, documento, numero_ordem, area_id, category_id, cost_center_id, collaborator_id, import_batch, is_new)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ON CONFLICT(data_transacao, codigo_item, documento, numero_ordem, valor_total) 
+                DO UPDATE SET import_batch = excluded.import_batch, is_new = 0
             """, (
                 dt_str,
                 str(it_codigo),
@@ -448,13 +454,18 @@ async def import_movimentacoes_post(file: UploadFile = File(...)):
                 area_id,
                 classificacao,
                 str(safe_get(['cc', 'centro de custo', 'centro de custos'], '')),
-                str(safe_get(['nome', 'colaborador', 'solicitante'], ''))
+                str(safe_get(['nome', 'colaborador', 'solicitante'], '')),
+                current_batch
             ))
             inserted_count += 1
             
         with open("import_debug.log", "a", encoding="utf-8") as f:
             f.write(f"Linhas inseridas: {inserted_count}\n")
             f.write(f"Linhas ignoradas: {skipped_count}\n")
+
+        # Apaga apenas os itens do mês que NÃO vieram na planilha atual (foram removidos no ERP)
+        if 'current_batch' in locals():
+            conn.execute("DELETE FROM movimentacoes_transaction WHERE substr(data_transacao, 1, 7) = ? AND import_batch != ?", (f"{ano_ref}-{mes_ref:02d}", current_batch))
 
         conn.commit()
         return {"status": "success", "mes": mes_ref, "ano": ano_ref, "message": "Importação concluída com sucesso."}
@@ -493,6 +504,55 @@ def get_mov_dashboard():
             elif "FACILIT" in area: timeline[chave]["facilities"] += consumo
 
         return {"timeline": list(timeline.values()), "raw_summary": [dict(r) for r in rows]}
+    finally:
+        conn.close()
+
+@app.get("/api/movimentacoes/novidades")
+def get_mov_novidades():
+    conn = get_db()
+    try:
+        query = "SELECT * FROM movimentacoes_transaction WHERE is_new = 1 ORDER BY valor_total DESC"
+        rows = conn.execute(query).fetchall()
+        
+        # Aggregate statistics
+        total_valor = 0.0
+        setores = {}
+        areas = {}
+        maior_lancamento = None
+        
+        for r in rows:
+            v = r["valor_total"] or 0
+            total_valor += v
+            
+            s = r["cost_center_id"] or "Não Informado"
+            setores[s] = setores.get(s, 0) + v
+            
+            a = r["area_id"] or "Não Informado"
+            areas[a] = areas.get(a, 0) + v
+            
+            if not maior_lancamento or v > (maior_lancamento["valor_total"] or 0):
+                maior_lancamento = dict(r)
+                
+        # Find top sector
+        top_setor = max(setores.items(), key=lambda x: x[1]) if setores else ("-", 0)
+        # Find top area
+        top_area = max(areas.items(), key=lambda x: x[1]) if areas else ("-", 0)
+
+        # Última importação
+        import_row = conn.execute("SELECT import_batch FROM movimentacoes_transaction WHERE import_batch IS NOT NULL ORDER BY import_batch DESC LIMIT 1").fetchone()
+        ultima_importacao = import_row["import_batch"] if import_row else None
+        
+        return {
+            "novidades": [dict(r) for r in rows],
+            "stats": {
+                "quantidade": len(rows),
+                "total_valor": total_valor,
+                "top_setor": {"nome": top_setor[0], "valor": top_setor[1]},
+                "top_area": {"nome": top_area[0], "valor": top_area[1]},
+                "maior_lancamento": maior_lancamento,
+                "ultima_importacao": ultima_importacao
+            }
+        }
     finally:
         conn.close()
 
@@ -704,7 +764,9 @@ def init_db():
             mtbf_h REAL,
             mttr_h REAL,
             indisponibilidade_pct REAL,
-            UNIQUE(linha, periodo_tipo, periodo_ref, ano)
+            mtta_m REAL DEFAULT 0,
+            tipo_reparo TEXT DEFAULT 'GERAL',
+            UNIQUE(linha, periodo_tipo, periodo_ref, ano, tipo_reparo)
         )
     ''')
 
@@ -771,9 +833,21 @@ def init_db():
             category_id TEXT,
             cost_center_id TEXT,
             collaborator_id TEXT,
+            import_batch TEXT,
+            is_new INTEGER DEFAULT 0,
             UNIQUE(data_transacao, codigo_item, documento, numero_ordem, valor_total)
         )
     ''')
+
+    # Add new columns to movimentacoes_transaction safely (for existing db)
+    try:
+        conn.execute("ALTER TABLE movimentacoes_transaction ADD COLUMN import_batch TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        conn.execute("ALTER TABLE movimentacoes_transaction ADD COLUMN is_new INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
 
     # Add new columns to kpi_paradas_raw safely
     try:
@@ -1368,61 +1442,91 @@ async def import_paradas(req: Request):
             )
 
         # 3. Calcula KPIs por Linha x Mês
-        rows_mes = conn.execute(
-            "SELECT linha, mes, COUNT(*) as n, SUM(dur_min) as tp, SUM(mtta_min) as tmtta FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, mes",
-            (ano,)
-        ).fetchall()
+        rows_mes = conn.execute("""
+            SELECT linha, mes, COUNT(*) as n, SUM(dur_min) as tp, SUM(mtta_min) as tmtta,
+                   SUM(CASE WHEN grupo_parada LIKE '%Mecânic%' OR grupo_parada LIKE '%mecanic%' THEN 1 ELSE 0 END) as n_mec,
+                   SUM(CASE WHEN grupo_parada LIKE '%Mecânic%' OR grupo_parada LIKE '%mecanic%' THEN dur_min ELSE 0 END) as tp_mec,
+                   SUM(CASE WHEN grupo_parada LIKE '%Mecânic%' OR grupo_parada LIKE '%mecanic%' THEN mtta_min ELSE 0 END) as tmtta_mec,
+                   SUM(CASE WHEN grupo_parada LIKE '%Elétric%' OR grupo_parada LIKE '%elétric%' THEN 1 ELSE 0 END) as n_ele,
+                   SUM(CASE WHEN grupo_parada LIKE '%Elétric%' OR grupo_parada LIKE '%elétric%' THEN dur_min ELSE 0 END) as tp_ele,
+                   SUM(CASE WHEN grupo_parada LIKE '%Elétric%' OR grupo_parada LIKE '%elétric%' THEN mtta_min ELSE 0 END) as tmtta_ele
+            FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, mes
+        """, (ano,)).fetchall()
+        
         MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
         for r in rows_mes:
-            ln, mes, n, tp = r['linha'], r['mes'], r['n'], r['tp'] or 0
-            tmtta = r['tmtta'] or 0
+            ln, mes = r['linha'], r['mes']
             
             # Buscar tempo disponível importado da produção
             prod_row = conn.execute(
                 "SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND mes=? AND ano=?", 
                 (ln, mes, ano)
             ).fetchone()
-            tempo_disponivel = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_MES_MIN_DEFAULT
+            td = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_MES_MIN_DEFAULT
             
-            # MTBF: usando tempo_disponivel bruto
-            mtbf = (tempo_disponivel / n / 60) if n > 0 else (tempo_disponivel / 60)
-            mttr = (tp / n / 60) if n > 0 else 0
-            mtta = (tmtta / n) if n > 0 else 0
-            indisp = (tp / tempo_disponivel) * 100 if tempo_disponivel > 0 else 0
             per_ref = MESES[mes - 1] if 1 <= mes <= 12 else str(mes)
-            conn.execute('''
-                INSERT OR REPLACE INTO kpi_confiabilidade
-                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct, mtta_m)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-            ''', (ln, 'MES', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2), round(mtta,2)))
+            
+            def insert_kpi_conf(tipo, num_f, tp_m, tmtta_m):
+                n = num_f or 0
+                tp = tp_m or 0
+                tmtta = tmtta_m or 0
+                mtbf = (td / n / 60) if n > 0 else (td / 60)
+                mttr = (tp / n / 60) if n > 0 else 0
+                mtta = (tmtta / n) if n > 0 else 0
+                indisp = (tp / td) * 100 if td > 0 else 0
+                
+                conn.execute('''
+                    INSERT OR REPLACE INTO kpi_confiabilidade
+                    (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct, mtta_m, tipo_reparo)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                ''', (ln, 'MES', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2), round(mtta,2), tipo))
+            
+            insert_kpi_conf('GERAL', r['n'], r['tp'], r['tmtta'])
+            insert_kpi_conf('MEC', r['n_mec'], r['tp_mec'], r['tmtta_mec'])
+            insert_kpi_conf('ELE', r['n_ele'], r['tp_ele'], r['tmtta_ele'])
 
         # 4. Calcula KPIs por Linha x Semana
-        rows_sem = conn.execute(
-            "SELECT linha, semana_iso, COUNT(*) as n, SUM(dur_min) as tp, SUM(mtta_min) as tmtta FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, semana_iso",
-            (ano,)
-        ).fetchall()
+        rows_sem = conn.execute("""
+            SELECT linha, semana_iso, COUNT(*) as n, SUM(dur_min) as tp, SUM(mtta_min) as tmtta,
+                   SUM(CASE WHEN grupo_parada LIKE '%Mecânic%' OR grupo_parada LIKE '%mecanic%' THEN 1 ELSE 0 END) as n_mec,
+                   SUM(CASE WHEN grupo_parada LIKE '%Mecânic%' OR grupo_parada LIKE '%mecanic%' THEN dur_min ELSE 0 END) as tp_mec,
+                   SUM(CASE WHEN grupo_parada LIKE '%Mecânic%' OR grupo_parada LIKE '%mecanic%' THEN mtta_min ELSE 0 END) as tmtta_mec,
+                   SUM(CASE WHEN grupo_parada LIKE '%Elétric%' OR grupo_parada LIKE '%elétric%' THEN 1 ELSE 0 END) as n_ele,
+                   SUM(CASE WHEN grupo_parada LIKE '%Elétric%' OR grupo_parada LIKE '%elétric%' THEN dur_min ELSE 0 END) as tp_ele,
+                   SUM(CASE WHEN grupo_parada LIKE '%Elétric%' OR grupo_parada LIKE '%elétric%' THEN mtta_min ELSE 0 END) as tmtta_ele
+            FROM kpi_paradas_raw WHERE ano=? GROUP BY linha, semana_iso
+        """, (ano,)).fetchall()
+        
         for r in rows_sem:
-            ln, sem, n, tp = r['linha'], r['semana_iso'], r['n'], r['tp'] or 0
-            tmtta = r['tmtta'] or 0
+            ln, sem = r['linha'], r['semana_iso']
             
             # Buscar tempo disponível importado da produção
             prod_row = conn.execute(
                 "SELECT SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND semana_iso=? AND ano=?", 
                 (ln, sem, ano)
             ).fetchone()
-            tempo_disponivel = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_SEM_MIN_DEFAULT
+            td = prod_row['td'] if (prod_row and prod_row['td'] and prod_row['td'] > 0) else TEMPO_SEM_MIN_DEFAULT
             
-            # MTBF: usando tempo_disponivel bruto
-            mtbf = (tempo_disponivel / n / 60) if n > 0 else (tempo_disponivel / 60)
-            mttr = (tp / n / 60) if n > 0 else 0
-            mtta = (tmtta / n) if n > 0 else 0
-            indisp = (tp / tempo_disponivel) * 100 if tempo_disponivel > 0 else 0
             per_ref = f'S{sem:02d}'
-            conn.execute('''
-                INSERT OR REPLACE INTO kpi_confiabilidade
-                (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct, mtta_m)
-                VALUES (?,?,?,?,?,?,?,?,?,?)
-            ''', (ln, 'SEMANA', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2), round(mtta,2)))
+            
+            def insert_kpi_conf_sem(tipo, num_f, tp_m, tmtta_m):
+                n = num_f or 0
+                tp = tp_m or 0
+                tmtta = tmtta_m or 0
+                mtbf = (td / n / 60) if n > 0 else (td / 60)
+                mttr = (tp / n / 60) if n > 0 else 0
+                mtta = (tmtta / n) if n > 0 else 0
+                indisp = (tp / td) * 100 if td > 0 else 0
+                
+                conn.execute('''
+                    INSERT OR REPLACE INTO kpi_confiabilidade
+                    (linha, periodo_tipo, periodo_ref, ano, n_falhas, tempo_parado_min, mtbf_h, mttr_h, indisponibilidade_pct, mtta_m, tipo_reparo)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                ''', (ln, 'SEMANA', per_ref, ano, n, tp, round(mtbf,2), round(mttr,2), round(indisp,2), round(mtta,2), tipo))
+                
+            insert_kpi_conf_sem('GERAL', r['n'], r['tp'], r['tmtta'])
+            insert_kpi_conf_sem('MEC', r['n_mec'], r['tp_mec'], r['tmtta_mec'])
+            insert_kpi_conf_sem('ELE', r['n_ele'], r['tp_ele'], r['tmtta_ele'])
 
         # 5. Calcula KPIs de Ofensores (Máquinas) por Semana
         rows_maq_sem = conn.execute(
@@ -1500,19 +1604,26 @@ async def import_paradas(req: Request):
         conn.close()
 
 @app.get("/api/kpi/confiabilidade")
-def get_kpi_confiabilidade(periodo_tipo: str = 'MES', ano: int = None, linha: str = None):
+def get_kpi_confiabilidade(periodo_tipo: str = 'MES', ano: int = None, linha: str = 'TODAS', tipo_reparo: str = 'GERAL'):
     import datetime
     if not ano:
         ano = datetime.datetime.now().year
+        
     conn = get_db()
     try:
-        q = "SELECT * FROM kpi_confiabilidade WHERE periodo_tipo=? AND ano=?"
-        vals = [periodo_tipo, ano]
-        if linha and linha != 'TODAS':
-            q += " AND linha=?"
-            vals.append(linha)
-        q += " ORDER BY linha, periodo_ref"
-        rows = conn.execute(q, vals).fetchall()
+        if linha == 'TODAS':
+            rows = conn.execute(
+                "SELECT periodo_ref, SUM(n_falhas) as n_falhas, SUM(tempo_parado_min) as tp, SUM(mtbf_h*n_falhas)/SUM(n_falhas) as mtbf_h, SUM(mttr_h*n_falhas)/SUM(n_falhas) as mttr_h, AVG(indisponibilidade_pct) as indisponibilidade_pct, SUM(mtta_m*n_falhas)/SUM(n_falhas) as mtta_m FROM kpi_confiabilidade WHERE periodo_tipo=? AND ano=? AND tipo_reparo=? GROUP BY periodo_ref",
+                (periodo_tipo, ano, tipo_reparo)
+            ).fetchall()
+        else:
+            q = "SELECT * FROM kpi_confiabilidade WHERE periodo_tipo=? AND ano=? AND tipo_reparo=?"
+            vals = [periodo_tipo, ano, tipo_reparo]
+            if linha and linha != 'TODAS':
+                q += " AND linha=?"
+                vals.append(linha)
+            q += " ORDER BY linha, periodo_ref"
+            rows = conn.execute(q, vals).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()

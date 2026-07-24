@@ -1172,13 +1172,14 @@ function prevSlide() {
 // ============================================================
 let _confiabPeriodo = 'MES';
 let _confiabLinha   = 'TODAS';
-let _confiabAno     = new Date().getFullYear();
+let _confiabAno     = 2026; // Hardcoded to 2026 as per user's usage
+let _confiabTipo    = 'GERAL';
 let _confiabMesSemana = 'TODOS';
 let _confiabMetas   = {};
 
 async function carregarConfiabilidade() {
   try {
-    const params = new URLSearchParams({ periodo_tipo: _confiabPeriodo, ano: _confiabAno });
+    const params = new URLSearchParams({ periodo_tipo: _confiabPeriodo, ano: _confiabAno, tipo_reparo: _confiabTipo });
     if (_confiabLinha !== 'TODAS') params.append('linha', _confiabLinha);
     const resp = await fetch(`/api/kpi/confiabilidade?${params}`);
     const dados = await resp.json();
@@ -1452,14 +1453,10 @@ async function importarMGPRO(file) {
           confirmButtonText: 'Ok'
         });
       }
-      // Atualiza o filtro de ano
-      const selAno = document.getElementById('selectConfiabAno');
-      if (selAno) {
-        if (![...selAno.options].find(o => o.value == ano)) {
-          selAno.insertAdjacentHTML('afterbegin', `<option value="${ano}">${ano}</option>`);
-        }
-        selAno.value = ano;
-        _confiabAno = ano;
+      // Atualiza o filtro de tipo (se precisasse, mas é estático)
+      const selTipo = document.getElementById('selectConfiabTipo');
+      if (selTipo) {
+        _confiabTipo = selTipo.value;
       }
       await carregarConfiabilidade();
     } catch(err) {
@@ -1498,9 +1495,9 @@ export function initConfiabilidade() {
     _confiabLinha = e.target.value;
     carregarConfiabilidade();
   });
-  document.getElementById('selectConfiabAno')?.addEventListener('change', e => {
-    _confiabAno = parseInt(e.target.value);
-    _confiabMesSemana = 'TODOS'; // reset ao mudar de ano
+  document.getElementById('selectConfiabTipo')?.addEventListener('change', e => {
+    _confiabTipo = e.target.value;
+    _confiabMesSemana = 'TODOS'; // reset ao mudar de tipo
     carregarConfiabilidade();
   });
   document.getElementById('selectConfiabMesSemana')?.addEventListener('change', e => {
