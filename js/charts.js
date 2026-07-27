@@ -351,8 +351,11 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
         type: 'bar',
         data: byMes.map((x) => x.previsto),
         itemStyle: {
-          // Navy: azul navy profundo (para manter identidade)
-          color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]),
+          // Navy: prata platinum – elegante, high luxury, representa "estimado"
+          color: gradient(
+            getThemeMode() === 'navy' ? 'rgba(148, 163, 184, 0.82)' : getThemePalette().tertiary[0],
+            getThemeMode() === 'navy' ? 'rgba(100, 116, 139, 0.38)' : getThemePalette().tertiary[1]
+          ),
           borderRadius: [8, 8, 0, 0]
         }
       },
@@ -361,10 +364,10 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
         type: 'bar',
         data: byMes.map((x) => x.recebido),
         itemStyle: {
-          // Navy: gunmetal/slate contrastante para diferenciar de Previsto
+          // Navy: azul navy profundo – sólido, representa "confirmado/liquidado"
           color: gradient(
-            getThemeMode() === 'navy' ? 'rgba(71, 85, 105, 0.95)' : getThemePalette().secondary[0],
-            getThemeMode() === 'navy' ? 'rgba(51, 65, 85, 0.50)'  : getThemePalette().secondary[1]
+            getThemeMode() === 'navy' ? 'rgba(37, 99, 235, 0.95)'  : getThemePalette().secondary[0],
+            getThemeMode() === 'navy' ? 'rgba(30, 58, 138, 0.50)'  : getThemePalette().secondary[1]
           ),
           borderRadius: [8, 8, 0, 0]
         }
@@ -512,8 +515,11 @@ export function renderDashboardCharts(registros) {
           type: 'bar',
           data: byMes.map((x) => x.previsto),
           itemStyle: {
-            // Navy: azul navy profundo (identidade do tema)
-            color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]),
+            // Navy: prata platinum – elegante, high luxury, representa "estimado"
+            color: gradient(
+              getThemeMode() === 'navy' ? 'rgba(148, 163, 184, 0.82)' : getThemePalette().tertiary[0],
+              getThemeMode() === 'navy' ? 'rgba(100, 116, 139, 0.38)' : getThemePalette().tertiary[1]
+            ),
             borderRadius: [8, 8, 0, 0]
           },
           animationDelay: (idx) => idx * 50
@@ -523,10 +529,10 @@ export function renderDashboardCharts(registros) {
           type: 'bar',
           data: byMes.map((x) => x.recebido),
           itemStyle: {
-            // Navy: gunmetal slate – contrasta com o azul navy do Previsto
+            // Navy: azul navy profundo – sólido, representa "confirmado/liquidado"
             color: gradient(
-              getThemeMode() === 'navy' ? 'rgba(71, 85, 105, 0.95)' : getThemePalette().secondary[0],
-              getThemeMode() === 'navy' ? 'rgba(51, 65, 85, 0.50)'  : getThemePalette().secondary[1]
+              getThemeMode() === 'navy' ? 'rgba(37, 99, 235, 0.95)'  : getThemePalette().secondary[0],
+              getThemeMode() === 'navy' ? 'rgba(30, 58, 138, 0.50)'  : getThemePalette().secondary[1]
             ),
             borderRadius: [8, 8, 0, 0]
           },
