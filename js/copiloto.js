@@ -492,8 +492,13 @@ export async function initCopiloto() {
   fab.addEventListener('click', () => {
     isOpen = !isOpen;
     win.classList.toggle('open', isOpen);
-    fab.textContent = isOpen ? '×' : '🤖';
-    fab.style.fontSize = isOpen ? '1.6rem' : '1.5rem';
+    if (isOpen) {
+      fab.innerHTML = '×';
+      fab.style.fontSize = '2.5rem';
+      fab.style.color = 'var(--text-primary, #fff)';
+    } else {
+      fab.innerHTML = '<img src="img/tucano_mascote.webp" alt="Copiloto" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); pointer-events: none;" />';
+    }
 
     if (isOpen && document.getElementById('copiloto-messages').children.length === 0) {
       addMsg('Olá! Sou o Copiloto do Controller. Posso responder perguntas sobre os gastos do mês, projeções e ordens.', 'ai');
