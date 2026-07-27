@@ -142,6 +142,43 @@ body.navy-mode [class*="badge-"] {
   border: 1px solid rgba(100, 116, 139, 0.15);
   color: #94a3b8;
 }
+
+/* Sidebar contrast — Darkness Ocean */
+/* Nav items: legível no fundo abissal */
+body.navy-mode .nav-item {
+  color: #94a3b8 !important;
+}
+body.navy-mode .nav-item:hover {
+  color: #cbd5e1 !important;
+  background: rgba(148, 163, 184, 0.04) !important;
+}
+/* Seções/grupos da sidebar (títulos em uppercase) */
+body.navy-mode aside [style*="text-transform: uppercase"],
+body.navy-mode aside [style*="text-transform:uppercase"] {
+  color: #475569 !important;
+  opacity: 1 !important;
+}
+/* Sub-items da sidebar (accordions) */
+body.navy-mode .nav-sub-item {
+  color: #64748b !important;
+}
+body.navy-mode .nav-sub-item:hover {
+  color: #94a3b8 !important;
+}
+body.navy-mode .nav-sub-item.active {
+  color: #cbd5e1 !important;
+}
+/* Nav accordion triggers */
+body.navy-mode .nav-accordion-trigger {
+  color: #94a3b8 !important;
+}
+body.navy-mode .nav-accordion-trigger:hover {
+  color: #cbd5e1 !important;
+}
+/* Status bar / footer da sidebar */
+body.navy-mode .app-status {
+  color: #64748b !important;
+}
 /* ----------------------------- */
 
 /* ===== PURPLE MODE (EXECUTIVE EDITION) ===== */

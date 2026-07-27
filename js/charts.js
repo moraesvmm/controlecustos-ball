@@ -31,10 +31,11 @@ export function getThemePalette() {
   const mode = getThemeMode();
   if (mode === 'navy') {
     return {
-      primary: ['rgba(37, 99, 235, 0.95)', 'rgba(30, 64, 175, 0.45)'],     // Blue 600
-      secondary: ['rgba(59, 130, 246, 0.95)', 'rgba(37, 99, 235, 0.45)'],  // Blue 500 (Brighter Blue)
-      tertiary: ['rgba(30, 58, 138, 0.95)', 'rgba(23, 37, 84, 0.45)'],     // Blue 900 (Deep Navy)
-      accent: ['rgba(14, 165, 233, 0.95)', 'rgba(2, 132, 199, 0.45)']       // Light Blue
+      // Darkness Ocean palette: navy + cold graphite/slate, NO vibrant blues
+      primary:   ['rgba(100, 116, 139, 0.9)', 'rgba(71, 85, 105, 0.4)'],    // Slate-500 / Slate-600
+      secondary: ['rgba(148, 163, 184, 0.85)', 'rgba(100, 116, 139, 0.35)'], // Slate-400 / Slate-500
+      tertiary:  ['rgba(51, 65, 85, 0.95)', 'rgba(30, 41, 59, 0.5)'],        // Slate-700 (deep)
+      accent:    ['rgba(71, 85, 105, 0.9)', 'rgba(51, 65, 85, 0.45)']        // Slate-600
     };
   }
   if (mode === 'purple') {
@@ -82,16 +83,16 @@ export function themeColors() {
   
   return {
     legendColor:  isLight ? '#475569' : '#cbd5e1',
-    titleColor:   isLight ? '#0f172a' : (isNavy ? '#eff6ff' : (isPurple ? '#faf5ff' : '#f8fafc')),
-    tickColor:    isLight ? '#94a3b8' : (isNavy ? '#93c5fd' : (isPurple ? '#d8b4fe' : '#94a3b8')),
-    gridColor:    isLight ? 'rgba(15,23,42,0.03)' : (isNavy ? 'rgba(59,130,246,0.03)' : (isPurple ? 'rgba(168,85,247,0.03)' : 'rgba(255,255,255,0.02)')),
-    tooltipBg:    isLight ? 'rgba(255,255,255,0.98)' : (isNavy ? 'rgba(15,23,42,0.95)' : (isPurple ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.95)')),
-    tooltipTitle: isLight ? '#0f172a' : (isNavy ? '#93c5fd' : (isPurple ? '#d8b4fe' : '#f1f5f9')),
-    tooltipText:  isLight ? '#475569' : '#cbd5e1',
-    borderColor:  isLight ? 'rgba(15,23,42,0.1)' : (isNavy ? 'rgba(59,130,246,0.2)' : (isPurple ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)')),
-    pointerShadow: isLight ? 'rgba(15,23,42,0.03)' : (isNavy ? 'rgba(59,130,246,0.05)' : (isPurple ? 'rgba(168,85,247,0.05)' : 'rgba(255,255,255,0.04)')),
-    pieBorder:    isLight ? '#ffffff' : '#0f172a',
-    shadowColor:  isLight ? 'rgba(15,23,42,0.1)' : (isNavy ? 'rgba(30,64,175,0.5)' : (isPurple ? 'rgba(109,40,217,0.5)' : 'rgba(0,0,0,0.4)')),
+    titleColor:   isLight ? '#0f172a' : (isNavy ? '#e2e8f0' : (isPurple ? '#faf5ff' : '#f8fafc')),
+    tickColor:    isLight ? '#94a3b8' : (isNavy ? '#64748b' : (isPurple ? '#d8b4fe' : '#94a3b8')),
+    gridColor:    isLight ? 'rgba(15,23,42,0.03)' : (isNavy ? 'rgba(255,255,255,0.025)' : (isPurple ? 'rgba(168,85,247,0.03)' : 'rgba(255,255,255,0.02)')),
+    tooltipBg:    isLight ? 'rgba(255,255,255,0.98)' : 'rgba(7,12,21,0.97)',
+    tooltipTitle: isLight ? '#0f172a' : (isNavy ? '#cbd5e1' : (isPurple ? '#d8b4fe' : '#f1f5f9')),
+    tooltipText:  isLight ? '#475569' : '#94a3b8',
+    borderColor:  isLight ? 'rgba(15,23,42,0.1)' : (isNavy ? 'rgba(255,255,255,0.06)' : (isPurple ? 'rgba(168,85,247,0.2)' : 'rgba(255,255,255,0.1)')),
+    pointerShadow: isLight ? 'rgba(15,23,42,0.03)' : (isNavy ? 'rgba(100,116,139,0.04)' : (isPurple ? 'rgba(168,85,247,0.05)' : 'rgba(255,255,255,0.04)')),
+    pieBorder:    isLight ? '#ffffff' : '#070c15',
+    shadowColor:  isLight ? 'rgba(15,23,42,0.1)' : (isNavy ? 'rgba(0,0,0,0.5)' : (isPurple ? 'rgba(109,40,217,0.5)' : 'rgba(0,0,0,0.4)')),
   };
 }
 
