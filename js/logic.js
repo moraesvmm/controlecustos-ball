@@ -368,34 +368,53 @@ export function agregarPrazosRetorno(registros, tipoNatureza) {
 
 export function agregarFornecedores(registros) {
   const map = {};
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+
   for (const r of registros) {
     if (!r.fornecedor) continue;
     if (!map[r.fornecedor]) {
-      map[r.fornecedor] = { totalEntregues: 0, noPrazo: 0, somaAtraso: 0, qtdAtraso: 0 };
+      map[r.fornecedor] = { totalAvaliados: 0, noPrazo: 0, somaAtraso: 0, qtdAtraso: 0 };
     }
     
-    // SLA conta apenas itens recebidos ou com previsão
-    if (r.data_recebimento && r.previsao_entrega) {
-      map[r.fornecedor].totalEntregues++;
-      const dataRec = new Date(r.data_recebimento);
+    // SLA avalia itens já recebidos OU itens pendentes que já passaram do prazo
+    if (r.previsao_entrega) {
       const dataPrev = new Date(r.previsao_entrega);
-      const diffTime = dataRec - dataPrev;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
       
-      if (diffDays <= 0) {
-        map[r.fornecedor].noPrazo++;
+      if (r.data_recebimento) {
+        // Item recebido: calcular atraso real
+        map[r.fornecedor].totalAvaliados++;
+        const dataRec = new Date(r.data_recebimento);
+        const diffTime = dataRec - dataPrev;
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        if (diffDays <= 0) {
+          map[r.fornecedor].noPrazo++;
+        } else {
+          map[r.fornecedor].somaAtraso += diffDays;
+          map[r.fornecedor].qtdAtraso++;
+        }
       } else {
-        map[r.fornecedor].somaAtraso += diffDays;
-        map[r.fornecedor].qtdAtraso++;
+        // Item NÃO recebido: se o prazo já passou, ele penaliza o SLA
+        // Assumindo que se não tem data_recebimento e não é ENTREGUE, está em aberto
+        const isEntregue = (r.status === 'ENTREGUE');
+        if (!isEntregue && dataPrev < hoje) {
+          map[r.fornecedor].totalAvaliados++;
+          const diffTime = hoje - dataPrev;
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          map[r.fornecedor].somaAtraso += diffDays;
+          map[r.fornecedor].qtdAtraso++;
+        }
       }
     }
   }
 
   return Object.entries(map)
-    .filter(([_, data]) => data.totalEntregues > 0)
+    .filter(([_, data]) => data.totalAvaliados > 0)
     .map(([fornecedor, data]) => {
-      const pontualidade = (data.noPrazo / data.totalEntregues) * 100;
-      const mediaAtraso = data.qtdAtraso > 0 ? (data.somaAtraso / data.totalEntregues) : 0;
+      const pontualidade = (data.noPrazo / data.totalAvaliados) * 100;
+      const mediaAtraso = data.qtdAtraso > 0 ? (data.somaAtraso / data.totalAvaliados) : 0;
       let status = 'Excelente';
       if (pontualidade < 90) status = 'Bom';
       if (pontualidade < 75) status = 'Regular';
@@ -403,7 +422,7 @@ export function agregarFornecedores(registros) {
 
       return {
         fornecedor,
-        entregues: data.totalEntregues,
+        entregues: data.totalAvaliados, // Mantém chave 'entregues' por compatibilidade com UI
         pontualidade,
         mediaAtraso,
         status
