@@ -350,15 +350,24 @@ export function renderCrudMesChart(registros, titulo = 'PREVISTOS X RECEBIDOS') 
         name: 'Valor Previsto',
         type: 'bar',
         data: byMes.map((x) => x.previsto),
-
-        itemStyle: { color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]), borderRadius: [8, 8, 0, 0] }
+        itemStyle: {
+          // Navy: azul navy profundo (para manter identidade)
+          color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]),
+          borderRadius: [8, 8, 0, 0]
+        }
       },
       {
         name: 'Valor Recebido',
         type: 'bar',
         data: byMes.map((x) => x.recebido),
-
-        itemStyle: { color: gradient(getThemePalette().secondary[0], getThemePalette().secondary[1]), borderRadius: [8, 8, 0, 0] }
+        itemStyle: {
+          // Navy: gunmetal/slate contrastante para diferenciar de Previsto
+          color: gradient(
+            getThemeMode() === 'navy' ? 'rgba(71, 85, 105, 0.95)' : getThemePalette().secondary[0],
+            getThemeMode() === 'navy' ? 'rgba(51, 65, 85, 0.50)'  : getThemePalette().secondary[1]
+          ),
+          borderRadius: [8, 8, 0, 0]
+        }
       }
     ]
   };
@@ -502,16 +511,25 @@ export function renderDashboardCharts(registros) {
           name: 'Valor Previsto',
           type: 'bar',
           data: byMes.map((x) => x.previsto),
-  
-          itemStyle: { color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]), borderRadius: [8, 8, 0, 0] },
+          itemStyle: {
+            // Navy: azul navy profundo (identidade do tema)
+            color: gradient(getThemePalette().tertiary[0], getThemePalette().tertiary[1]),
+            borderRadius: [8, 8, 0, 0]
+          },
           animationDelay: (idx) => idx * 50
         },
         {
           name: 'Valor Recebido',
           type: 'bar',
           data: byMes.map((x) => x.recebido),
-  
-          itemStyle: { color: gradient(getThemePalette().secondary[0], getThemePalette().secondary[1]), borderRadius: [8, 8, 0, 0] },
+          itemStyle: {
+            // Navy: gunmetal slate – contrasta com o azul navy do Previsto
+            color: gradient(
+              getThemeMode() === 'navy' ? 'rgba(71, 85, 105, 0.95)' : getThemePalette().secondary[0],
+              getThemeMode() === 'navy' ? 'rgba(51, 65, 85, 0.50)'  : getThemePalette().secondary[1]
+            ),
+            borderRadius: [8, 8, 0, 0]
+          },
           animationDelay: (idx) => idx * 50 + 20
         }
       ]
