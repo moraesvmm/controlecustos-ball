@@ -67,6 +67,18 @@ export function getColorsByStatus(status) {
 
   if (mode === 'dark' || mode === 'light') return base[status] || base.PENDENTE;
 
+  // Darkness Ocean — paleta distinta por status, mantendo coesão "navy profundo"
+  if (mode === 'navy') {
+    const navyByStatus = {
+      'ENTREGUE':             ['rgba(37, 99, 235, 0.95)',  'rgba(30, 58, 138, 0.50)'],   // Navy Blue (sólido, confirmado)
+      'PENDENTE DE ENTREGA':  ['rgba(148, 163, 184, 0.88)','rgba(100, 116, 139, 0.42)'], // Platinum Slate (em trânsito)
+      'PENDENTE DE PEDIDO':   ['rgba(71, 85, 105, 0.95)',  'rgba(51, 65, 85, 0.50)'],    // Gunmetal (aguardando)
+      'PENDENTE DE ORCAMENTO':['rgba(100, 116, 139, 0.80)','rgba(71, 85, 105, 0.38)'],   // Slate médio (projeção)
+      'PENDENTE':             ['rgba(71, 85, 105, 0.70)',  'rgba(51, 65, 85, 0.35)'],
+    };
+    return navyByStatus[status] || navyByStatus['PENDENTE'];
+  }
+
   const palette = getThemePalette();
   if (status === 'ENTREGUE') return palette.primary;
   if (status === 'PENDENTE DE ENTREGA') return palette.tertiary;
