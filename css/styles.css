@@ -27,70 +27,120 @@
   --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ===== NAVY BLUE MODE (ENTERPRISE STEALTH) ===== */
+/* ===== NAVY BLUE MODE (DARKNESS OCEAN) ===== */
 body.navy-mode {
-  --bg: #020508;
-  --bg2: #050a12;
-  --surface: #0B1220;
-  --surface-solid: #0A0F17;
-  --border: rgba(255, 255, 255, 0.05);
-  --text: #F1F5F9;
-  --muted: #8b9ab5;
-  --gold: #60a5fa;
-  --gold-rgb: 96, 165, 250;
-  --gold-dim: rgba(59, 130, 246, 0.1);
-  --accent: #1D4ED8;
-  --accent-dark: #1E3A8A;
-  --danger: #991B1B;
-  --success: #065F46;
-  --warning: #B45309;
+  /* Backgrounds: abyssal depth */
+  --bg: #010407;
+  --bg2: #040810;
+  --surface: #080d18;
+  --surface-solid: #070c15;
+  /* Borders: almost invisible, precise */
+  --border: rgba(255, 255, 255, 0.04);
+  --border-strong: rgba(255, 255, 255, 0.08);
+  /* Text: cool slate-white hierarchy */
+  --text: #e8ecf1;
+  --text-secondary: rgba(232, 236, 241, 0.65);
+  --muted: #64748b;
+  --muted-dim: rgba(100, 116, 139, 0.4);
+  /* Primary accent: cold slate (NOT blue vibrant) */
+  --gold: #94a3b8;
+  --gold-rgb: 148, 163, 184;
+  --gold-dim: rgba(148, 163, 184, 0.07);
+  /* Action blue: muted, institutional */
+  --accent: #2d4a6b;
+  --accent-dark: #1a2e44;
+  --primary: #94a3b8;
+  --primary-dim: rgba(148, 163, 184, 0.08);
+  /* Semantic: more muted, enterprise-grade */
+  --danger: #7f1d1d;
+  --success: #064e3b;
+  --warning: #92400e;
+  /* Geometry: ultra-sharp, institutional */
   --radius: 4px;
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  --radius-sm: 2px;
+  --radius-lg: 6px;
+  /* Shadow: deep, multi-layered */
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-glow: none;
 }
 
-/* --- Navy Mode Components --- */
+/* --- Navy Mode Components — Darkness Ocean --- */
 body.navy-mode .panel {
-  background: rgba(11, 18, 32, 0.4);
+  background: rgba(8, 13, 24, 0.75);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
+/* Nav active: cool slate, no vibrant blue */
 body.navy-mode .nav-item.active {
-  background: linear-gradient(90deg, rgba(59,130,246,0.1) 0%, transparent 100%) !important;
-  color: #60a5fa !important;
+  background: linear-gradient(90deg, rgba(148, 163, 184, 0.06) 0%, transparent 100%) !important;
+  color: #94a3b8 !important;
   font-weight: 600 !important;
-  border-left: 2px solid #3B82F6 !important;
-  border-radius: 0 8px 8px 0 !important;
+  border-left: 2px solid rgba(148, 163, 184, 0.5) !important;
+  border-radius: 0 4px 4px 0 !important;
   box-shadow: none !important;
 }
 
 body.navy-mode .kpi-card {
   padding: 1.5rem;
-  background: rgba(11, 18, 32, 0.4);
+  background: rgba(8, 13, 24, 0.6);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.035);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.025);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: visible;
   position: relative;
 }
 
 body.navy-mode .kpi-card:hover {
-  transform: translateY(-3px);
-  background: rgba(13, 24, 39, 0.5);
-  border-color: rgba(59,130,246,0.15);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 0 rgba(59,130,246,0.08);
+  transform: translateY(-2px);
+  background: rgba(10, 16, 28, 0.75);
+  border-color: rgba(148, 163, 184, 0.07);
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(148, 163, 184, 0.04);
   position: relative;
   z-index: 100;
 }
 
 body.navy-mode .kpi-card .label {
-  letter-spacing: 0.1em;
-  font-weight: 700;
-  color: #475569;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Buttons: institutional slate tone in Navy mode */
+body.navy-mode .btn-primary {
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
+body.navy-mode .btn-primary:hover {
+  background: rgba(148, 163, 184, 0.15);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #e2e8f0;
+}
+
+/* Row selected: slate highlight */
+body.navy-mode .row-selected {
+  background: rgba(148, 163, 184, 0.06) !important;
+}
+
+/* Action bar: darker glass in Navy */
+body.navy-mode .row-action-bar {
+  background: rgba(8, 13, 24, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+}
+
+/* Badges & chips: muted slate */
+body.navy-mode .badge,
+body.navy-mode [class*="badge-"] {
+  background: rgba(100, 116, 139, 0.1);
+  border: 1px solid rgba(100, 116, 139, 0.15);
+  color: #94a3b8;
 }
 /* ----------------------------- */
 
