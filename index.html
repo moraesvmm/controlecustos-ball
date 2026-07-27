@@ -644,14 +644,14 @@
             </div>
             <div style="display: flex; gap: 1rem;">
               <input type="file" id="fileImportKPI" accept=".xlsx, .xls" style="display: none;" />
-              <button type="button" class="btn btn-primary" id="btnUploadKPI" style="display: flex; gap: 0.5rem; align-items: center; background: linear-gradient(135deg, var(--gold), #d4af37); color: #000; border: none; font-weight: 600;">
+              <button type="button" class="btn-ghost-luxury" id="btnUploadKPI">
                 Upload Paradas (MTBF)
               </button>
               <input type="file" id="fileImportProducao" accept=".xlsx, .xls" style="display: none;" />
-              <button type="button" class="btn btn-primary" id="btnUploadProducao" style="display: flex; gap: 0.5rem; align-items: center; background: linear-gradient(135deg, #10b981, #059669); color: #fff; border: none; font-weight: 600;">
+              <button type="button" class="btn-ghost-luxury" id="btnUploadProducao">
                 Upload Produção
               </button>
-              <button type="button" class="btn btn-secondary" id="btnEditKPI" onclick="if(window.abrirModalEdicaoKPI) window.abrirModalEdicaoKPI(); else console.error('abrirModalEdicaoKPI not loaded');" style="display: flex; gap: 0.5rem; align-items: center; border: 1px solid var(--border); background: var(--bg3); color: var(--text-primary);">
+              <button type="button" class="btn-ghost-luxury" id="btnEditKPI" onclick="if(window.abrirModalEdicaoKPI) window.abrirModalEdicaoKPI(); else console.error('abrirModalEdicaoKPI not loaded');">
                 Editar Dados Manuais
               </button>
             </div>
@@ -665,38 +665,40 @@
             <button type="button" class="kpi-tab-btn" data-kpitab="compliance" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent;">Compliance & Ações</button>
             <button type="button" class="kpi-tab-btn" data-kpitab="evidencias" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent;">Evidências (Galeria)</button>
             <button type="button" class="kpi-tab-btn" data-kpitab="ia" id="btnTabIA" style="background: none; border: none; color: var(--text-secondary); cursor: pointer; padding: 0.5rem 1rem; border-bottom: 2px solid transparent; display: flex; align-items: center; gap: 0.4rem;">
-              <span style="font-size: 1rem;">🤖</span> Inteligência IA
+              Inteligência Artificial (IA)
               <span id="iaBadge" style="display:none; background: #ef4444; color: #fff; font-size: 0.65rem; font-weight: 700; padding: 1px 6px; border-radius: 99px;"></span>
             </button>
           </div>
 
           <!-- TAB 1: GLOBAL -->
-          <div id="kpi-view-global" class="kpi-subview" style="display: flex; flex-direction: column; gap: 1.5rem;">
+          <div id="kpi-view-global" class="kpi-subview" style="display: flex; flex-direction: column; gap: 2.5rem;">
             <!-- KPI Cards Top -->
-            <div class="kpi-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-              <div class="kpi-card">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Breakdown Atual (Semana)</div>
-                <div class="value" id="kpiBreakdownSemana" style="font-size: 2rem; color: var(--text-primary);">--</div>
+            <div class="premium-glass-surface" style="display: flex; justify-content: space-between; padding: 2rem 2.5rem;">
+              <div style="flex: 1; padding-right: 2rem;">
+                <div class="kpi-label-luxury">Breakdown Atual (Semana)</div>
+                <div id="kpiBreakdownSemana" class="kpi-number-luxury">--</div>
               </div>
-              <div class="kpi-card">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Breakdown Acumulado (Mês)</div>
-                <div class="value" id="kpiBreakdownMes" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              <div class="micro-divider"></div>
+              <div style="flex: 1; padding: 0 2rem;">
+                <div class="kpi-label-luxury">Breakdown Acumulado (Mês)</div>
+                <div id="kpiBreakdownMes" class="kpi-number-luxury">--</div>
               </div>
-              <div class="kpi-card">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary);">Meta Global</div>
-                <div class="value" id="kpiBreakdownMeta" style="font-size: 2rem; color: #10b981;">--</div>
+              <div class="micro-divider"></div>
+              <div style="flex: 1; padding-left: 2rem;">
+                <div class="kpi-label-luxury">Meta Global</div>
+                <div id="kpiBreakdownMeta" class="kpi-number-luxury" style="color: #10b981;">--</div>
               </div>
             </div>
 
             <!-- Gráficos Principais -->
-            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-              <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h4 style="margin: 0; color: var(--text-primary);">Indisponibilidade (%)<span class="kpi-help-icon" data-tooltip="Indisponibilidade (%).&#10;Evolução da porcentagem de tempo que a linha passou parada devido a falhas.&#10;&#10;Lógica de Cálculo:&#10;• Fórmula = (Total de Minutos Parados / Tempo Disponível) * 100">?</span></h4>
-                  <div style="display: flex; gap: 0.5rem; background: var(--bg2); padding: 0.25rem; border-radius: 6px; border: 1px solid var(--border);">
-                    <button type="button" id="btnKpiDiario" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Diário</button>
-                    <button type="button" id="btnKpiSemana" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:var(--bg3); color:var(--text-primary);">Semanal</button>
-                    <button type="button" id="btnKpiMes" style="border:none; padding:4px 12px; border-radius:4px; font-size:0.75rem; cursor:pointer; background:transparent; color:var(--text-secondary);">Mensal</button>
+            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2.5rem; border-top: 1px solid var(--border); padding-top: 2rem;">
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <h4 style="margin: 0; color: var(--text-primary); font-size: 1.1rem; font-weight: 500;">Indisponibilidade (%)<span class="kpi-help-icon" data-tooltip="Indisponibilidade (%).&#10;Evolução da porcentagem de tempo que a linha passou parada devido a falhas.&#10;&#10;Lógica de Cálculo:&#10;• Fórmula = (Total de Minutos Parados / Tempo Disponível) * 100">?</span></h4>
+                  <div style="display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border); padding-bottom: 0.25rem;">
+                    <button type="button" id="btnKpiDiario" class="btn-ghost" style="padding: 2px 8px; font-size: 0.8rem;">Diário</button>
+                    <button type="button" id="btnKpiSemana" class="btn-ghost" style="padding: 2px 8px; font-size: 0.8rem; font-weight: 600; color: var(--text-primary);">Semanal</button>
+                    <button type="button" id="btnKpiMes" class="btn-ghost" style="padding: 2px 8px; font-size: 0.8rem;">Mensal</button>
                   </div>
                 </div>
                 <div style="width: 100%; height: 300px; position: relative;">
@@ -704,10 +706,10 @@
                 </div>
               </div>
 
-              <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                  <h4 style="margin: 0; color: var(--text-primary);">Top Ofensores<span class="kpi-help-icon" data-tooltip="Top Ofensores.&#10;Rankeia as máquinas que mais falharam no período.&#10;Dividido em:&#10;• Azul: Falhas Mecânicas&#10;• Amarelo: Falhas Elétricas">?</span></h4>
-                  <select id="selectKpiSemanaOfensor" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; outline: none;"></select>
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <h4 style="margin: 0; color: var(--text-primary); font-size: 1.1rem; font-weight: 500;">Top Ofensores<span class="kpi-help-icon" data-tooltip="Top Ofensores.&#10;Rankeia as máquinas que mais falharam no período.&#10;Dividido em:&#10;• Azul: Falhas Mecânicas&#10;• Amarelo: Falhas Elétricas">?</span></h4>
+                  <select id="selectKpiSemanaOfensor" style="background: transparent; border: none; border-bottom: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; font-size: 0.85rem; outline: none;"></select>
                 </div>
                 <div style="width: 100%; height: 300px; position: relative;">
                   <div id="chartKpiOfensores" style="width: 100%; height: 100%; min-height: 250px;"></div>
@@ -730,20 +732,21 @@
               </select>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
-              <div style="display: flex; flex-direction: column; gap: 1.5rem;">
-                <div class="kpi-card" style="text-align: center;">
-                  <div class="label" style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Breakdown Anual (<span id="lblKpiLinhaAnual">--</span>)</div>
-                  <div class="value" id="valKpiLinhaAnual" style="font-size: 2.5rem; color: var(--text-primary); font-weight: bold;">--</div>
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2.5rem; margin-top: 1rem;">
+              <div class="premium-glass-surface" style="display: flex; flex-direction: column; gap: 2rem; padding: 2rem 2.5rem;">
+                <div>
+                  <div class="kpi-label-luxury">Breakdown Anual (<span id="lblKpiLinhaAnual">--</span>)</div>
+                  <div id="valKpiLinhaAnual" class="kpi-number-luxury">--</div>
                 </div>
-                <div class="kpi-card" style="text-align: center;">
-                  <div class="label" style="font-size: 0.9rem; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.5rem;">Breakdown Mensal (<span id="lblKpiLinhaMensal">--</span>)</div>
-                  <div class="value" id="valKpiLinhaMensal" style="font-size: 2.5rem; color: var(--text-primary); font-weight: bold;">--</div>
+                <div style="width: 40%; height: 1px; background: linear-gradient(to right, rgba(255,255,255,0.06), transparent);"></div>
+                <div>
+                  <div class="kpi-label-luxury">Breakdown Mensal (<span id="lblKpiLinhaMensal">--</span>)</div>
+                  <div id="valKpiLinhaMensal" class="kpi-number-luxury">--</div>
                 </div>
               </div>
 
-              <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow-x: auto;">
-                <h4 style="margin-top: 0; color: var(--text-primary); display:flex; align-items:center;">MTBF (Horas) - <span id="lblKpiLinhaMtbf" style="margin-left:5px;">Linha 4</span><span class="kpi-help-icon" data-tooltip="MTBF (Tempo Médio Entre Falhas).&#10;Avalia a confiabilidade da máquina. Quanto MAIOR, mais confiável é a máquina.">?</span></h4>
+              <div style="overflow-x: auto;">
+                <h4 style="margin-top: 0; color: var(--text-primary); display:flex; align-items:center; font-size: 1.1rem; font-weight: 500;">MTBF (Horas) - <span id="lblKpiLinhaMtbf" style="margin-left:5px;">Linha 4</span><span class="kpi-help-icon" data-tooltip="MTBF (Tempo Médio Entre Falhas).&#10;Avalia a confiabilidade da máquina. Quanto MAIOR, mais confiável é a máquina.">?</span></h4>
                 <table class="data-table" id="tableKpiMtbf" style="width: 100%; border-collapse: collapse; margin-top: 1rem;">
                   <thead>
                     <tr>
@@ -792,54 +795,64 @@
                 <select id="selectConfiabMesSemana" style="background: var(--bg3); border: 1px solid var(--border); color: var(--text-primary); padding: 6px 12px; border-radius: 6px; font-size: 0.9rem; outline: none;">
                 </select>
               </div>
-              <div style="display: flex; gap: 0.5rem;">
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <!-- Toggle Mode: Visão Integrada / Analytics -->
+                <div class="mtbf-mode-toggle">
+                  <button type="button" id="btnMtbfModeInt" class="mtbf-mode-btn active">Visão Integrada</button>
+                  <button type="button" id="btnMtbfModeAna" class="mtbf-mode-btn">MTBF Analytics</button>
+                </div>
                 <!-- Botão configurar metas -->
-                <button type="button" id="btnConfiabMetas" style="display:flex; align-items:center; gap:0.4rem; padding:6px 14px; background:var(--bg3); color:var(--text-primary); border:1px solid var(--border); border-radius:8px; font-size:0.85rem; cursor:pointer; font-weight:500;">
-                  ⚙️ Metas
+                <button type="button" id="btnConfiabMetas" class="btn-ghost" style="display:flex; align-items:center; gap:0.4rem; font-size:0.8rem; cursor:pointer; font-weight:500;">
+                  Metas
                 </button>
               </div>
             </div>
 
+            <!-- CONTAINER: VISÃO INTEGRADA (ATUAL) -->
+            <div id="mtbf-integrada-container" style="display: flex; flex-direction: column; gap: 1.5rem; transition: opacity 0.3s ease;">
+
+
             <!-- Cards de resumo -->
-            <div id="confiabCardsArea" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
+            <div id="confiabCardsArea" class="premium-glass-surface" style="display: flex; justify-content: space-between; padding: 2rem 2.5rem;">
               <!-- Card MTBF -->
-              <div class="panel" style="padding:1.5rem; border-radius:12px; border:1px solid var(--border); text-align:center; position:relative;">
-                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem; display:flex; align-items:center; justify-content:center;">MTBF Médio (h)<span class="kpi-help-icon" data-tooltip="Tempo Médio Entre Falhas (MTBF).&#10;Avalia a confiabilidade da máquina. Quanto MAIOR, mais confiável é a máquina.&#10;&#10;Lógica de Cálculo:&#10;• Tempo Disp. = 30 dias (Mês) ou 7 dias (Semana)&#10;• Fórmula = (Tempo Disp. - Total de Minutos Parados) ÷ Número de Falhas">?</span></div>
-                <div id="cardConfiabMtbf" style="font-size:2.6rem; font-weight:700; color:#10b981;">--</div>
-                <div id="cardConfiabMtbfMeta" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Meta: --h</div>
-                <div id="cardConfiabMtbfVar" style="font-size:0.82rem; margin-top:0.4rem; font-weight:600;"></div>
+              <div style="flex: 1; padding-right: 2rem;">
+                <div class="kpi-label-luxury">MTBF Médio (h)<span class="kpi-help-icon" data-tooltip="Tempo Médio Entre Falhas (MTBF).&#10;Avalia a confiabilidade da máquina. Quanto MAIOR, mais confiável é a máquina.&#10;&#10;Lógica de Cálculo:&#10;• Tempo Disp. = 30 dias (Mês) ou 7 dias (Semana)&#10;• Fórmula = (Tempo Disp. - Total de Minutos Parados) ÷ Número de Falhas" style="margin-left:6px;">?</span></div>
+                <div id="cardConfiabMtbf" class="kpi-number-luxury">--</div>
+                <div id="cardConfiabMtbfMeta" style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">Meta: --h</div>
+                <div id="cardConfiabMtbfVar" style="font-size:0.8rem; margin-top:0.2rem; font-weight:500;"></div>
               </div>
+              <div class="micro-divider"></div>
               <!-- Card MTTR -->
-              <div class="panel" style="padding:1.5rem; border-radius:12px; border:1px solid var(--border); text-align:center; position:relative;">
-                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem; display:flex; align-items:center; justify-content:center;">MTTR Médio (h)<span class="kpi-help-icon" data-tooltip="Tempo Médio de Reparo (MTTR).&#10;Avalia a agilidade e eficiência da equipe de manutenção. Quanto MENOR, melhor.&#10;&#10;Lógica de Cálculo:&#10;• Fórmula = Total de Minutos Parados ÷ Número de Falhas">?</span></div>
-                <div id="cardConfiabMttr" style="font-size:2.6rem; font-weight:700; color:#f59e0b;">--</div>
-                <div id="cardConfiabMttrMeta" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Meta: --h</div>
-                <div id="cardConfiabMttrVar" style="font-size:0.82rem; margin-top:0.4rem; font-weight:600;"></div>
+              <div style="flex: 1; padding: 0 2rem;">
+                <div class="kpi-label-luxury">MTTR Médio (h)<span class="kpi-help-icon" data-tooltip="Tempo Médio de Reparo (MTTR).&#10;Avalia a agilidade e eficiência da equipe de manutenção. Quanto MENOR, melhor.&#10;&#10;Lógica de Cálculo:&#10;• Fórmula = Total de Minutos Parados ÷ Número de Falhas" style="margin-left:6px;">?</span></div>
+                <div id="cardConfiabMttr" class="kpi-number-luxury">--</div>
+                <div id="cardConfiabMttrMeta" style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">Meta: --h</div>
+                <div id="cardConfiabMttrVar" style="font-size:0.8rem; margin-top:0.2rem; font-weight:500;"></div>
               </div>
+              <div class="micro-divider"></div>
               <!-- Card MTTA -->
-              <div class="panel" style="padding:1.5rem; border-radius:12px; border:1px solid var(--border); text-align:center; position:relative;">
-                <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-secondary); margin-bottom:0.5rem; display:flex; align-items:center; justify-content:center;">MTTA Médio (min)<span class="kpi-help-icon" data-tooltip="Tempo Médio de Acknowledge (MTTA).&#10;Avalia o tempo de resposta inicial da equipe após o reporte. Quanto MENOR, melhor.&#10;&#10;Lógica de Cálculo:&#10;• Ack = Tempo decorrido entre a Falha e o Início do Atendimento&#10;• Fórmula = Soma de Minutos de Ack ÷ Número de Falhas">?</span></div>
-                <div id="cardConfiabMtta" style="font-size:2.6rem; font-weight:700; color:#ef4444;">--</div>
-                <div id="cardConfiabMttaMeta" style="font-size:0.8rem; color:var(--text-secondary); margin-top:0.25rem;">Meta: --m</div>
-                <div id="cardConfiabMttaVar" style="font-size:0.82rem; margin-top:0.4rem; font-weight:600;"></div>
+              <div style="flex: 1; padding-left: 2rem;">
+                <div class="kpi-label-luxury">MTTA Médio (min)<span class="kpi-help-icon" data-tooltip="Tempo Médio de Acknowledge (MTTA).&#10;Avalia o tempo de resposta inicial da equipe após o reporte. Quanto MENOR, melhor.&#10;&#10;Lógica de Cálculo:&#10;• Ack = Tempo decorrido entre a Falha e o Início do Atendimento&#10;• Fórmula = Soma de Minutos de Ack ÷ Número de Falhas" style="margin-left:6px;">?</span></div>
+                <div id="cardConfiabMtta" class="kpi-number-luxury">--</div>
+                <div id="cardConfiabMttaMeta" style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">Meta: --m</div>
+                <div id="cardConfiabMttaVar" style="font-size:0.8rem; margin-top:0.2rem; font-weight:500;"></div>
               </div>
             </div>
 
             <!-- Gráficos (3 colunas) -->
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem;">
-              <div class="panel" style="padding:1.25rem; border-radius:12px; border:1px solid var(--border);">
-                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem; display:flex; align-items:center;">MTBF por Período (h)<span class="kpi-help-icon" data-tooltip="Evolução do MTBF.&#10;Mostra se a confiabilidade das máquinas está melhorando ou piorando ao longo do tempo.">?</span></h4>
-                <p style="margin:-0.5rem 0 1rem 0; font-size:0.75rem; color:var(--gold); display:flex; align-items:center; gap:0.4rem;">
-                  <i class="fa-solid fa-circle-info"></i> Importe a aba "Produção" para calcular este KPI com precisão.
-                </p>
+            <div class="premium-glass-surface" style="display: flex; justify-content: space-between; margin-top: 1.5rem; padding: 2rem 2.5rem; gap: 1rem;">
+              <div style="flex: 1;">
+                <h4 style="margin:0 0 1.5rem; color:var(--text-primary); font-size:1.05rem; font-weight:500; display:flex; align-items:center;">MTBF por Período (h)<span class="kpi-help-icon" data-tooltip="Evolução do MTBF.&#10;Mostra se a confiabilidade das máquinas está melhorando ou piorando ao longo do tempo." style="margin-left:6px;">?</span></h4>
                 <div id="chartConfiabMtbf" style="width:100%; height:260px;"></div>
               </div>
-              <div class="panel" style="padding:1.25rem; border-radius:12px; border:1px solid var(--border);">
-                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem; display:flex; align-items:center;">MTTR por Período (h)<span class="kpi-help-icon" data-tooltip="Evolução do MTTR.&#10;Mostra se o tempo de resposta e conserto da equipe está mais rápido ao longo do tempo.">?</span></h4>
+              <div class="micro-divider"></div>
+              <div style="flex: 1;">
+                <h4 style="margin:0 0 1.5rem; color:var(--text-primary); font-size:1.05rem; font-weight:500; display:flex; align-items:center;">MTTR por Período (h)<span class="kpi-help-icon" data-tooltip="Evolução do MTTR.&#10;Mostra se o tempo de resposta e conserto da equipe está mais rápido ao longo do tempo." style="margin-left:6px;">?</span></h4>
                 <div id="chartConfiabMttr" style="width:100%; height:260px;"></div>
               </div>
-              <div class="panel" style="padding:1.25rem; border-radius:12px; border:1px solid var(--border);">
-                <h4 style="margin:0 0 1rem; color:var(--text-primary); font-size:0.9rem; display:flex; align-items:center;">MTTA (m)<span class="kpi-help-icon" data-tooltip="Evolução do MTTA.&#10;Mostra a evolução do tempo médio até o início do atendimento da falha.">?</span></h4>
+              <div class="micro-divider"></div>
+              <div style="flex: 1;">
+                <h4 style="margin:0 0 1.5rem; color:var(--text-primary); font-size:1.05rem; font-weight:500; display:flex; align-items:center;">MTTA (m)<span class="kpi-help-icon" data-tooltip="Evolução do MTTA.&#10;Mostra a evolução do tempo médio até o início do atendimento da falha." style="margin-left:6px;">?</span></h4>
                 <div id="chartMtta" style="width:100%; height:260px;"></div>
               </div>
             </div>
@@ -851,13 +864,63 @@
               Clique em <strong>"Importar MGPRO"</strong> e selecione o arquivo <em>Relatório de Paradas YYYY-MM.xlsx</em>.
             </div>
 
+            </div> <!-- Fim mtbf-integrada-container -->
+
+            <!-- CONTAINER: MTBF ANALYTICS -->
+            <div id="mtbf-analytics-container" style="display: none; flex-direction: column; gap: 1.5rem; transition: opacity 0.3s ease; opacity: 0;">
+              
+              <!-- 1. Hero Strip -->
+              <div class="mtbf-hero-strip" id="mtbfHeroStrip">
+                <!-- Preenchido via JS -->
+              </div>
+              
+              <!-- 2. Heatmap & Stability -->
+              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
+                <!-- Heatmap -->
+                <div class="mtbf-heatmap-container">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+                    <h4 style="margin:0; color:var(--text-primary); font-size:1rem; font-weight:600;">Evolução de Confiabilidade (MTBF)</h4>
+                    <span style="font-size: 0.75rem; color:var(--text-secondary);">% vs Meta</span>
+                  </div>
+                  <div id="mtbfHeatmapWrapper" style="overflow-x:auto;"></div>
+                </div>
+                <!-- Stability -->
+                <div class="mtbf-ledger-container" style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem;">
+                  <h4 style="margin:0; color:var(--text-primary); font-size:1rem; font-weight:600;">Estabilidade por Linha</h4>
+                  <div id="mtbfStabilityWrapper" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+                </div>
+              </div>
+
+              <!-- 3. Machine Ledger -->
+              <div class="mtbf-ledger-container">
+                <div class="mtbf-ledger-header">
+                  <h4 style="margin:0; color:var(--text-primary); font-size:1rem; font-weight:600;">Machine Performance Ledger</h4>
+                  <span style="font-size: 0.75rem; color:var(--text-secondary);">Ranking de confiabilidade (Maior = Melhor)</span>
+                </div>
+                <table class="mtbf-ledger-table">
+                  <thead>
+                    <tr>
+                      <th>Máquina / Linha</th>
+                      <th>Status</th>
+                      <th>MTBF Médio</th>
+                      <th style="width:30%;">Performance vs Meta</th>
+                      <th style="text-align:right;">Tendência</th>
+                    </tr>
+                  </thead>
+                  <tbody id="mtbfLedgerTbody">
+                  </tbody>
+                </table>
+              </div>
+
+            </div> <!-- Fim mtbf-analytics-container -->
+
           </div>
 
           <!-- MODAL: CONFIGURAR METAS DE CONFIABILIDADE -->
           <div id="modalMetasConfiab" style="display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; background:rgba(0,0,0,0.65); backdrop-filter:blur(4px);">
             <div style="background:var(--bg-card,#1e293b); border:1px solid var(--border,#334155); border-radius:16px; padding:2rem; width:min(95vw,560px); max-height:85vh; overflow-y:auto;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-                <h3 style="margin:0; color:var(--text-primary);">&#9881;&#65039; Configurar Metas de Confiabilidade</h3>
+                <h3 style="margin:0; color:var(--text-primary); font-weight:500;">Configurar Metas de Confiabilidade</h3>
                 <button id="btnFecharMetasConfiab" style="background:transparent; border:none; color:var(--muted); font-size:1.4rem; cursor:pointer;">&times;</button>
               </div>
               <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:1.25rem;">Defina os valores alvo para cada linha de produção. Os gráficos exibirão as metas como linha tracejada.</p>
@@ -868,28 +931,31 @@
               </div>
             </div>
           </div>
-          <div id="kpi-view-compliance" class="kpi-subview" style="display: none; flex-direction: column; gap: 1.5rem;">
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem;">
-              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">PM Compliance<span class="kpi-help-icon" data-tooltip="PM Compliance (Aderência à Preventiva).&#10;Mede se as manutenções preventivas programadas foram executadas no prazo.&#10;Um número alto indica alta disciplina.">?</span></div>
-                <div class="value" id="kpiCompPM" style="font-size: 2rem; color: var(--text-primary);">--</div>
+          <div id="kpi-view-compliance" class="kpi-subview" style="display: none; flex-direction: column; gap: 2.5rem;">
+            <div class="premium-glass-surface" style="display: flex; justify-content: space-between; padding: 2rem 2.5rem;">
+              <div style="flex: 1; padding-right: 1.5rem;">
+                <div class="kpi-label-luxury">PM Compliance<span class="kpi-help-icon" data-tooltip="PM Compliance (Aderência à Preventiva).&#10;Mede se as manutenções preventivas programadas foram executadas no prazo.&#10;Um número alto indica alta disciplina." style="margin-left:6px;">?</span></div>
+                <div id="kpiCompPM" class="kpi-number-luxury">--</div>
               </div>
-              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">Lubrificação<span class="kpi-help-icon" data-tooltip="Lubrificação.&#10;Índice de conformidade das inspeções de lubrificação da área.">?</span></div>
-                <div class="value" id="kpiCompLubri" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              <div class="micro-divider"></div>
+              <div style="flex: 1; padding: 0 1.5rem;">
+                <div class="kpi-label-luxury">Lubrificação<span class="kpi-help-icon" data-tooltip="Lubrificação.&#10;Índice de conformidade das inspeções de lubrificação da área." style="margin-left:6px;">?</span></div>
+                <div id="kpiCompLubri" class="kpi-number-luxury">--</div>
               </div>
-              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">Preventiva<span class="kpi-help-icon" data-tooltip="Preventiva.&#10;Índice de conformidade da execução correta das Ordens de Manutenção Preventiva.">?</span></div>
-                <div class="value" id="kpiCompPrev" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              <div class="micro-divider"></div>
+              <div style="flex: 1; padding: 0 1.5rem;">
+                <div class="kpi-label-luxury">Preventiva<span class="kpi-help-icon" data-tooltip="Preventiva.&#10;Índice de conformidade da execução correta das Ordens de Manutenção Preventiva." style="margin-left:6px;">?</span></div>
+                <div id="kpiCompPrev" class="kpi-number-luxury">--</div>
               </div>
-              <div class="kpi-card" style="padding: 1.5rem; border-radius: 8px; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); text-align: center;">
-                <div class="label" style="font-size: 0.8rem; text-transform: uppercase; color: var(--text-secondary); display:flex; align-items:center; justify-content:center;">Plano Espec.<span class="kpi-help-icon" data-tooltip="Plano Específico.&#10;Índice de conformidade dos Planos de Ação dedicados implementados na linha.">?</span></div>
-                <div class="value" id="kpiCompEspec" style="font-size: 2rem; color: var(--text-primary);">--</div>
+              <div class="micro-divider"></div>
+              <div style="flex: 1; padding-left: 1.5rem;">
+                <div class="kpi-label-luxury">Plano Espec.<span class="kpi-help-icon" data-tooltip="Plano Específico.&#10;Índice de conformidade dos Planos de Ação dedicados implementados na linha." style="margin-left:6px;">?</span></div>
+                <div id="kpiCompEspec" class="kpi-number-luxury">--</div>
               </div>
             </div>
 
-            <div class="panel" style="padding: 1.5rem; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;">
-              <h4 style="margin-top: 0; margin-bottom: 1rem; color: var(--text-primary);">Plano de Ações em Andamento</h4>
+            <div style="border-top: 1px solid var(--border); padding-top: 2rem;">
+              <h4 style="margin-top: 0; margin-bottom: 1rem; color: var(--text-primary); font-size: 1.1rem; font-weight: 500;">Plano de Ações em Andamento</h4>
               <div style="overflow-x: auto;">
                 <table class="data-table" id="tableKpiAcoes" style="width: 100%; border-collapse: collapse;">
                   <thead>
@@ -965,27 +1031,26 @@
           <div id="kpi-view-ia" class="kpi-subview" style="display: none; flex-direction: column; gap: 1.5rem;">
 
             <!-- Header + Treinar -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
               <div>
-                <h2 style="margin: 0; font-size: 1.2rem; color: var(--gold);">🤖 Inteligência Artificial — XGBoost Engine</h2>
+                <h2 style="margin: 0; font-size: 1.4rem; color: var(--text-primary); font-weight: 500;">Inteligência Artificial — XGBoost Engine</h2>
                 <p style="margin: 0.25rem 0 0; color: var(--text-secondary); font-size: 0.85rem;">Modelos treinados localmente com dados reais do sistema. 100% offline, sem envio de dados externos.</p>
               </div>
-              <div style="display: flex; gap: 0.75rem; align-items: center;">
-                <span id="iaStatusBadge" style="font-size: 0.8rem; color: var(--text-secondary);">Verificando modelos...</span>
-                <button type="button" id="btnRetreinaIA" class="btn btn-outline" style="border-color: var(--gold); color: var(--gold); padding: 0.4rem 1rem; font-size: 0.85rem;">
-                  🔄 Re-treinar Modelos
+              <div style="display: flex; gap: 1rem; align-items: center;">
+                <span id="iaStatusBadge" style="font-size: 0.85rem; color: var(--text-secondary);">Verificando modelos...</span>
+                <button type="button" id="btnRetreinaIA" class="btn-ghost" style="padding: 0.4rem 1rem; font-size: 0.85rem;">
+                  Re-treinar Modelos
                 </button>
               </div>
             </div>
 
             <!-- Cards de Status dos Modelos -->
-            <div id="iaModelCards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem;"></div>
+            <div id="iaModelCards" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; padding-bottom: 2rem; border-bottom: 1px solid var(--border);"></div>
 
             <!-- Budget Forecast (Modelo 1) — Largura total -->
-            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
               <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <span style="font-size: 1.2rem;">💰</span>
-                <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Budget Forecast — Projeção do Mês</h3>
+                <h3 style="margin: 0; font-size: 1.1rem; font-weight: 500; color: var(--text-primary);">Budget Forecast — Projeção do Mês</h3>
                 <span style="margin-left: auto; font-size: 0.7rem; color: var(--text-secondary); background: rgba(59,130,246,0.15); padding: 2px 8px; border-radius: 99px;">Modelo 1 — XGBoost Regressor</span>
               </div>
               <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Projeção baseada em Machine Learning para o fechamento do custo mensal.</p>
@@ -996,13 +1061,12 @@
 
             <!-- GRID Principal -->
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem; border-top: 1px solid var(--border); padding-top: 2rem;">
 
               <!-- Radar de Risco (Modelo 2) -->
-              <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span style="font-size: 1.2rem;">⚡</span>
-                  <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Radar de Risco de Quebra</h3>
+                  <h3 style="margin: 0; font-size: 1.1rem; font-weight: 500; color: var(--text-primary);">Radar de Risco de Quebra</h3>
                   <span style="margin-left: auto; font-size: 0.7rem; color: var(--text-secondary); background: rgba(99,102,241,0.15); padding: 2px 8px; border-radius: 99px;">Modelo 2 — XGBoost</span>
                 </div>
                 <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Máquinas com maior probabilidade de falha grave nos próximos 7 dias.</p>
@@ -1012,10 +1076,9 @@
               </div>
 
               <!-- Spare Parts (Modelo 4) -->
-              <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem;">
+              <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                  <span style="font-size: 1.2rem;">🔧</span>
-                  <h3 style="margin: 0; font-size: 1rem; color: var(--text-primary);">Previsão de Spare Parts</h3>
+                  <h3 style="margin: 0; font-size: 1.1rem; font-weight: 500; color: var(--text-primary);">Previsão de Spare Parts</h3>
                   <span style="margin-left: auto; font-size: 0.7rem; color: var(--text-secondary); background: rgba(16,185,129,0.15); padding: 2px 8px; border-radius: 99px;">Modelo 4 — XGBoost</span>
                 </div>
                 <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary);">Máquinas com risco de precisar de peças nos próximos 14 dias.</p>

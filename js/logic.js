@@ -378,13 +378,25 @@ export function agregarFornecedores(registros) {
     }
     
     // SLA avalia itens já recebidos OU itens pendentes que já passaram do prazo
+    // Função auxiliar para parsear data com segurança
+    const parseDateSafe = (dStr) => {
+      if (!dStr) return null;
+      let s = String(dStr).trim();
+      if (/\d{2}\/\d{2}\/\d{4}/.test(s)) {
+        const [d, m, y] = s.split('/');
+        return new Date(`${y}-${m}-${d}T00:00:00`);
+      }
+      return new Date(s);
+    };
+
     if (r.previsao_entrega) {
-      const dataPrev = new Date(r.previsao_entrega);
+      const dataPrev = parseDateSafe(r.previsao_entrega);
+      if (isNaN(dataPrev.getTime())) continue; // Ignore se for data inválida
       
       if (r.data_recebimento) {
         // Item recebido: calcular atraso real
         map[r.fornecedor].totalAvaliados++;
-        const dataRec = new Date(r.data_recebimento);
+        const dataRec = parseDateSafe(r.data_recebimento);
         const diffTime = dataRec - dataPrev;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
@@ -414,7 +426,7 @@ export function agregarFornecedores(registros) {
     .filter(([_, data]) => data.totalAvaliados > 0)
     .map(([fornecedor, data]) => {
       const pontualidade = (data.noPrazo / data.totalAvaliados) * 100;
-      const mediaAtraso = data.qtdAtraso > 0 ? (data.somaAtraso / data.totalAvaliados) : 0;
+      const mediaAtraso = data.qtdAtraso > 0 ? (data.somaAtraso / data.qtdAtraso) : 0; // Fixed: divide by qtdAtraso
       let status = 'Excelente';
       if (pontualidade < 90) status = 'Bom';
       if (pontualidade < 75) status = 'Regular';
@@ -428,7 +440,13 @@ export function agregarFornecedores(registros) {
         status
       };
     })
-    .sort((a, b) => b.pontualidade - a.pontualidade);
+    .sort((a, b) => {
+      if (b.pontualidade !== a.pontualidade) return b.pontualidade - a.pontualidade;
+      // Se empatar na pontualidade, o que tem maior média de atraso fica pior (vai para o final)
+      if (a.mediaAtraso !== b.mediaAtraso) return a.mediaAtraso - b.mediaAtraso;
+      // Se empatar na média de atraso, o que tem mais itens entregues fica pior
+      return a.entregues - b.entregues;
+    });
 }
 
 export function opcoesUnicas(registros, campo) {

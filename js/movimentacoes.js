@@ -827,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderNovidadesTable(lista) {
         if(!novTableBody) return;
+        window.currentFilteredNovidades = lista;
         novTableBody.innerHTML = '';
         
         if(lista.length === 0) {
@@ -871,11 +872,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if(btnNovExportarCsv) {
         btnNovExportarCsv.addEventListener('click', () => {
-            const table = document.getElementById('novTable');
-            if(!table) return;
-            const rows = Array.from(table.querySelectorAll('tr'));
-            const csv = rows.map(r => Array.from(r.querySelectorAll('th,td')).map(c => '"' + c.innerText.replace(/"/g, '""') + '"').join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const dataToExport = window.currentFilteredNovidades || currentNovidadesData;
+            if(!dataToExport || dataToExport.length === 0) return;
+            
+            const headers = ['Data', 'Item (Código)', 'Descrição', 'Área', 'Centro de Custo', 'Valor (R$)', 'NF / Ordem', 'Colaborador'];
+            const csvRows = [headers.map(h => '"' + h + '"').join(';')];
+            
+            dataToExport.forEach(r => {
+                const cols = [
+                    r.data_transacao || '',
+                    r.codigo_item || '',
+                    r.descricao || '',
+                    r.area_id || '',
+                    r.cost_center_id || '',
+                    (r.valor_total || 0).toFixed(2).replace('.', ','),
+                    r.documento || r.numero_ordem || '',
+                    r.collaborator_id || ''
+                ];
+                
+                const escapedCols = cols.map((c, index) => {
+                    // Se for a coluna de valor numérico (índice 5), não colocar aspas
+                    if (index === 5) return String(c);
+                    return '"' + String(c).replace(/"/g, '""') + '"';
+                });
+                csvRows.push(escapedCols.join(';'));
+            });
+            
+            const csv = csvRows.join('\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = "movimentacoes_recentes.csv";

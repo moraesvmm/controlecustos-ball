@@ -1704,6 +1704,50 @@ def get_kpi_mtbf_dynamic(ano: int = None):
         conn.close()
 
 
+@app.get("/api/kpi/mtbf_analytics")
+def get_kpi_mtbf_analytics(periodo_tipo: str = 'SEMANA', ano: int = None, linha: str = 'TODAS'):
+    if not ano:
+        from datetime import datetime
+        ano = datetime.now().year
+    conn = get_db()
+    try:
+        q2 = '''
+        SELECT 
+            mo.semana as periodo_ref, 
+            mo.maquina, 
+            mo.tempo_total_min, 
+            mo.tempo_disponivel_min, 
+            mo.n_falhas,
+            (SELECT linha FROM kpi_paradas_raw pr WHERE pr.maquina = mo.maquina AND pr.linha != '' LIMIT 1) as linha
+        FROM kpi_maquinas_ofensoras mo
+        '''
+        vals = []
+        if periodo_tipo == 'MES':
+            q2 += " WHERE mo.semana NOT LIKE 'S%'"
+        else:
+            q2 += " WHERE mo.semana LIKE 'S%'"
+            
+        rows = conn.execute(q2).fetchall()
+        
+        result = []
+        for r in rows:
+            d = dict(r)
+            if linha != 'TODAS' and d['linha'] != linha:
+                continue
+                
+            n_falhas = d['n_falhas']
+            td = d['tempo_disponivel_min']
+            if not d['linha']:
+                d['linha'] = 'Não Informada'
+            
+            mtbf = (td / n_falhas / 60) if n_falhas > 0 else (td / 60)
+            d['mtbf_h'] = round(mtbf, 2)
+            result.append(d)
+            
+        return result
+    finally:
+        conn.close()
+
 @app.get("/api/kpi/drilldown_maquinas")
 def get_kpi_drilldown_maquinas(semana: str, linha: str = 'TODAS', ano: int = None):
     if not semana:
@@ -1716,32 +1760,41 @@ def get_kpi_drilldown_maquinas(semana: str, linha: str = 'TODAS', ano: int = Non
         MESES = {'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6,
                  'Jul': 7, 'Ago': 8, 'Set': 9, 'Out': 10, 'Nov': 11, 'Dez': 12}
         
-        q = "SELECT maquina, SUM(dur_min) as tempo_total_min, COUNT(*) as n_falhas FROM kpi_paradas_raw WHERE ano=?"
-        vals = [ano]
+        # Primeiro pega a lista de todas as máquinas distintas que operam nesse ano
+        q_all = "SELECT DISTINCT maquina FROM kpi_paradas_raw WHERE ano=? AND maquina != ''"
+        vals_all = [ano]
+        if linha and linha != 'TODAS':
+            q_all += " AND linha=?"
+            vals_all.append(linha)
+        all_machines = [r['maquina'] for r in conn.execute(q_all, vals_all).fetchall()]
+        
+        # Agora pega as falhas apenas do período filtrado
+        q_fail = "SELECT maquina, SUM(dur_min) as tempo_total_min, COUNT(*) as n_falhas FROM kpi_paradas_raw WHERE ano=?"
+        vals_fail = [ano]
         
         if semana in MESES:
-            q += " AND mes=?"
-            vals.append(MESES[semana])
+            q_fail += " AND mes=?"
+            vals_fail.append(MESES[semana])
         elif semana.startswith('S'):
-            q += " AND semana_iso=?"
-            vals.append(int(semana[1:]))
+            q_fail += " AND semana_iso=?"
+            vals_fail.append(int(semana[1:]))
         else:
-            q += " AND mes=?"
-            vals.append(int(semana))
+            q_fail += " AND mes=?"
+            vals_fail.append(int(semana))
             
         if linha and linha != 'TODAS':
-            q += " AND linha=?"
-            vals.append(linha)
+            q_fail += " AND linha=?"
+            vals_fail.append(linha)
             
-        q += " GROUP BY maquina ORDER BY tempo_total_min DESC"
+        q_fail += " GROUP BY maquina"
         
-        rows = conn.execute(q, vals).fetchall()
+        fail_rows = conn.execute(q_fail, vals_fail).fetchall()
+        fail_map = {r['maquina']: dict(r) for r in fail_rows}
         
         # Calculate MTBF per machine
         result = []
-        for r in rows:
-            d = dict(r)
-            maq = d['maquina']
+        for maq in all_machines:
+            d = fail_map.get(maq, {'maquina': maq, 'tempo_total_min': 0, 'n_falhas': 0})
             tp = d['tempo_total_min']
             n_falhas = d['n_falhas']
             
@@ -1770,6 +1823,11 @@ def get_kpi_drilldown_maquinas(semana: str, linha: str = 'TODAS', ano: int = Non
             mtbf = (td / n_falhas / 60) if n_falhas > 0 else (td / 60)
             d['mtbf_h'] = round(mtbf, 2)
             result.append(d)
+            
+        # Ordena result por tempo total de parada decrescente (piores primeiro), ou mtbf decrescente?
+        # Para mtbf, máquinas com MAIOR MTBF são as melhores.
+        # Vamos manter o formato antigo ordenando por tempo de parada para as que falharam, e depois as sem falhas
+        result.sort(key=lambda x: x['tempo_total_min'], reverse=True)
             
         return result
     finally:

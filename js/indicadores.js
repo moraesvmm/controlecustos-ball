@@ -1186,7 +1186,7 @@ async function carregarConfiabilidade() {
 
     const empty = document.getElementById('confiabEmpty');
     const cards = document.getElementById('confiabCardsArea');
-    const chartsArea = document.querySelector('#kpi-view-confiabilidade > div:nth-child(3)');
+    const chartsArea = document.querySelector('#mtbf-integrada-container > div:nth-child(2)');
 
     if (!dados || dados.length === 0) {
       // Proteção anti-flicker: se os gráficos já estão visíveis (importação em andamento),
@@ -1303,6 +1303,11 @@ async function carregarConfiabilidade() {
       meta_mttr_h: metaMttr,
       meta_mtta_m: metaMtta
     }, _confiabLinha);
+    
+    // Renderiza a nova visão MTBF Analytics
+    if (typeof renderMtbfAnalytics === 'function') {
+      renderMtbfAnalytics(dados, metaMtbf);
+    }
 
     setTimeout(() => window.dispatchEvent(new Event('resize')), 300);
 
@@ -1502,6 +1507,26 @@ export function initConfiabilidade() {
   });
   document.getElementById('selectConfiabMesSemana')?.addEventListener('change', e => {
     _confiabMesSemana = e.target.value;
+    carregarConfiabilidade();
+  });
+
+  document.getElementById('btnMtbfModeInt')?.addEventListener('click', () => {
+    document.getElementById('btnMtbfModeInt').classList.add('active');
+    document.getElementById('btnMtbfModeAna').classList.remove('active');
+    const intContainer = document.getElementById('mtbf-integrada-container');
+    const anaContainer = document.getElementById('mtbf-analytics-container');
+    if(intContainer) { intContainer.style.display = 'flex'; setTimeout(()=>intContainer.style.opacity = '1', 10); }
+    if(anaContainer) { anaContainer.style.opacity = '0'; setTimeout(()=>anaContainer.style.display = 'none', 300); }
+    carregarConfiabilidade();
+  });
+  
+  document.getElementById('btnMtbfModeAna')?.addEventListener('click', () => {
+    document.getElementById('btnMtbfModeAna').classList.add('active');
+    document.getElementById('btnMtbfModeInt').classList.remove('active');
+    const intContainer = document.getElementById('mtbf-integrada-container');
+    const anaContainer = document.getElementById('mtbf-analytics-container');
+    if(anaContainer) { anaContainer.style.display = 'flex'; setTimeout(()=>anaContainer.style.opacity = '1', 10); }
+    if(intContainer) { intContainer.style.opacity = '0'; setTimeout(()=>intContainer.style.display = 'none', 300); }
     carregarConfiabilidade();
   });
 
@@ -1776,3 +1801,264 @@ window.abrirDrilldownMaquinas = async function(periodo) {
     console.error(e);
   }
 };
+
+// ============================================================
+// MTBF ANALYTICS - VISÃO DEDICADA
+// ============================================================
+async function renderMtbfAnalytics(dadosOld, globalMetaMtbf) {
+  if (!dadosOld || dadosOld.length === 0) {
+    const hero = document.getElementById('mtbfHeroStrip');
+    const ledger = document.getElementById('mtbfLedgerTbody');
+    const heatmap = document.getElementById('mtbfHeatmapWrapper');
+    const stability = document.getElementById('mtbfStabilityWrapper');
+    if(hero) hero.innerHTML = '';
+    if(ledger) ledger.innerHTML = '';
+    if(heatmap) heatmap.innerHTML = '';
+    if(stability) stability.innerHTML = '';
+    return;
+  }
+
+  // 1. Prepara dadosOld e ordena períodos cronologicamente
+  const mesesOrder = { 'Jan': 1, 'Fev': 2, 'Mar': 3, 'Abr': 4, 'Mai': 5, 'Jun': 6, 'Jul': 7, 'Ago': 8, 'Set': 9, 'Out': 10, 'Nov': 11, 'Dez': 12 };
+  let periodos = [...new Set(dadosOld.map(d => d.periodo_ref))].sort((a, b) => {
+    if (mesesOrder[a] && mesesOrder[b]) return mesesOrder[a] - mesesOrder[b];
+    return a.localeCompare(b);
+  });
+  if (periodos.length === 0) return;
+  const currentPeriod = periodos[periodos.length - 1];
+  const previousPeriod = periodos.length > 1 ? periodos[periodos.length - 2] : null;
+
+  // 2. Agrupa por máquina para o Ledger (via API de drilldown_maquinas)
+  const machineData = {};
+  try {
+    const fetchPromises = periodos.map(async (p) => {
+      const resp = await fetch(`/api/kpi/drilldown_maquinas?semana=${encodeURIComponent(p)}&linha=${encodeURIComponent(_confiabLinha)}&ano=${encodeURIComponent(_confiabAno)}`);
+      const data = await resp.json();
+      return { p, data };
+    });
+    
+    const results = await Promise.all(fetchPromises);
+    
+    results.forEach(({ p, data }) => {
+      data.forEach(d => {
+        if (!machineData[d.maquina]) {
+          machineData[d.maquina] = { maquina: d.maquina, linha: _confiabLinha === 'TODAS' ? '' : _confiabLinha, history: {}, currentMtbf: 0, prevMtbf: 0 };
+        }
+        machineData[d.maquina].history[p] = d.mtbf_h;
+        if (p === currentPeriod) machineData[d.maquina].currentMtbf = d.mtbf_h;
+        if (p === previousPeriod) machineData[d.maquina].prevMtbf = d.mtbf_h;
+      });
+    });
+  } catch(e) {
+    console.error("MTBF Analytics falhou ao carregar ledger:", e);
+  }
+
+  // Não filtra mais por currentMtbf > 0. Mostra TODAS as máquinas que tiveram histórico no período filtrado.
+  const ledgerArray = Object.values(machineData);
+  ledgerArray.sort((a, b) => {
+    // Máquinas que não tiveram falhas no período atual ficam no topo (MTBF "infinito")
+    const mtbfA = a.currentMtbf || Infinity;
+    const mtbfB = b.currentMtbf || Infinity;
+    return mtbfB - mtbfA; // Maior MTBF primeiro
+  });
+
+  // 3. Renderiza Hero Strip
+  let heroHtml = '';
+  if (periodos.length > 0) {
+    const currentData = dadosOld.filter(d => d.periodo_ref === currentPeriod);
+    const avgMtbf = currentData.length > 0 ? (currentData.reduce((acc, d) => acc + (d.mtbf_h || 0), 0) / currentData.length) : 0;
+    
+    heroHtml += `
+      <div class="mtbf-hero-item">
+        <span class="mtbf-hero-label">MTBF Global (${currentPeriod})</span>
+        <span class="mtbf-hero-value" style="color: ${avgMtbf >= globalMetaMtbf ? 'var(--success)' : 'var(--warning)'}">${avgMtbf.toFixed(1)}h</span>
+        <span class="mtbf-hero-sub">Meta Corporativa: ${globalMetaMtbf}h</span>
+      </div>
+    `;
+
+    if (ledgerArray.length > 0) {
+      const best = ledgerArray[0];
+      const worst = ledgerArray[ledgerArray.length - 1];
+      const bestDisplay = best.currentMtbf ? `${best.currentMtbf.toFixed(1)}h` : 'Sem falhas';
+      const worstDisplay = worst.currentMtbf ? `${worst.currentMtbf.toFixed(1)}h` : 'Sem falhas';
+      heroHtml += `
+        <div class="mtbf-hero-item">
+          <span class="mtbf-hero-label">Máquina Alta Perf.</span>
+          <span class="mtbf-hero-value" style="color: var(--success)">${best.maquina}</span>
+          <span class="mtbf-hero-sub">${bestDisplay} ${best.linha ? '('+best.linha+')' : ''}</span>
+        </div>
+        <div class="mtbf-hero-item">
+          <span class="mtbf-hero-label">Máquina Atenção Crítica</span>
+          <span class="mtbf-hero-value" style="color: var(--danger)">${worst.maquina}</span>
+          <span class="mtbf-hero-sub">${worstDisplay} ${worst.linha ? '('+worst.linha+')' : ''}</span>
+        </div>
+        <div class="mtbf-hero-item">
+          <span class="mtbf-hero-label">Máquinas Analisadas</span>
+          <span class="mtbf-hero-value">${ledgerArray.length}</span>
+          <span class="mtbf-hero-sub">Histórico acumulado</span>
+        </div>
+      `;
+    }
+  }
+  const hero = document.getElementById('mtbfHeroStrip');
+  if(hero) hero.innerHTML = heroHtml;
+
+  // 4. Renderiza Heatmap Matrix (Linhas vs Períodos) usando dadosOld
+  const heatmapData = {};
+  dadosOld.forEach(d => {
+    const ln = d.linha || (_confiabLinha === 'TODAS' ? 'Geral' : _confiabLinha);
+    if (!heatmapData[ln]) heatmapData[ln] = {};
+    if (!heatmapData[ln][d.periodo_ref]) heatmapData[ln][d.periodo_ref] = [];
+    heatmapData[ln][d.periodo_ref].push(d.mtbf_h);
+  });
+
+  const getHeatmapColor = (val, meta) => {
+    if (!val) return 'var(--surface)';
+    const pct = val / meta;
+    if (pct >= 1) return 'rgba(16, 185, 129, 0.15)'; // Verde
+    if (pct >= 0.7) return 'rgba(245, 158, 11, 0.15)'; // Âmbar
+    return 'rgba(239, 68, 68, 0.15)'; // Vermelho
+  };
+  const getHeatmapBorder = (val, meta) => {
+    if (!val) return '1px solid var(--border)';
+    const pct = val / meta;
+    if (pct >= 1) return '1px solid rgba(16, 185, 129, 0.4)';
+    if (pct >= 0.7) return '1px solid rgba(245, 158, 11, 0.4)';
+    return '1px solid rgba(239, 68, 68, 0.4)';
+  };
+
+  let heatmapHtml = '<table class="mtbf-heatmap-table"><thead><tr><th>Linha</th>';
+  periodos.forEach(p => heatmapHtml += `<th>${p}</th>`);
+  heatmapHtml += '</tr></thead><tbody>';
+
+  const linhasKeys = Object.keys(heatmapData).sort();
+  linhasKeys.forEach(linha => {
+    heatmapHtml += `<tr><td>${linha}</td>`;
+    const metaLinha = _confiabMetas[linha] ? _confiabMetas[linha].meta_mtbf_h : globalMetaMtbf;
+    periodos.forEach(p => {
+      const vals = heatmapData[linha][p];
+      const avg = vals && vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+      const cor = getHeatmapColor(avg, metaLinha);
+      const borda = getHeatmapBorder(avg, metaLinha);
+      const valStr = avg > 0 ? avg.toFixed(1) : '-';
+      heatmapHtml += `<td class="mtbf-heatmap-cell" style="background: ${cor}; border: ${borda}; color: ${avg >= metaLinha ? 'var(--success)' : (avg >= metaLinha*0.7 ? 'var(--warning)' : 'var(--danger)')}">${valStr}</td>`;
+    });
+    heatmapHtml += '</tr>';
+  });
+  heatmapHtml += '</tbody></table>';
+  const hw = document.getElementById('mtbfHeatmapWrapper');
+  if(hw) hw.innerHTML = heatmapHtml;
+
+  // 5. Renderiza Stability Blocks usando dadosOld
+  let stabilityHtml = '';
+  linhasKeys.forEach(linha => {
+    const vals = heatmapData[linha][currentPeriod] || [];
+    const avg = vals.length > 0 ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+    const metaLinha = _confiabMetas[linha] ? _confiabMetas[linha].meta_mtbf_h : globalMetaMtbf;
+    
+    const pctMec = 50;
+    const pctEle = 50;
+
+    stabilityHtml += `
+      <div class="mtbf-stability-block">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <strong style="color:var(--text-primary);">${linha}</strong>
+          <span style="font-size:0.7rem; padding:2px 8px; border-radius:12px; background: ${avg >= metaLinha ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; color: ${avg >= metaLinha ? 'var(--success)' : 'var(--danger)'}; border:1px solid ${avg >= metaLinha ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}">${avg >= metaLinha ? 'Estável' : 'Crítico'}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+          <span style="color:var(--text-secondary);">MTBF Atual:</span>
+          <strong style="color:var(--text-primary);">${avg.toFixed(1)}h <span style="font-size:0.7rem; color:var(--muted); font-weight:normal;">/ ${metaLinha}h</span></strong>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px; margin-top:4px;">
+          <div style="display:flex; justify-content:space-between; font-size:0.65rem; color:var(--muted); text-transform:uppercase;">
+            <span>MEC ${pctMec}%</span>
+            <span>ELE ${pctEle}%</span>
+          </div>
+          <div class="mtbf-prop-bar">
+            <div style="width:${pctMec}%; background:rgba(148,163,184,0.6);"></div>
+            <div style="width:${pctEle}%; background:rgba(56,189,248,0.6);"></div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  const sw = document.getElementById('mtbfStabilityWrapper');
+  if(sw) sw.innerHTML = `<div class="mtbf-stability-grid">${stabilityHtml}</div>`;
+
+  // 6. Renderiza Ledger Ranking
+  let ledgerHtml = '';
+  ledgerArray.forEach(m => {
+    // Como a API não retornou linha confiável pra TODAS, assumimos a global
+    const metaL = (m.linha && _confiabMetas[m.linha]) ? _confiabMetas[m.linha].meta_mtbf_h : globalMetaMtbf;
+    const isSemFalhas = !m.currentMtbf || m.currentMtbf === 0;
+    const currentMtbfDisplay = isSemFalhas ? 'Sem falhas' : `${m.currentMtbf.toFixed(1)}h`;
+    
+    // Se não quebrou, a % da meta atingida é 100%. Se quebrou, calcula.
+    const pct = isSemFalhas ? 100 : Math.min((m.currentMtbf / metaL) * 100, 100);
+    const isGood = isSemFalhas || m.currentMtbf >= metaL;
+    
+    let trendIcon = '<span style="color:var(--muted);">-</span>';
+    const prev = m.prevMtbf || Infinity;
+    const curr = m.currentMtbf || Infinity;
+    if (prev !== Infinity || curr !== Infinity) {
+      if (curr > prev) trendIcon = '<span style="color:var(--success);">▲</span>';
+      else if (curr < prev) trendIcon = '<span style="color:var(--danger);">▼</span>';
+    }
+
+    ledgerHtml += `
+      <tr style="cursor:pointer;" onclick="this.nextElementSibling.style.display = this.nextElementSibling.style.display === 'none' ? 'table-row' : 'none'" title="Clique para expandir histórico">
+        <td>
+          <div style="font-weight:600; color:var(--text-primary);">${m.maquina}</div>
+          <div style="font-size:0.7rem; color:var(--muted);">${m.linha}</div>
+        </td>
+        <td>
+          <span style="font-size:0.75rem; padding:3px 8px; border-radius:4px; background: ${isGood ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)'}; color: ${isGood ? 'var(--success)' : 'var(--danger)'};">
+            ${isSemFalhas ? 'Perfeita' : (isGood ? 'Alta Perf.' : 'Sub Perf.')}
+          </span>
+        </td>
+        <td style="font-family: 'DM Sans', sans-serif; font-weight:700; color:var(--text-primary);">
+          ${currentMtbfDisplay}
+        </td>
+        <td>
+          <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:2px; color:var(--text-secondary);">
+            <span>${pct.toFixed(0)}%</span>
+            <span>Meta: ${metaL}h</span>
+          </div>
+          <div class="mtbf-bar-bg">
+            <div class="mtbf-bar-fill" style="width: ${pct}%; background: ${isGood ? 'var(--success)' : 'var(--danger)'}; box-shadow: 0 0 8px ${isGood ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'};"></div>
+          </div>
+        </td>
+        <td style="text-align:right; font-size:1.1rem;">
+          ${trendIcon}
+        </td>
+      </tr>
+      <tr style="display:none; background: rgba(0,0,0,0.15);">
+        <td colspan="5" style="padding: 16px 24px; border-bottom: 1px solid var(--border-strong);">
+          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px; font-weight:600;">Histórico Recente de MTBF (Últimos 8 períodos)</div>
+          <div style="display:flex; gap:12px; overflow-x:auto; padding-bottom:4px;">
+            ${periodos.slice(-8).map(p => {
+              const val = m.history[p];
+              const display = val ? val.toFixed(1) + 'h' : 'Sem falhas';
+              
+              // Define height para dar um visual de gráfico de barras inline
+              const pct = val ? Math.min((val / metaL) * 100, 100) : 100;
+              const barHeight = Math.max(pct * 0.4, 4); // 4px to 40px
+              const isGood = !val || val >= metaL;
+              const color = isGood ? 'var(--success)' : 'var(--danger)';
+              const bg = isGood ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)';
+              const border = isGood ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+
+              return `<div style="display:flex; flex-direction:column; justify-content:flex-end; align-items:center; min-width:80px; flex:1;">
+                        <div style="color:${color}; font-weight:700; font-size:0.85rem; margin-bottom:6px; font-family:'DM Sans', sans-serif;">${display}</div>
+                        <div style="width:100%; background:${bg}; border:1px solid ${border}; border-radius:4px 4px 0 0; height:${barHeight}px; transition: height 0.3s ease;"></div>
+                        <div style="width:100%; text-align:center; color:var(--muted); font-size:0.65rem; padding-top:4px; border-top:1px solid var(--border);">${p}</div>
+                      </div>`;
+            }).join('')}
+          </div>
+        </td>
+      </tr>
+    `;
+  });
+  const lb = document.getElementById('mtbfLedgerTbody');
+  if(lb) lb.innerHTML = ledgerHtml;
+}
