@@ -29,19 +29,19 @@
 
 /* ===== NAVY BLUE MODE (DARKNESS OCEAN) ===== */
 body.navy-mode {
-  /* Backgrounds: abyssal depth */
-  --bg: #010407;
-  --bg2: #040810;
-  --surface: #080d18;
-  --surface-solid: #070c15;
-  /* Borders: almost invisible, precise */
-  --border: rgba(255, 255, 255, 0.04);
-  --border-strong: rgba(255, 255, 255, 0.08);
+  /* Backgrounds: abyssal depth — slightly lighter for panel contrast */
+  --bg: #030712;
+  --bg2: #060d1a;
+  --surface: #0d1626;
+  --surface-solid: #0d1626;
+  /* Borders: more visible for structural clarity */
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
   /* Text: cool slate-white hierarchy */
   --text: #e8ecf1;
   --text-secondary: rgba(232, 236, 241, 0.65);
-  --muted: #64748b;
-  --muted-dim: rgba(100, 116, 139, 0.4);
+  --muted: #7a8ca0;
+  --muted-dim: rgba(122, 140, 160, 0.4);
   /* Primary accent: cold slate (NOT blue vibrant) */
   --gold: #94a3b8;
   --gold-rgb: 148, 163, 184;

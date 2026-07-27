@@ -70,7 +70,7 @@ export function getColorsByStatus(status) {
   // Darkness Ocean — paleta distinta por status, mantendo coesão "navy profundo"
   if (mode === 'navy') {
     const navyByStatus = {
-      'ENTREGUE':             ['rgba(37, 99, 235, 0.95)',  'rgba(30, 58, 138, 0.50)'],   // Navy Blue (sólido, confirmado)
+      'ENTREGUE':             ['rgba(8, 60, 200, 0.98)',   'rgba(5, 30, 120, 0.60)'],    // Cobalt Ocean (profundo, agressivo)
       'PENDENTE DE ENTREGA':  ['rgba(148, 163, 184, 0.88)','rgba(100, 116, 139, 0.42)'], // Platinum Slate (em trânsito)
       'PENDENTE DE PEDIDO':   ['rgba(71, 85, 105, 0.95)',  'rgba(51, 65, 85, 0.50)'],    // Gunmetal (aguardando)
       'PENDENTE DE ORCAMENTO':['rgba(100, 116, 139, 0.80)','rgba(71, 85, 105, 0.38)'],   // Slate médio (projeção)
