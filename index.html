@@ -413,7 +413,7 @@
                 <div id="healthScoreLabel" style="font-size: 0.8rem; font-weight: 600; margin-top: 0.35rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.02em;">-</div>
                 <div id="healthScoreTrend" style="font-size: 0.75rem; margin-top: 0.25rem; color: var(--muted); display: flex; flex-direction: column; gap: 0.15rem;">-</div>
               </div>
-              <div id="chartHealthScore" style="width: 80px; height: 80px; flex-shrink: 0; position: relative; right: -5px;"></div>
+              <div id="chartMovHealthScore" style="width: 80px; height: 80px; flex-shrink: 0; position: relative; right: -5px;"></div>
             </div>
             <div id="healthScoreInsight" style="font-size: 0.75rem; color: var(--muted); margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.05); line-height: 1.4;">
               -
@@ -452,97 +452,120 @@
 
       <!-- MÓDULO MOVIMENTAÇÕES: DATAGRID (TRANSAÇÕES) -->
       <div id="view-movimentacoes-grid" class="view" style="height: 100%;">
-        <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: 2rem;">
-        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-shrink: 0;">
+        <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden; padding: 1rem 1.5rem;">
+        
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; flex-shrink: 0;">
           <div>
-            <h3 style="margin: 0; color: var(--text); font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em;">Movimentações Analíticas</h3>
-            <p style="margin: 0.25rem 0 0 0; font-size: 0.95rem; color: var(--muted);">Tabela dinâmica detalhada de requisições e apontamentos</p>
+            <h3 style="margin: 0; color: var(--text); font-size: 1.25rem; font-weight: 600; letter-spacing: -0.02em;">Movimentações Analíticas</h3>
+            <p style="margin: 0.15rem 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">Tabela dinâmica de alto desempenho para consulta de requisições e apontamentos</p>
+          </div>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="btnMovNovidades" class="btn btn-outline" style="display: none; padding: 0.4rem 0.85rem; font-size: 0.8rem; height: 32px; border: 1px solid var(--border); color: var(--text); background: transparent; border-radius: 6px; transition: background 0.2s;">
+              Entradas Recentes
+            </button>
+            <button id="btnMovExportarCsv" class="btn btn-outline" style="padding: 0.4rem 0.85rem; font-size: 0.8rem; height: 32px; border: 1px solid var(--border); color: var(--text); background: var(--surface-solid); border-radius: 6px; display: flex; align-items: center; gap: 0.4rem; transition: background 0.2s;">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Exportar CSV
+            </button>
           </div>
         </header>
 
-        <!-- Filters Bar -->
-        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; background: var(--surface-solid); padding: 1.25rem; border-radius: var(--radius); border: 1px solid var(--border); align-items: flex-end; flex-shrink: 0; flex-wrap: wrap; box-shadow: var(--shadow);">
-          <div style="flex: 1; min-width: 250px;">
-            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; font-weight: 600; letter-spacing: 0.05em;">Busca Rápida</label>
-            <input type="text" id="movFiltroBusca" placeholder="Ex: código, descrição, colaborador..." style="width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; border-radius: var(--radius-sm); font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'" />
+        <!-- Filters Bar (Linear / Stripe style) -->
+        <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-shrink: 0; flex-wrap: wrap; align-items: center;">
+          <div style="flex: 1; min-width: 250px; position: relative;">
+            <svg style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--muted);" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="movFiltroBusca" placeholder="Pesquisar código, descrição ou colaborador..." style="width: 100%; background: var(--surface-solid); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.75rem 0.4rem 2rem; border-radius: 6px; font-size: 0.8rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s;" onfocus="this.style.borderColor='var(--primary)'; this.style.boxShadow='0 0 0 2px rgba(212,175,55,0.1)'" onblur="this.style.borderColor='var(--border)'; this.style.boxShadow='none'" />
           </div>
-          <div style="width: 150px;">
-            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; font-weight: 600; letter-spacing: 0.05em;">Ano</label>
-            <select id="movFiltroAno" style="width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; border-radius: var(--radius-sm); font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-              <option value="">Todos</option>
+          
+          <div style="display: flex; gap: 0.25rem; background: var(--surface-solid); padding: 0.15rem; border-radius: 6px; border: 1px solid var(--border);">
+            <select id="movFiltroAno" style="background: transparent; border: none; color: var(--text); padding: 0.2rem 0.4rem; font-size: 0.8rem; outline: none; cursor: pointer;">
+              <option value="">Ano: Todos</option>
               <option value="2026">2026</option>
               <option value="2025">2025</option>
               <option value="2024">2024</option>
             </select>
-          </div>
-          <div style="width: 150px;">
-            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; font-weight: 600; letter-spacing: 0.05em;">Mês</label>
-            <select id="movFiltroMes" style="width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; border-radius: var(--radius-sm); font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-              <option value="">Todos</option>
-              <option value="1">Janeiro</option>
-              <option value="2">Fevereiro</option>
-              <option value="3">Março</option>
-              <option value="4">Abril</option>
-              <option value="5">Maio</option>
-              <option value="6">Junho</option>
-              <option value="7">Julho</option>
-              <option value="8">Agosto</option>
-              <option value="9">Setembro</option>
-              <option value="10">Outubro</option>
-              <option value="11">Novembro</option>
-              <option value="12">Dezembro</option>
+            <div style="width: 1px; background: var(--border); margin: 0.15rem 0;"></div>
+            <select id="movFiltroMes" style="background: transparent; border: none; color: var(--text); padding: 0.2rem 0.4rem; font-size: 0.8rem; outline: none; cursor: pointer;">
+              <option value="">Mês: Todos</option>
+              <option value="1">Jan</option>
+              <option value="2">Fev</option>
+              <option value="3">Mar</option>
+              <option value="4">Abr</option>
+              <option value="5">Mai</option>
+              <option value="6">Jun</option>
+              <option value="7">Jul</option>
+              <option value="8">Ago</option>
+              <option value="9">Set</option>
+              <option value="10">Out</option>
+              <option value="11">Nov</option>
+              <option value="12">Dez</option>
             </select>
-          </div>
-          <div style="width: 180px;">
-            <label style="display: block; font-size: 0.75rem; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; font-weight: 600; letter-spacing: 0.05em;">Área</label>
-            <select id="movFiltroArea" style="width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text); padding: 0.6rem 1rem; border-radius: var(--radius-sm); font-size: 0.9rem; outline: none; transition: border-color 0.2s;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='var(--border)'">
-              <option value="">Todas as Áreas</option>
+            <div style="width: 1px; background: var(--border); margin: 0.15rem 0;"></div>
+            <select id="movFiltroArea" style="background: transparent; border: none; color: var(--text); padding: 0.2rem 0.4rem; font-size: 0.8rem; outline: none; cursor: pointer;">
+              <option value="">Área: Todas</option>
               <option value="MANUTENÇÃO">Manutenção</option>
               <option value="FERRAMENTARIA">Ferramentaria</option>
               <option value="FACILITIES">Facilities</option>
             </select>
           </div>
-          <button id="btnMovExportarCsv" class="btn btn-outline" style="padding: 0.6rem 1.5rem; height: 39px; border-color: var(--border-strong); color: var(--text); font-weight: 600; background: var(--surface-solid);">
-            📥 Exportar CSV
-          </button>
-          <button id="btnMovNovidades" class="btn btn-outline" style="display: none; padding: 0.6rem 1.5rem; height: 39px; border-color: var(--border-strong); color: var(--text); font-weight: 600; background: var(--surface-solid);">
-            Entradas Recentes
-          </button>
         </div>
 
-        <!-- Data Table -->
-        <div style="flex: 1; overflow: hidden; background: var(--surface-solid); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; box-shadow: var(--shadow);">
-          <div style="overflow-y: auto; flex: 1;">
-            <table class="data-table" id="movTableGrid" style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap;">
-              <thead style="position: sticky; top: 0; background: rgba(39,39,42,0.9); backdrop-filter: blur(8px); z-index: 10; box-shadow: 0 1px 0 var(--border);">
+        <!-- Data Table Enterprise -->
+        <div style="flex: 1; overflow: hidden; background: transparent; display: flex; flex-direction: column;">
+          
+          <!-- Action Bar Movimentações -->
+          <div class="row-action-bar hidden" id="rowActionBarMov" aria-live="polite" style="margin-bottom: 0.5rem; border-radius: 8px; flex-shrink: 0;">
+            <div class="row-action-info">
+              <span class="row-action-label" id="rowActionLabelMov">Linha selecionada</span>
+              <span class="row-action-hint">Duplo clique na linha para abrir detalhes no painel lateral</span>
+            </div>
+            <div class="row-action-buttons">
+              <button type="button" class="btn btn-ghost btn-sm" id="btnRowDetalheMov">Ver detalhes</button>
+              <button type="button" class="btn btn-ghost btn-sm" id="btnRowLimparSelMov">✕</button>
+            </div>
+          </div>
+          <div style="overflow-y: auto; overflow-x: auto; flex: 1; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);">
+            <table class="data-table" id="movTableGrid" style="width: 100%; border-collapse: collapse; text-align: left; white-space: nowrap; font-family: 'Inter', system-ui, sans-serif;">
+              <thead style="position: sticky; top: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); z-index: 10; box-shadow: 0 1px 0 rgba(255,255,255,0.04);">
                 <tr>
-                  <th style="padding: 1rem 1.5rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">Data</th>
-                  <th style="padding: 1rem 1.5rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">Item (Código)</th>
-                  <th style="padding: 1rem 1.5rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">Descrição</th>
-                  <th style="padding: 1rem 1.5rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">Área</th>
-                  <th style="padding: 1rem 1.5rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">Centro de Custo</th>
-                  <th style="padding: 1rem 1.5rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); text-align: right;">Valor (R$)</th>
-                  <th style="padding: 1rem 1.5rem; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em; border-bottom: 1px solid var(--border);">Colaborador</th>
+                  <th style="padding: 0.6rem 1rem; color: var(--muted); font-size: 0.7rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.03); text-transform: none; letter-spacing: 0.01em;">Data</th>
+                  <th style="padding: 0.6rem 1rem; color: var(--muted); font-size: 0.7rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.03); text-transform: none; letter-spacing: 0.01em;">Código</th>
+                  <th style="padding: 0.6rem 1rem; color: var(--muted); font-size: 0.7rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.03); text-transform: none; letter-spacing: 0.01em;">Descrição do Item</th>
+                  <th style="padding: 0.6rem 1rem; color: var(--muted); font-size: 0.7rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.03); text-transform: none; letter-spacing: 0.01em;">Área</th>
+                  <th style="padding: 0.6rem 1rem; color: var(--muted); font-size: 0.7rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.03); text-transform: none; letter-spacing: 0.01em;">Centro de Custo</th>
+                  <th style="padding: 0.6rem 1rem; color: var(--muted); font-size: 0.7rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.03); text-transform: none; letter-spacing: 0.01em; text-align: right;">Valor (R$)</th>
+                  <th style="padding: 0.6rem 1rem; color: var(--muted); font-size: 0.7rem; font-weight: 500; border-bottom: 1px solid rgba(255,255,255,0.03); text-transform: none; letter-spacing: 0.01em;">Solicitante/Colaborador</th>
                 </tr>
               </thead>
-              <tbody id="movTableGridBody" style="font-size: 0.9rem;">
+              <tbody id="movTableGridBody" style="font-size: 0.8rem; color: var(--text-secondary);">
                 <!-- Javascript injects rows here -->
               </tbody>
             </table>
           </div>
           
-          <!-- Table Footer / Pagination -->
-          <div style="padding: 1rem 1.5rem; border-top: 1px solid var(--border); background: var(--bg); display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
-            <div style="font-size: 0.85rem; color: var(--muted);">
-              Exibindo <span id="movGridVisiveis" style="color: var(--text); font-weight: 600;">0</span> registros de <span id="movGridTotal" style="color: var(--text); font-weight: 600;">0</span>.
+          <!-- Executive Footer / Pagination -->
+          <div style="padding: 0.5rem 0.5rem 0 0.5rem; background: transparent; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0; font-family: 'Inter', system-ui, sans-serif;">
+            
+            <div style="display: flex; align-items: center; gap: 1.25rem;">
+                <div style="font-size: 0.75rem; color: var(--muted);">
+                Exibindo <span id="movGridVisiveis" style="color: var(--text); font-weight: 500;">0</span> de <span id="movGridTotal" style="color: var(--text); font-weight: 500;">0</span> registros
+                </div>
+                
+                <div style="width: 1px; height: 14px; background: var(--border);"></div>
+                
+                <div style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+                <span style="color: var(--muted);">Valor Filtrado</span> 
+                <span id="movGridSomaValor" style="color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.02em;">R$ 0,00</span>
+                </div>
             </div>
-            <div style="font-size: 0.95rem; color: var(--text); font-weight: 600; display: flex; align-items: center; gap: 0.75rem;">
-              <span style="color: var(--muted); font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;">Total Filtrado:</span> 
-              <span id="movGridSomaValor" style="color: var(--primary); font-size: 1.1rem; font-family: 'DM Sans', monospace;">R$ 0,00</span>
-            </div>
-            <div style="display: flex; gap: 0.5rem;">
-              <button class="btn btn-outline" id="movBtnPrevPage" disabled style="padding: 0.4rem 0.75rem; font-size: 0.85rem; border-color: var(--border-strong); background: var(--surface-solid); color: var(--muted);">Anterior</button>
-              <button class="btn btn-outline" id="movBtnNextPage" disabled style="padding: 0.4rem 0.75rem; font-size: 0.85rem; border-color: var(--border-strong); background: var(--surface-solid); color: var(--muted);">Próxima</button>
+
+            <div style="display: flex; gap: 0.25rem;">
+              <button class="btn" id="movBtnPrevPage" disabled style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border: none; background: transparent; color: var(--text); border-radius: 4px; cursor: pointer; transition: background 0.15s ease;" onmouseover="if(!this.disabled) this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                ← Anterior
+              </button>
+              <button class="btn" id="movBtnNextPage" disabled style="padding: 0.25rem 0.5rem; font-size: 0.75rem; border: none; background: transparent; color: var(--text); border-radius: 4px; cursor: pointer; transition: background 0.15s ease;" onmouseover="if(!this.disabled) this.style.background='rgba(255,255,255,0.05)'" onmouseout="this.style.background='transparent'">
+                Próxima →
+              </button>
             </div>
           </div>
         </div>

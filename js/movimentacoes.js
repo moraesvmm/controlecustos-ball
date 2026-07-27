@@ -299,14 +299,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 pointer: { show: false }, 
                 progress: { 
                     show: true, overlap: false, roundCap: true, clip: false, 
-                    itemStyle: { color: utilGaugeColor, shadowBlur: 10, shadowColor: utilGaugeColor + '66' } 
+                    itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.3)' } 
                 },
                 axisLine: { lineStyle: { width: 6, color: [[1, 'rgba(255,255,255,0.05)']] } },
                 splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
                 data: [{ value: Math.min(percGeral, 100), itemStyle: { color: utilGaugeColor } }],
                 detail: { show: false }
-            }]
-        });
+            }],
+            color: [utilGaugeColor]
+        }, true);
 
         // --- 7. Health Score Orçamentário Visual ---
         document.getElementById('healthScoreValue').innerText = healthScore;
@@ -316,7 +317,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('healthScoreTrend').innerHTML = `<span style="color: ${trendColor}; font-weight: 600;">${healthTrend}</span> <span style="opacity: 0.7; font-size: 0.7rem;">Confiança: 94%</span>`;
         document.getElementById('healthScoreInsight').innerText = healthInsight;
 
-        if(!window.chartHealthScoreInstance) window.chartHealthScoreInstance = echarts.init(document.getElementById('chartHealthScore'));
+        if(!window.chartHealthScoreInstance) window.chartHealthScoreInstance = echarts.init(document.getElementById('chartMovHealthScore'));
         window.chartHealthScoreInstance.setOption({
             series: [{
                 type: 'gauge', startAngle: 90, endAngle: -270,
@@ -324,15 +325,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 pointer: { show: false }, 
                 progress: { 
                     show: true, overlap: false, roundCap: true, clip: false, 
-                    itemStyle: { color: healthColor, shadowBlur: 10, shadowColor: healthColor + '88' } 
+                    itemStyle: { shadowBlur: 8, shadowColor: 'rgba(0,0,0,0.3)' } 
                 },
                 axisLine: { lineStyle: { width: 5, color: [[1, 'rgba(255,255,255,0.05)']] } },
                 splitLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false },
                 data: [{ value: healthScore, itemStyle: { color: healthColor } }],
                 detail: { show: false }
             }],
-            color: [healthColor] // Forçar cor no ECharts
-        }, true); // Adicionar "true" limpa propriedades residuais do echarts
+            color: [healthColor]
+        }, true);
 
 
         // --- 5. Master Evolution Chart ---
@@ -557,27 +558,45 @@ document.addEventListener('DOMContentLoaded', () => {
             movTableGridBody.innerHTML = '';
             let somaFiltro = 0;
             
-            rows.forEach(r => {
+            // Armazena as linhas atuais globalmente para o drilldown
+            window.currentMovRows = rows;
+            
+            rows.forEach((r, index) => {
                 somaFiltro += r.valor_total || 0;
                 
                 const tr = document.createElement('tr');
-                tr.style.transition = 'background-color 0.2s';
-                tr.onmouseover = () => tr.style.backgroundColor = 'rgba(255,255,255,0.02)';
+                tr.classList.add('mov-table-row');
+                tr.dataset.index = index;
+                tr.style.transition = 'background-color 0.15s ease';
+                tr.style.cursor = 'pointer';
+                tr.onmouseover = () => tr.style.backgroundColor = 'rgba(255,255,255,0.025)';
                 tr.onmouseout = () => tr.style.backgroundColor = 'transparent';
+                
+                tr.onclick = () => window.selecionarLinhaMov(index);
+                tr.ondblclick = () => window.abrirDetalheMov(index);
+                
+                // Micro-badge style based on Area
+                let areaColor = 'var(--muted)';
+                if (r.area_id === 'MANUTENÇÃO') areaColor = '#f59e0b';
+                else if (r.area_id === 'FACILITIES') areaColor = '#10b981';
+                else if (r.area_id === 'FERRAMENTARIA') areaColor = '#3b82f6';
+                
+                const areaBadge = r.area_id ? `<div style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 0;"><div style="width: 6px; height: 6px; border-radius: 50%; background: ${areaColor}; box-shadow: 0 0 4px ${areaColor}40;"></div><span style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 500; letter-spacing: 0.02em;">${r.area_id}</span></div>` : '-';
+
                 tr.innerHTML = `
-                    <td style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--muted);">${r.data_transacao}</td>
-                    <td style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', monospace;">${r.codigo_item || '-'}</td>
-                    <td style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--text); font-weight: 500;" title="${r.descricao || ''}">${(r.descricao || '').substring(0,50)}</td>
-                    <td style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--muted);"><span style="background: var(--bg); padding: 4px 8px; border-radius: var(--radius-sm); font-size: 0.75rem; border: 1px solid var(--border);">${r.area_id || '-'}</span></td>
-                    <td style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--muted);">${r.cost_center_id || '-'}</td>
-                    <td style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--text); font-family: 'DM Sans', monospace; font-weight: 600; text-align: right;">${formatBRL(r.valor_total || 0)}</td>
-                    <td style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--muted);">${r.collaborator_id || '-'}</td>
+                    <td style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--muted); font-variant-numeric: tabular-nums;">${r.data_transacao}</td>
+                    <td style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-secondary); font-family: 'DM Sans', monospace; font-size: 0.8rem; font-weight: 400;">${r.codigo_item || '-'}</td>
+                    <td style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text); font-weight: 500; letter-spacing: -0.01em; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${r.descricao || ''}">${r.descricao || '-'}</td>
+                    <td style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03);">${areaBadge}</td>
+                    <td style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text-secondary);">${r.cost_center_id || '-'}</td>
+                    <td style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--text); font-family: 'Inter', monospace; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums;">${formatBRL(r.valor_total || 0)}</td>
+                    <td style="padding: 0.5rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.03); color: var(--muted); max-width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${r.collaborator_id || ''}">${r.collaborator_id || '-'}</td>
                 `;
                 movTableGridBody.appendChild(tr);
             });
 
             if(rows.length === 0) {
-                movTableGridBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2rem; color: var(--text-secondary);">Nenhum registro encontrado.</td></tr>`;
+                movTableGridBody.innerHTML = `<tr><td colspan="7" style="text-align: center; padding: 2.5rem; color: var(--text-secondary); font-size: 0.85rem;">Nenhum registro encontrado.</td></tr>`;
             }
 
             movGridSomaValor.innerText = formatBRL(somaFiltro);
@@ -688,6 +707,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     window.addEventListener('themeChanged', () => {
+        if (window.chartHealthScoreInstance) {
+            window.chartHealthScoreInstance.dispose();
+            window.chartHealthScoreInstance = null;
+        }
+        if (window.chartUtilizacaoInstance) {
+            window.chartUtilizacaoInstance.dispose();
+            window.chartUtilizacaoInstance = null;
+        }
         if (document.getElementById('view-movimentacoes-dashboard').style.display !== 'none') {
             loadDashboard();
         }
@@ -855,5 +882,132 @@ document.addEventListener('DOMContentLoaded', () => {
             link.click();
         });
     }
+
+    // ==========================================
+    // ACTION BAR & DRILLDOWN (MOVIMENTAÇÕES)
+    // ==========================================
+    window.movLinhaSelecionadaIndex = null;
+
+    window.selecionarLinhaMov = function(index) {
+        window.movLinhaSelecionadaIndex = index;
+        
+        // Remove destaque anterior
+        document.querySelectorAll('.mov-table-row').forEach(tr => {
+            tr.classList.remove('row-selected');
+            tr.style.backgroundColor = 'transparent';
+        });
+        
+        // Adiciona destaque na linha atual
+        const tr = document.querySelector(`.mov-table-row[data-index="${index}"]`);
+        if (tr) {
+            tr.classList.add('row-selected');
+            tr.style.backgroundColor = 'rgba(56, 189, 248, 0.15)'; // Azul translúcido Premium
+        }
+
+        const bar = document.getElementById('rowActionBarMov');
+        if (bar && window.currentMovRows) {
+            bar.classList.remove('hidden');
+            const r = window.currentMovRows[index];
+            const itemCode = r.codigo_item || 'S/N';
+            document.getElementById('rowActionLabelMov').textContent = `Transação do Item ${itemCode} selecionada`;
+        }
+    };
+
+    window.limparSelecaoMov = function() {
+        window.movLinhaSelecionadaIndex = null;
+        document.querySelectorAll('.mov-table-row').forEach(tr => {
+            tr.classList.remove('row-selected');
+            tr.style.backgroundColor = 'transparent';
+        });
+        const bar = document.getElementById('rowActionBarMov');
+        if (bar) bar.classList.add('hidden');
+    };
+
+    const btnRowLimparSelMov = document.getElementById('btnRowLimparSelMov');
+    if(btnRowLimparSelMov) btnRowLimparSelMov.addEventListener('click', window.limparSelecaoMov);
+
+    const btnRowDetalheMov = document.getElementById('btnRowDetalheMov');
+    if(btnRowDetalheMov) {
+        btnRowDetalheMov.addEventListener('click', () => {
+            if(window.movLinhaSelecionadaIndex !== null) {
+                window.abrirDetalheMov(window.movLinhaSelecionadaIndex);
+            }
+        });
+    }
+
+    window.abrirDetalheMov = function(index) {
+        if (!window.currentMovRows || window.currentMovRows.length === 0) return;
+        const r = window.currentMovRows[index];
+        if (!r) return;
+        
+        window.selecionarLinhaMov(index);
+
+        const panel = document.getElementById('drillPanel');
+        const overlay = document.getElementById('drillOverlay');
+        if (!panel) return;
+
+        // Cabeçalho Refinado (High Luxury)
+        document.getElementById('drillTitulo').innerHTML = `<span style="font-size: 1.05rem; font-weight: 400; letter-spacing: -0.01em; color: rgba(255,255,255,0.95); line-height: 1.5; display: block; margin-bottom: 0.4rem;">${r.descricao || 'Item sem descrição'}</span>`;
+        document.getElementById('drillSubtitulo').innerHTML = `<span style="font-size: 0.75rem; color: rgba(255,255,255,0.4); font-family: 'Inter', system-ui, sans-serif; letter-spacing: 0.02em; font-weight: 400;">${r.codigo_item || 'S/N'} <span style="margin: 0 0.4rem; color: rgba(255,255,255,0.2);">|</span> ${r.data_transacao || 'Data desconhecida'}</span>`;
+        
+        const valorFormatado = formatBRL(r.valor_total || 0);
+        
+        // Hero Value & Executive Grid (Minimalist & Corporate)
+        const heroValueHTML = `
+            <div style="margin-top: 2rem; margin-bottom: 2.5rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                <span style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.06em; color: rgba(255,255,255,0.4); font-weight: 500;">Valor da Transação</span>
+                <div style="font-family: 'Inter', system-ui, sans-serif; font-size: 2.25rem; font-weight: 500; color: rgba(255,255,255,0.95); letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums;">
+                    ${valorFormatado}
+                </div>
+            </div>
+        `;
+        
+        const gridHTML = `
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2rem; margin-bottom: 2.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                    <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(255,255,255,0.35); font-weight: 500;">Área Responsável</div>
+                    <div style="font-size: 0.85rem; font-weight: 400; color: rgba(255,255,255,0.85);">${r.area_id || '—'}</div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                    <div style="font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.04em; color: rgba(255,255,255,0.35); font-weight: 500;">Centro de Custo</div>
+                    <div style="font-size: 0.85rem; font-weight: 400; color: rgba(255,255,255,0.85);">${r.cost_center_id || '—'}</div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('drillStats').innerHTML = heroValueHTML + gridHTML;
+        
+        // Insight block (escondido)
+        const insight = document.getElementById('drillInsight');
+        if (insight) insight.style.display = 'none';
+
+        // Ledger-style Details List (Extremely Clean)
+        const formatLedgerRow = (label, value) => {
+            const val = value ? value : '<span style="color:rgba(255,255,255,0.3); font-style:italic;">Não informado</span>';
+            return `<div style="display:flex; justify-content:space-between; align-items: flex-start; padding: 0.75rem 0; border-bottom: 1px solid rgba(255,255,255,0.03);">
+                <span style="color: rgba(255,255,255,0.45); font-size: 0.75rem; letter-spacing: 0.01em; flex-shrink: 0; padding-top: 2px;">${label}</span>
+                <span style="color: rgba(255,255,255,0.85); font-weight: 400; font-size: 0.8rem; text-align:right; max-width:65%; word-break: break-word;">${val}</span>
+            </div>`;
+        };
+
+        const ledgerHTML = `
+            <div style="margin-bottom: 2rem;">
+                <h4 style="margin:0 0 1rem 0; font-size:0.65rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.35); font-weight:500;">Detalhes do Lançamento</h4>
+                <div style="background: transparent;">
+                    ${formatLedgerRow('Solicitante / Colaborador', r.collaborator_id)}
+                    ${formatLedgerRow('Descrição Completa', r.descricao)}
+                    ${formatLedgerRow('Documento / Nº Ordem', r.documento || r.numero_ordem)}
+                    ${formatLedgerRow('ID da Transação', r.tipo_movimento || r.id)}
+                </div>
+            </div>
+        `;
+
+        document.getElementById('drillLista').innerHTML = ledgerHTML;
+
+        // Abrir painel
+        panel.classList.add('open');
+        if(overlay) overlay.classList.add('open');
+    };
 });
+
 

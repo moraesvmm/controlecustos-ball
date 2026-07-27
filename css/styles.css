@@ -1265,14 +1265,15 @@ body.view-crud .main-layout {
   right: 0;
   width: min(440px, 100vw);
   height: 100vh;
-  background: var(--surface-solid);
-  border-left: 1px solid var(--border);
+  background: rgba(15, 23, 42, 0.65);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
   z-index: 160;
   transform: translateX(100%);
   transition: transform 0.35s cubic-bezier(0.4,0,0.2,1);
   overflow-y: auto;
-  box-shadow: -24px 0 64px rgba(0,0,0,0.5);
-  backdrop-filter: blur(24px);
+  box-shadow: -24px 0 64px rgba(0,0,0,0.8);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
 }
 
 .drill-panel.open { transform: translateX(0); }
@@ -3450,6 +3451,201 @@ select#selectKpiLinha option {
   position: absolute;
   font-size: 1.5rem;
   font-weight: 700;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  border: none;
+}
+.table-premium td {
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.table-premium tr td:first-child {
+  border-left: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 12px 0 0 12px;
+}
+.table-premium tr td:last-child {
+  border-right: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 0 12px 12px 0;
+}
+.table-premium tr:hover td {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* ==========================================================================
+   APEX-FINANCE DESIGN SYSTEM (Stripe / Bloomberg / Apple)
+   ========================================================================== */
+
+.apex-grid-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .apex-grid-hero {
+    grid-template-columns: 1fr 2fr;
+  }
+}
+
+.apex-grid-tactical {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.apex-card {
+  background: #0a0a0c;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.apex-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+
+
+.apex-card-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: #8b8d98;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.apex-card-value {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -1px;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 0.25rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.apex-card-value.hero-value {
+  font-size: 4rem;
+  font-weight: 800;
+  letter-spacing: -2px;
+  background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.apex-trend-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  font-family: 'Inter', sans-serif;
+  letter-spacing: 0.5px;
+}
+
+.apex-trend-positive {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.apex-trend-negative {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.apex-trend-neutral {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.apex-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.06);
+  margin: 1rem 0;
+  width: 100%;
+}
+
+.apex-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.apex-row-label {
+  color: #8b8d98;
+  font-weight: 500;
+}
+
+.apex-row-value {
+  color: #e2e8f0;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.apex-sparkline-container {
+  height: 60px;
+  width: 100%;
+  margin-top: auto;
+  position: relative;
+  pointer-events: none;
+}
+
+.apex-progress-ring-container {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.apex-progress-ring {
+  transform: rotate(-90deg);
+  width: 100%;
+  height: 100%;
+}
+
+.apex-progress-ring circle {
+  fill: transparent;
+  stroke-width: 6;
+}
+
+.apex-progress-ring-bg {
+  stroke: rgba(255, 255, 255, 0.05);
+}
+
+.apex-progress-ring-fill {
+  stroke: url(#apex-gradient);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.apex-progress-ring-text {
+  position: absolute;
+  font-size: 1.5rem;
+  font-weight: 700;
   color: #fff;
   font-variant-numeric: tabular-nums;
 }
@@ -3461,6 +3657,19 @@ select#selectKpiLinha option {
   text-transform: uppercase;
   color: #8b8d98;
   letter-spacing: 1px;
+}
+
+.drill-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: sticky;
+  top: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  z-index: 10;
 }
 
 /* ===== ENTERPRISE UTILITY CLASSES ===== */
