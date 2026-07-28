@@ -249,13 +249,35 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('movInsightsText').innerHTML = insightsHTML;
         document.getElementById('movInsightsBanner').style.display = 'flex';
 
-        // --- 4. KPIs Básicos ---
-        document.getElementById('movKpiBudget').innerText = formatBRL(ultimoMes.budget);
-        document.getElementById('movKpiConsumido').innerText = formatBRL(ultimoMes.consumo);
+        // --- 4. KPIs Básicos (Foco: Manutenção - Mês Vigente) ---
+        let pConsumoManutencao = 0;
+        let pBudgetManutencao = 0;
+        let pHasBudgetArea = false;
+
+        if (penultimoMes && raw_summary) {
+            raw_summary.forEach(r => {
+                if (r.mes === penultimoMes.mes && r.ano === penultimoMes.ano) {
+                    if (r.area_id && r.area_id.toUpperCase().includes('MANUTEN')) {
+                        pConsumoManutencao += (r.consumo_realizado || 0);
+                        let areaBudget = r.meta_mensal !== undefined ? r.meta_mensal : (r.budget_total !== undefined ? r.budget_total : undefined);
+                        if (areaBudget !== undefined) {
+                            pBudgetManutencao += areaBudget;
+                            pHasBudgetArea = true;
+                        }
+                    }
+                }
+            });
+            if (!pHasBudgetArea || pBudgetManutencao === 0) {
+                pBudgetManutencao = penultimoMes.budget;
+            }
+        }
+
+        document.getElementById('movKpiBudget').innerText = formatBRL(budgetManutencao);
+        document.getElementById('movKpiConsumido').innerText = formatBRL(consumoManutencao);
 
         if (penultimoMes) {
-            const varBudget = penultimoMes.budget > 0 ? ((ultimoMes.budget - penultimoMes.budget) / penultimoMes.budget) * 100 : 0;
-            const varConsumo = penultimoMes.consumo > 0 ? ((ultimoMes.consumo - penultimoMes.consumo) / penultimoMes.consumo) * 100 : 0;
+            const varBudget = pBudgetManutencao > 0 ? ((budgetManutencao - pBudgetManutencao) / pBudgetManutencao) * 100 : 0;
+            const varConsumo = pConsumoManutencao > 0 ? ((consumoManutencao - pConsumoManutencao) / pConsumoManutencao) * 100 : 0;
             
             document.getElementById('movKpiBudgetTrend').innerHTML = `<span style="color: ${varBudget >= 0 ? 'var(--success)' : 'var(--muted)'};">${varBudget >= 0 ? '↑' : '↓'} ${Math.abs(varBudget).toFixed(1)}%</span> vs mês anterior`;
             document.getElementById('movKpiConsumoTrend').innerHTML = `<span style="color: ${varConsumo > 0 ? 'var(--error)' : 'var(--success)'};">${varConsumo > 0 ? '↑' : '↓'} ${Math.abs(varConsumo).toFixed(1)}%</span> vs mês anterior`;

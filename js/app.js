@@ -325,22 +325,47 @@ function renderMachineList() {
   } else {
      sourceActs = registrosPreventiva;
   }
+
+  // Filter templates only
+  const templateActs = sourceActs.filter(r => !r.mes || r.mes === '');
   
-  const todasMaquinas = sourceActs
-     .map(r => r.maquina)
-     .filter(Boolean);
-  const maquinas = [...new Set(todasMaquinas)].sort();
+  // Search filter
+  const searchInput = $('#pmSearchMachine');
+  const searchVal = searchInput ? searchInput.value.toLowerCase() : '';
+
+  const maquinasMap = new Map(); // name -> count
+  templateActs.forEach(r => {
+    if (r.maquina) {
+      maquinasMap.set(r.maquina, (maquinasMap.get(r.maquina) || 0) + 1);
+    }
+  });
+
+  let maquinas = Array.from(maquinasMap.keys()).sort();
+  if (searchVal) {
+    maquinas = maquinas.filter(m => m.toLowerCase().includes(searchVal));
+  }
   
-  if (maquinas.length === 0) {
-    ul.innerHTML = '<li style="color:var(--muted); font-size:0.85rem;">Nenhuma máquina encontrada. Importe a planilha.</li>';
+  if (maquinas.length === 0 && !searchVal) {
+    ul.innerHTML = '<li style="color:var(--muted); font-size:0.85rem; padding: 1rem; text-align: center;">Nenhuma máquina encontrada. Importe a planilha.</li>';
+    return;
+  } else if (maquinas.length === 0 && searchVal) {
+    ul.innerHTML = '<li style="color:var(--muted); font-size:0.85rem; padding: 1rem; text-align: center;">Nenhuma máquina encontrada para esta busca.</li>';
     return;
   }
   
+  const totalGeral = templateActs.length;
+  
   const htmlGeral = `
-    <li data-id="GERAL" class="machine-list-item ${window.selectedMachineId === 'GERAL' ? 'active' : ''}">Geral (Todas)</li>
+    <li data-id="GERAL" class="machine-list-item pm-machine-geral ${window.selectedMachineId === 'GERAL' ? 'active' : ''}">
+      <span>Geral (Todas)</span>
+      <span class="pm-machine-count">${totalGeral}</span>
+    </li>
   `;
   const htmlMaquinas = maquinas.map(m => `
-    <li data-id="${m}" class="machine-list-item ${window.selectedMachineId === m ? 'active' : ''}">${m}</li>
+    <li data-id="${m}" class="machine-list-item ${window.selectedMachineId === m ? 'active' : ''}">
+      <span>${m}</span>
+      <span class="pm-machine-count">${maquinasMap.get(m)}</span>
+    </li>
   `).join('');
   
   ul.innerHTML = htmlGeral + htmlMaquinas;
@@ -349,7 +374,7 @@ function renderMachineList() {
     li.addEventListener('click', () => {
       selectedMachineId = li.dataset.id;
       window.selectedMachineId = selectedMachineId;
-      $('#machineTitle').textContent = li.dataset.id === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Atividades: ${li.dataset.id}`;
+      $('#machineTitle').textContent = li.dataset.id === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Máquina: ${li.dataset.id}`;
       if ($('#btnAddActivity')) $('#btnAddActivity').style.display = 'inline-block';
       renderMachineActivities();
       
@@ -368,8 +393,39 @@ function renderMachineList() {
     window.selectedMachineId = 'GERAL';
     selLi = document.querySelector(`#machineList li[data-id="GERAL"]`);
   }
-  if (selLi) selLi.click();
+  // Remove programmatic click to avoid infinite loops when typing, just update UI
+  if (selLi && !selLi.classList.contains('active')) {
+     ul.querySelectorAll('li').forEach(x => x.classList.remove('active'));
+     selLi.classList.add('active');
+     $('#machineTitle').textContent = selectedMachineId === 'GERAL' ? 'Visão Geral (Todas as Atividades)' : `Máquina: ${selectedMachineId}`;
+     renderMachineActivities();
+  }
 }
+
+// Attach Search event
+document.addEventListener('DOMContentLoaded', () => {
+  const searchInput = $('#pmSearchMachine');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => renderMachineList());
+  }
+
+  // Segmented control events
+  const segmentedButtons = document.querySelectorAll('#pmSegmented button');
+  if (segmentedButtons.length > 0) {
+    segmentedButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        segmentedButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const filterEl = $('#geralSetorFilter');
+        if (filterEl) {
+          filterEl.value = btn.dataset.setor;
+          renderMachineList();
+          renderMachineActivities();
+        }
+      });
+    });
+  }
+});
 
 function renderMachineActivities() {
   if (!selectedMachineId) return;
@@ -397,68 +453,141 @@ function renderMachineActivities() {
     return idA.localeCompare(idB, undefined, {numeric: true});
   });
     
+  const container = $('#pmCardsContainer');
   const table = $('#machineActivitiesTable');
-  if (!table) return;
-  const thead = table.querySelector('thead');
-  const tbody = table.querySelector('tbody');
+  const thead = table ? table.querySelector('thead') : null;
+  const tbody = table ? table.querySelector('tbody') : null;
+  const subtitle = $('#pmSubtitle');
 
-  const cols = [];
-  if (selectedMachineId === 'GERAL') {
-    cols.push({ key: 'maquina', label: 'Máquina' });
+  if (subtitle) {
+     subtitle.textContent = `${acts.length} atividade${acts.length !== 1 ? 's' : ''} encontrada${acts.length !== 1 ? 's' : ''}`;
   }
-  cols.push(
-    { key: 'identificador', label: 'Identificador' },
-    { key: 'descricao_resumo', label: 'Descrição' },
-    { key: 'material', label: 'Material' },
-    { key: 'plano_padrao', label: 'Plano Padrão' },
-    { key: 'duracao_horas', label: 'Duração (h)' },
-    { key: 'hh_mec', label: 'HH Mec' },
-    { key: 'hh_eletrico', label: 'HH Elétrico' },
-    { key: 'resp_fabrica', label: 'Resp. Fábrica' },
-    { key: 'resp_manutencao', label: 'Resp. Manutenção' },
-    { key: 'status_auditoria', label: 'Status' },
-    { key: 'previsao_custos', label: 'Prev. Custos' },
-    { key: 'acoes', label: '' }
-  );
 
-  thead.innerHTML = `<tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+  // --- KPI Calculation ---
+  let totalDuracao = 0;
+  let totalCusto = 0;
+  acts.forEach(a => {
+     totalDuracao += parseFloat(a.duracao_horas || 0);
+     totalCusto += parseFloat(a.previsao_custos || 0);
+  });
+  const avgDuracao = acts.length > 0 ? (totalDuracao / acts.length) : 0;
+  
+  if ($('#pmKpiTotal')) $('#pmKpiTotal').textContent = acts.length;
+  if ($('#pmKpiDuracao')) $('#pmKpiDuracao').textContent = avgDuracao.toFixed(1) + 'h';
+  if ($('#pmKpiCusto')) $('#pmKpiCusto').textContent = totalCusto.toLocaleString('pt-BR', {style:'currency', currency:'BRL', maximumFractionDigits: 0});
+
+  // --- Hidden Table Logic (For Excel Export) ---
+  if (thead && tbody) {
+    const cols = [];
+    if (selectedMachineId === 'GERAL') {
+      cols.push({ key: 'maquina', label: 'Máquina' });
+    }
+    cols.push(
+      { key: 'identificador', label: 'Identificador' },
+      { key: 'descricao_resumo', label: 'Descrição' },
+      { key: 'material', label: 'Material' },
+      { key: 'plano_padrao', label: 'Plano Padrão' },
+      { key: 'duracao_horas', label: 'Duração (h)' },
+      { key: 'hh_mec', label: 'HH Mec' },
+      { key: 'hh_eletrico', label: 'HH Elétrico' },
+      { key: 'resp_fabrica', label: 'Resp. Fábrica' },
+      { key: 'resp_manutencao', label: 'Resp. Manutenção' },
+      { key: 'status_auditoria', label: 'Status' },
+      { key: 'previsao_custos', label: 'Prev. Custos' }
+    );
+    thead.innerHTML = `<tr>${cols.map(c => `<th>${c.label}</th>`).join('')}</tr>`;
+    tbody.innerHTML = acts.map(a => {
+      const descLines = (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0)
+        ? a.atividades_descricoes : (a.descricao ? [a.descricao] : []);
+      const descDisplay = descLines.length > 0 ? descLines.join('<br>') : '-';
+      const matDisplay = Array.isArray(a.material) ? a.material.join('<br>') : String(a.material || '-');
+      let trHtml = `<tr>`;
+      if (selectedMachineId === 'GERAL') trHtml += `<td>${a.maquina || '-'}</td>`;
+      trHtml += `
+        <td>${a.identificador || '-'}</td>
+        <td>${descDisplay}</td>
+        <td>${matDisplay}</td>
+        <td>${a.plano_padrao || '-'}</td>
+        <td>${a.duracao_horas || '-'}</td>
+        <td>${a.hh_mec || '-'}</td>
+        <td>${a.hh_eletrico || '-'}</td>
+        <td>${a.resp_fabrica || '-'}</td>
+        <td>${a.resp_manutencao || '-'}</td>
+        <td>${a.status_auditoria || '-'}</td>
+        <td>${a.previsao_custos || '-'}</td>
+      </tr>`;
+      return trHtml;
+    }).join('');
+  }
+
+  if (!container) return;
 
   if (acts.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="${cols.length}" style="text-align:center; color:var(--muted);">Nenhuma atividade encontrada para esta máquina. Importe a planilha no Navegador Geral.</td></tr>`;
+    container.innerHTML = `
+      <div class="pm-empty-state">
+        <div class="pm-empty-state-icon">📭</div>
+        <div class="pm-empty-state-text">Nenhuma atividade encontrada.<br>Importe sua planilha ou selecione outra máquina.</div>
+      </div>
+    `;
     return;
   }
 
-  tbody.innerHTML = acts.map(a => {
-    // Descrição resumida (primeira linha)
+  // --- Cards Rendering ---
+  container.innerHTML = acts.map(a => {
     const descLines = (a.atividades_descricoes && Array.isArray(a.atividades_descricoes) && a.atividades_descricoes.length > 0)
       ? a.atividades_descricoes
       : (a.descricao ? [a.descricao] : []);
-    const descDisplay = descLines.length > 0 ? descLines.join('<br>') : '-';
-    const matDisplay = Array.isArray(a.material) ? a.material.join('<br>') : String(a.material || '-');
+    const descDisplay = descLines.length > 0 ? descLines[0] : 'Sem descrição'; // Hero Title
     
-    const selCls = String(a.id) === String(window.linhaSelecionadaPreventivaId) ? ' row-selected' : '';
-    let trHtml = `<tr data-id="${a.id}" class="${selCls}" style="cursor:pointer;" onclick="abrirDetalhePreventivaPanel('${a.id}')">`;
+    // Materials
+    let mats = Array.isArray(a.material) ? a.material : (a.material ? String(a.material).split(',').map(m => m.trim()) : []);
+    mats = mats.filter(m => m !== '-' && m !== '');
     
-    if (selectedMachineId === 'GERAL') {
-      trHtml += `<td>${a.maquina || '-'}</td>`;
+    let matsHtml = '';
+    if (mats.length > 0) {
+      const visibleMats = mats.slice(0, 3);
+      matsHtml = visibleMats.map(m => `<span class="pm-mat-tag" title="${m}"><svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>${m}</span>`).join('');
+      if (mats.length > 3) {
+        matsHtml += `<span class="pm-mat-tag pm-mat-more">+${mats.length - 3} mais</span>`;
+      }
+    } else {
+      matsHtml = `<span class="pm-chip" style="opacity:0.5; background:transparent; border-color:transparent; padding-left:0;">Nenhum material</span>`;
     }
+
+    const selCls = String(a.id) === String(window.linhaSelecionadaPreventivaId) ? ' row-selected' : '';
+    const status = a.status_auditoria || 'none';
     
-    trHtml += `
-      <td><strong>${a.identificador || '-'}</strong></td>
-      <td style="min-width: 350px; white-space: normal; line-height: 1.5; padding: 12px; color: var(--text);">${descDisplay}</td>
-      <td style="min-width: 200px; white-space: normal; line-height: 1.5; padding: 12px; color: var(--text);">${matDisplay}</td>
-      <td><span class="badge ${a.plano_padrao === 'S' ? 'badge-success' : 'badge-warning'}">${a.plano_padrao || '-'}</span></td>
-      <td>${a.duracao_horas || '-'}</td>
-      <td>${a.hh_mec || '-'}</td>
-      <td>${a.hh_eletrico || '-'}</td>
-      <td>${a.resp_fabrica || '-'}</td>
-      <td>${a.resp_manutencao || '-'}</td>
-      <td><span class="badge ${a.status_auditoria === 'FINALIZADO' ? 'badge-success' : a.status_auditoria ? 'badge-warning' : ''}">${a.status_auditoria || '-'}</span></td>
-      <td>${Number(a.previsao_custos || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</td>
-      <td><button type="button" class="btn-icon" onclick="event.stopPropagation(); abrirDetalhePreventivaPanel('${a.id}')" title="Ver Detalhes" style="background:var(--primary);color:white;padding:0.3rem 0.6rem;border-radius:6px;font-size:0.75rem;white-space:nowrap;">Ver</button></td>
-    </tr>`;
+    let html = `<div class="pm-card ${selCls}" data-id="${a.id}" data-status="${status}" onclick="abrirDetalhePreventivaPanel('${a.id}')">`;
     
-    return trHtml;
+    html += `<div class="pm-card-hero">`;
+    html += `  <div style="flex: 1;">`;
+    if (selectedMachineId === 'GERAL' && a.maquina) {
+      html += `    <div class="pm-card-machine">${a.maquina}</div>`;
+    }
+    html += `    <div class="pm-card-title">${descDisplay}</div>`;
+    html += `  </div>`;
+    html += `  <div class="pm-card-plano-badge ${a.plano_padrao !== 'S' ? 'inactive' : ''}">${a.plano_padrao === 'S' ? 'Plano Padrão' : 'Personalizado'}</div>`;
+    html += `</div>`;
+    
+    html += `<div class="pm-card-meta">`;
+    html += `  <span class="pm-chip"><span class="pm-chip-icon">⏱</span>${a.duracao_horas || 0}h</span>`;
+    html += `  <span class="pm-chip"><span class="pm-chip-icon">⚙️</span>${a.hh_mec || 0} Mec</span>`;
+    html += `  <span class="pm-chip"><span class="pm-chip-icon">⚡</span>${a.hh_eletrico || 0} Elét</span>`;
+    if (status !== 'none' && status !== '') {
+       html += `  <span class="pm-chip" style="color: ${status === 'FINALIZADO' ? 'var(--success)' : (status === 'EM ANDAMENTO' ? 'var(--warning)' : 'var(--accent)')}; border-color: currentColor;"><span class="pm-chip-icon">●</span>${status}</span>`;
+    }
+    html += `</div>`;
+    
+    html += `<div class="pm-card-materials">${matsHtml}</div>`;
+    
+    html += `<div class="pm-card-footer">`;
+    html += `  <span class="pm-card-id">${a.identificador || '-'}</span>`;
+    html += `  <span class="pm-card-cost">${Number(a.previsao_custos || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'})}</span>`;
+    html += `  <span class="pm-card-resp">Resp: ${a.resp_manutencao || a.resp_fabrica || 'Não definido'}</span>`;
+    html += `</div>`;
+    
+    html += `</div>`;
+    return html;
   }).join('');
 }
 window.renderMachineActivities = renderMachineActivities;
@@ -2714,6 +2843,11 @@ window.abrirDetalhePreventivaPanel = function(id) {
   document.querySelectorAll('#machineActivitiesTable tbody tr').forEach(tr => {
     tr.classList.toggle('row-selected', String(tr.dataset.id) === String(id));
   });
+  
+  // Highlight no sidebar se existir (sincronizando o estado visual dos cards novos)
+  document.querySelectorAll('.pm-card').forEach(c => {
+    c.classList.toggle('row-selected', String(c.dataset.id) === String(id));
+  });
 
   const panel = document.getElementById('drillPanel');
   const overlay = document.getElementById('drillOverlay');
@@ -2738,9 +2872,9 @@ window.abrirDetalhePreventivaPanel = function(id) {
   document.getElementById('drillStats').innerHTML = stats
     .map(
       (s) => `
-    <div class="drill-stat">
-      <span>${s.label}</span>
-      <strong>${s.value}</strong>
+    <div class="drill-stat pm-layered-stat">
+      <span class="pm-stat-label">${s.label}</span>
+      <strong class="pm-stat-value">${s.value}</strong>
     </div>`
     )
     .join('');
@@ -2750,19 +2884,19 @@ window.abrirDetalhePreventivaPanel = function(id) {
   const formatCards = (text) => {
     const safeText = String(text || '');
     if (!safeText || safeText.trim() === '' || safeText === 'Sem descrição' || safeText === 'Nenhum material especificado' || safeText === 'undefined') {
-      return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">Não informado</p>`;
+      return `<p style="color: var(--muted); padding: 1rem; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">Não informado</p>`;
     }
     // Quebra por \n real (não literal)
     const steps = safeText.split(/\n/)
                       .map(s => s.trim().replace(/^[-–]/, '').trim())
                       .filter(s => s.length > 1);
     
-    if (steps.length === 0) return `<p style="color: var(--muted); padding: 1rem; background: var(--bg); border-radius: 8px;">${safeText}</p>`;
+    if (steps.length === 0) return `<p style="color: var(--muted); padding: 1rem; background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.06); border-radius: 8px;">${safeText}</p>`;
 
     return steps.map((step, idx) => `
-      <div style="background: var(--bg); padding: 1rem; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-        <span style="background: rgba(212, 175, 55, 0.15); color: var(--primary); width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: bold; flex-shrink: 0; border: 1px solid rgba(212, 175, 55, 0.3);">${idx + 1}</span>
-        <span style="font-size: 0.95rem; line-height: 1.5; color: var(--text); padding-top: 2px;">${step}</span>
+      <div class="pm-layered-card" style="margin-bottom: 0.75rem; display: flex; gap: 1rem; align-items: flex-start;">
+        <span class="pm-step-number">${idx + 1}</span>
+        <span class="pm-step-text">${step}</span>
       </div>
     `).join('');
   };
@@ -2794,36 +2928,40 @@ window.abrirDetalhePreventivaPanel = function(id) {
   let progHTML = '';
   if (r.programacao && Array.isArray(r.programacao) && r.programacao.length > 0) {
     progHTML = `
-      <h4 style="margin-top: 2rem; color:var(--text); margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+      <h4 style="margin-top: 2rem; color:var(--text); margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'DM Sans', sans-serif;">
         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
         Programação
       </h4>
       <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
-        ${r.programacao.map(p => `<span style="background: rgba(212,175,55,0.1); border: 1px solid rgba(212,175,55,0.3); color: var(--primary); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.85rem;">${p.data} ${p.turno}</span>`).join('')}
+        ${r.programacao.map(p => `<span style="background: rgba(212,175,55,0.06); border: 1px solid rgba(212,175,55,0.15); color: var(--gold); padding: 0.35rem 0.85rem; border-radius: 20px; font-size: 0.8rem; font-weight: 500;">${p.data} ${p.turno}</span>`).join('')}
       </div>`;
   }
 
   const lista = document.getElementById('drillLista');
   lista.innerHTML = `
       <article class="drill-item" style="padding: 1.5rem; background: transparent; border: none;">
-        <h4 style="margin-top:0; color:var(--text); margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+        <h4 style="margin-top:0; color:var(--text); margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'DM Sans', sans-serif;">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
           Descrição
         </h4>
         ${descHTML}
         
-        <h4 style="margin-top: 2rem; color:var(--text); margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+        <h4 style="margin-top: 2rem; color:var(--text); margin-bottom: 1rem; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'DM Sans', sans-serif;">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
           Materiais Necessários
         </h4>
         ${matHTML}
         ${progHTML}
         
-        <div class="drill-item-actions" style="margin-top: 2rem;">
-          <button type="button" class="btn-primary" onclick="${r.setor === 'frontend' ? 'abrirFormularioPreventivaFE' : 'abrirFormularioPreventiva'}('${r.id}'); fecharDrilldown();" style="width: 100%;">✏️ Editar Atividade</button>
+        <div class="drill-item-actions" style="margin-top: 2.5rem;">
+          <button type="button" class="btn-ghost" onclick="${r.setor === 'frontend' ? 'abrirFormularioPreventivaFE' : 'abrirFormularioPreventiva'}('${r.id}'); fecharDrilldown();" style="width: 100%; padding: 0.85rem; background: rgba(212,175,55,0.06); color: var(--gold); border: 1px solid rgba(212,175,55,0.2); border-radius: 8px; font-weight: 600; transition: all 0.2s;">
+            ✏️ Editar Atividade
+          </button>
         </div>
-      </article>`;
+      </article>
+  `;
 
+  if (overlay) overlay.classList.add('open');
   panel.classList.add('open');
   overlay.classList.add('open');
 };

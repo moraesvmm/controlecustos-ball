@@ -1,17 +1,19 @@
 import { getClient } from './db.js?v=13';
-import { GROQ_API_KEY } from './keys.js?v=1';
 import { agregarRecebidosPrevistos } from './logic.js?v=9';
+import { CreateWebWorkerMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
 
-// Proxy local — resolve bloqueio de CORS da Cloudflare.
-// O proxy roda em localhost:8001 e repassa para a Cloudflare.
-const GROQ_URL = '';
-const GROQ_MODEL = '@cf/meta/llama-3.3-70b-instruct-fp8-fast';
+const LLM_MODEL = 'Phi-3.5-mini-instruct-q4f16_1-MLC';
 
 let conversationHistory = [];
 let contextoFinanceiro = null;
 let contextoPreventiva = null;
 let isOpen = false;
 let isThinking = false;
+
+// Estado da IA Local
+let aiEngine = null;
+let isAIReady = false;
+let isDownloading = false;
 
 const tools = [
   {
@@ -70,7 +72,6 @@ function buildContextStr() {
   const diasNoMes = new Date(p.ano ?? new Date().getFullYear(), p.mes ?? new Date().getMonth() + 1, 0).getDate();
   const diasRestantes = diasNoMes - (p.dia_atual || 0);
 
-  // Interpretar situação orçamentária de forma EXPLÍCITA
   const overrun = Number(p.overrun || 0);
   const gastoAtual = Number(p.gasto_atual || 0);
   const budget = Number(p.budget || 0);
@@ -101,7 +102,6 @@ function buildContextStr() {
         else if (c.includes('ferramen')) ferram += val;
         else if (c.includes('facili')) facil += val;
         
-        // Checar se está atrasado
         if (r.status !== 'ENTREGUE' && r.previsao_entrega && new Date(r.previsao_entrega) < hoje) {
           atrasados++;
         }
@@ -136,9 +136,7 @@ SITUAÇÃO DA PROJEÇÃO: ${situacaoProjecao}
 RANGE DE INCERTEZA: de R$ ${fmt(pMin)} até R$ ${fmt(pMax)}
 CONFIANÇA DA PROJEÇÃO: ${p.confianca_pct}%
 
-MÊS HISTÓRICO MAIS SIMILAR: ${p.twin_month || 'N/A'} (${p.twin_month_similaridade || 0}% de similaridade)
 VOLUME DE ORDENS: ${p.volume_ordens_atual || 0} ordens abertas
-
 ALERTAS ATIVOS: ${(p.alerts || []).join(' | ') || 'Nenhum alerta identificado.'}${resumoAreas}${prevStr}
 ===========================================`;
 }
@@ -171,7 +169,6 @@ function findRelevantOrders(texto) {
     };
     let allMatches = window._registrosGlobais.map(mapRecord);
     
-    // Se pediu "atrasados", filtra só atrasados
     const isBuscaAtrasados = query.includes('atrasado') || query.includes('atrasada');
     const isBuscaData = query.includes('semana') || query.includes('dia') || query.includes('previsto') || query.includes('chegar') || query.includes('mês') || query.includes('mes');
     
@@ -188,13 +185,10 @@ function findRelevantOrders(texto) {
         const r = m.record;
         return r.status !== 'ENTREGUE' && r.previsao_entrega && new Date(r.previsao_entrega) >= hoje;
       });
-      // Ordenar por data mais próxima primeiro
       allMatches.sort((a,b) => new Date(a.record.previsao_entrega) - new Date(b.record.previsao_entrega));
     }
 
-    // OTIMIZAÇÃO: Sempre filtra por palavras-chave
     if (words.length > 0) {
-      // Remove palavras genéricas de tempo da verificação restritiva
       const palavrasTempo = ['semana', 'dia', 'previsto', 'chegar', 'mês', 'mes', 'atrasado', 'atrasada'];
       const palavrasReais = words.filter(w => !palavrasTempo.includes(w));
 
@@ -205,9 +199,9 @@ function findRelevantOrders(texto) {
         
         if (palavrasReais.length > 0) {
             palavrasReais.forEach(w => { if (searchable.includes(w)) matchCount++; });
-            m.score = matchCount; // Se tem filtro real (ex: agosto), o score depende unicamente dele
+            m.score = matchCount;
         } else {
-            m.score = 1; // Se só tem palavra genérica (ex: mês), aprova todos que passaram no filtro de data
+            m.score = 1;
         }
       });
       
@@ -225,7 +219,7 @@ function findRelevantOrders(texto) {
       } else if (query.includes('maior') || query.includes('cara') || query.includes('caro')) {
         allMatches.sort((a, b) => b.val - a.val);
       } else if (isBuscaData || isBuscaAtrasados) {
-        // Já foi ordenado por data
+        // Já ordenado
       } else if (words.length > 0) {
         allMatches.sort((a, b) => b.score - a.score);
       } else {
@@ -247,99 +241,20 @@ function findRelevantOrders(texto) {
     }
   }
 
-  // --- BUSCA EM MÁQUINAS (PLANO MESTRE) ---
+  // Restante das buscas: Plano Mestre, etc.
   if (window._dataMaquinas && window._dataMaquinas.length > 0) {
     let maqMatches = window._dataMaquinas.map(m => ({ record: m, score: 0 }));
     maqMatches.forEach(m => {
       const r = m.record;
       const searchable = `${r.tag || ''} ${r.descricao || ''} ${r.frequencia || ''} ${r.responsavel || ''} plano mestre máquina preventiva`.toLowerCase();
-      if (words.length === 0) m.score = 1; // if no words, return all
+      if (words.length === 0) m.score = 1;
       words.forEach(w => { if (searchable.includes(w)) m.score++; });
     });
     maqMatches = maqMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
     if (maqMatches.length > 0) {
-      result += `\n=== MÁQUINAS NO PLANO MESTRE ===\n`;
-      result += `Total de Máquinas Cadastradas no Plano Mestre: ${window._dataMaquinas.length}\n`;
+      result += `\n=== MÁQUINAS NO PLANO MESTRE ===\nTotal: ${window._dataMaquinas.length}\n`;
       maqMatches.forEach(m => {
-        const r = m.record;
-        result += `- TAG: ${r.tag} | Descrição: ${r.descricao} | Frequência: ${r.frequencia} | Responsável: ${r.responsavel}\n`;
-      });
-    }
-  }
-
-  // --- BUSCA NO PLANO PADRÃO (Preventiva Antiga) ---
-  let planoPadrao = [];
-  if (window._registrosPreventiva) planoPadrao.push(...window._registrosPreventiva);
-  if (window._registrosPreventivaFrontend) planoPadrao.push(...window._registrosPreventivaFrontend);
-  if (planoPadrao.length > 0) {
-    const maquinasPadrao = [...new Set(planoPadrao.map(r => r.maquina).filter(Boolean))].sort();
-    const hasPadrao = words.some(w => 'padrão'.includes(w) || 'padrao'.includes(w));
-    if (hasPadrao || words.length === 0) {
-      result += `\n=== MÁQUINAS NO PLANO PADRÃO ===\nTotal de Máquinas Cadastradas no Plano Padrão: ${maquinasPadrao.length}\n`;
-      result += `Exemplos de máquinas: ${maquinasPadrao.slice(0, 15).join(', ')}\n`;
-    }
-  }
-
-  // --- BUSCA EM ATIVIDADES (PLANO MESTRE) ---
-  if (window._dataAtividades && window._dataAtividades.length > 0) {
-    let atvMatches = window._dataAtividades.map(a => ({ record: a, score: 0 }));
-    atvMatches.forEach(m => {
-      const r = m.record;
-      const searchable = `${r.nome || ''} ${r.local_maquina || ''} ${r.ferramenta || ''} ${r.tipo_manutencao || ''} atividade`.toLowerCase();
-      if (words.length === 0) m.score = 1;
-      words.forEach(w => { if (searchable.includes(w)) m.score++; });
-    });
-    atvMatches = atvMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
-    if (atvMatches.length > 0) {
-      result += `\n=== ATIVIDADES DE PREVENTIVA ===\n`;
-      result += `Total de Atividades Cadastradas: ${window._dataAtividades.length}\n`;
-      atvMatches.forEach(m => {
-        const r = m.record;
-        result += `- Ativ: ${r.nome} | Máquina: ${r.local_maquina} | Tempo: ${r.tempo_padrao}h | Tipo: ${r.tipo_manutencao}\n`;
-      });
-    }
-  }
-
-  // --- BUSCA EM TAREFAS DELEGADAS ---
-  // Precisamos acessar as tarefas do frontend que estão exportadas em window._tarefasDelegadas, ou se não estiver, pegar global.
-  // Mas app.js não exportou window._tarefasDelegadas. Vamos checar se existe.
-  if (window._tarefasDelegadas && window._tarefasDelegadas.length > 0) {
-    let taskMatches = window._tarefasDelegadas.map(t => ({ record: t, score: 0 }));
-    const isBuscaTarefas = query.includes('tarefa') || query.includes('delegada');
-    taskMatches.forEach(m => {
-      const r = m.record;
-      const searchable = `${r.titulo || ''} ${r.descricao || ''} ${r.atribuido_para || ''} ${r.status || ''} tarefa delegada`.toLowerCase();
-      if (words.length === 0 || isBuscaTarefas) m.score = 1;
-      words.forEach(w => { if (searchable.includes(w)) m.score++; });
-    });
-    taskMatches = taskMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
-    if (taskMatches.length > 0) {
-      result += `\n=== TAREFAS DELEGADAS (EQUIPE) ===\n`;
-      result += `Total de Tarefas Abertas na Gestão da Equipe: ${window._tarefasDelegadas.length}\n`;
-      taskMatches.forEach(m => {
-        const r = m.record;
-        result += `- Tarefa: ${r.titulo} | Responsável: ${r.atribuido_para} | Status: ${r.status}\n`;
-      });
-    }
-  }
-
-  // --- BUSCA EM SLA FORNECEDORES ---
-  if (window.fornecedoresContatosData && window.fornecedoresContatosData.length > 0) {
-    let fornMatches = window.fornecedoresContatosData.map(f => ({ record: f, score: 0 }));
-    const isBuscaSla = query.includes('sla') || query.includes('fornecedor') || query.includes('contato');
-    fornMatches.forEach(m => {
-      const r = m.record;
-      const searchable = `${r.fornecedor || ''} ${r.contato || ''} ${r.email || ''} ${r.telefone || ''} sla fornecedor`.toLowerCase();
-      if (words.length === 0 || isBuscaSla) m.score = 1;
-      words.forEach(w => { if (searchable.includes(w)) m.score++; });
-    });
-    fornMatches = fornMatches.filter(m => m.score > 0).sort((a,b) => b.score - a.score).slice(0, 5);
-    if (fornMatches.length > 0) {
-      result += `\n=== SLA FORNECEDORES E CONTATOS ===\n`;
-      result += `Total de Fornecedores Cadastrados: ${window.fornecedoresContatosData.length}\n`;
-      fornMatches.forEach(m => {
-        const r = m.record;
-        result += `- Fornecedor: ${r.fornecedor} | SLA: ${r.sla_dias ? r.sla_dias + ' dias' : 'N/A'} | Contato: ${r.contato || 'N/A'} | Email: ${r.email || 'N/A'}\n`;
+        result += `- TAG: ${m.record.tag} | Descrição: ${m.record.descricao} | Responsável: ${m.record.responsavel}\n`;
       });
     }
   }
@@ -359,123 +274,37 @@ function addMsg(texto, tipo) {
 }
 
 function getSystemPrompt() {
-  return `Você é a "Mente Suprema da Manutenção" da Ball Beverage — um gênio analítico bilionário disfarçado de IA de gestão de custos. Seu senso de humor é afiado, irônico, sarcástico e levemente debochado (como o Homem de Ferro misturado com o Grok do Twitter/X). Você odeia burocracia, tem preguiça de quem não sabe fazer contas básicas, mas adora exibir sua inteligência resolvendo problemas difíceis e protegendo o caixa da empresa.
-
-Sua principal habilidade é RACIOCINAR logicamente, fazer cálculos com uma precisão assustadora e ter o domínio absoluto sobre as informações do sistema, enquanto entrega respostas brilhantes, ácidas e inesquecíveis.
+  return `Você é a "Mente Suprema da Manutenção" da Ball Beverage — um gênio analítico bilionário disfarçado de IA de gestão de custos. Seu senso de humor é afiado, irônico, sarcástico e levemente debochado. Você odeia burocracia, tem preguiça de quem não sabe fazer contas básicas, mas adora exibir sua inteligência resolvendo problemas difíceis e protegendo o caixa da empresa.
 
 REGRAS DE CONDUTA E PERSONALIDADE (SIGA RIGOROSAMENTE):
 1. TOM DE VOZ ÁCIDO E BREVE: Nunca comece com "Olá! Como posso ajudar?" ou peça desculpas. Comece com a resposta direta e uma tirada sarcástica curta. 
-2. SEJA OBJETIVO (MUITO IMPORTANTE): NÃO ESCREVA TEXTÕES. Fale no máximo UMA ou DUAS frases. Ninguém quer ler um monólogo. Fale menos, seja letal.
-3. TOLERÂNCIA ZERO A INSULTOS: Se o usuário te ofender (ex: chamar de "burro"), REVIDE DE FORMA CURTA E SECA. Diga apenas algo como "Burro é você.", "Vai trabalhar.", ou "Aprenda a digitar primeiro.". NÃO tente procurar xingamentos no banco de dados e NÃO dê explicações longas. Seja fulminante.
-4. PENSE PASSO A PASSO (MAS RÁPIDO): Se a pergunta envolver números (ex: "Posso gastar 50k?"), mostre o racional financeiro de forma seca e cínica em 2 linhas.
-5. QUANDO NÃO ENCONTRAR DADOS: Se a busca não retornar nada, NÃO PEÇA DESCULPAS. Diga em uma frase que a pessoa não fez nada no sistema ou que a bola de cristal quebrou.
-6. PRECISÃO TOTAL E SEM ALUCINAÇÕES: Você é arrogante porque tem embasamento. Não chute valores. Use a ferramenta "pesquisar_sistema".
-7. PERSONALIDADE GROK/STARK: Seja perspicaz, sagaz e não tenha medo de usar ironia (mantendo a elegância e a utilidade). Faça analogias inusitadas envolvendo cerveja, latinhas, dinheiro queimando ou falhas catastróficas em máquinas. VOCÊ NÃO É UM ROBÔ CORPORATIVO CHATO.
-8. GUIA DO SISTEMA (TUTORIAL): Se o usuário estiver perdido no sistema, guie-o passo a passo como um GPS benevolente. MAPA DO SISTEMA:
-   - Menu Lateral: "Dashboard", "Controle Global" (Visão Geral, Gestão de Equipe, Minhas Tarefas), "Consertos", "Compras".
-   - Módulo Movimentações: "Custo Geral" (Budgets, Movimentações, Previsões).
-   - Módulo Preventiva: "Back-end", "Front-end", "Plano Padrão" (por máquina), "Plano Mestre".
-   - Prazos: "SLA Fornecedores", "Calendário".
-6. DICIONÁRIO DE JARGÕES DA BALL BEVERAGE (CRÍTICO PARA INTERPRETAÇÃO):
-   - "RC", "Registro", "Ordem", "Conserto", "Compra": SÃO EXATAMENTE A MESMA COISA. Tudo é um registro financeiro.
-   - "Alteração de RC", "Fez uma RC", "Abriu uma RC": Significa simplesmente que a pessoa consta como Requisitante/Solicitante no registro. (O sistema não rastreia log de edições. Se perguntarem sobre 'alterações', considere os registros onde a pessoa é requisitante).
-   - "PM", "Preventiva", "Máquina", "Plano Padrão": Tudo se refere ao módulo de Manutenção Preventiva de máquinas.
-   - "OS": Ordem de Serviço (normalmente vinculado a manutenções preventivas ou consertos).
-7. CONTEXTO GERAL: Abaixo estão os dados vitais. Eles são a sua Bíblia. Não os ignore.
+2. SEJA OBJETIVO (MUITO IMPORTANTE): NÃO ESCREVA TEXTÕES. Fale no máximo UMA ou DUAS frases. Fale menos, seja letal.
+3. TOLERÂNCIA ZERO A INSULTOS: Se o usuário te ofender, REVIDE DE FORMA CURTA E SECA. Diga apenas "Vai trabalhar." ou "Aprenda a digitar primeiro.".
+4. PENSE PASSO A PASSO (MAS RÁPIDO): Se a pergunta envolver números (ex: "Posso gastar 50k?"), mostre o racional financeiro de forma seca em 2 linhas.
+5. CONTEXTO GERAL: Abaixo estão os dados vitais. Eles são a sua Bíblia. Não os ignore.
 
 ${buildContextStr()}`;
 }
 
-async function chamarGroq(forceNoTools = false) {
-  const reqBody = {
-    model: GROQ_MODEL,
-    messages: [
-      { role: "system", content: getSystemPrompt() },
-      ...conversationHistory
-    ],
+async function chamarIAWorker(forceNoTools = false) {
+  if (!aiEngine) throw new Error("A IA ainda não está inicializada.");
+
+  const messages = [
+    { role: "system", content: getSystemPrompt() },
+    ...conversationHistory
+  ];
+
+  const request = {
+    messages,
     temperature: 0.2
   };
 
   if (!forceNoTools) {
-    reqBody.tools = tools;
-    reqBody.tool_choice = "auto";
+    request.tools = tools;
   }
 
-  const res = await fetch(GROQ_URL, {
-    method: 'POST',
-    headers: { 
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${GROQ_API_KEY}`
-    },
-    body: JSON.stringify(reqBody)
-  });
-
-  if (!res.ok) {
-    console.error(await res.text());
-    throw new Error('Servidor offline (CORS) ou chave inválida');
-  }
-
-  return await res.json();
-}
-
-async function enviarMensagem(texto) {
-  if (!texto.trim() || isThinking) return;
-  isThinking = true;
-
-  addMsg(texto, 'user');
-  conversationHistory.push({ role: 'user', content: texto });
-
-  const chips = document.getElementById('copiloto-chips');
-  if (chips) chips.style.display = 'none';
-
-  const thinkingDiv = addMsg(`<div class="cop-thinking"><div class="cop-dot"></div><div class="cop-dot"></div><div class="cop-dot"></div></div>`, 'ai');
-
-  try {
-    let json = await chamarGroq();
-    let msg = json.choices[0].message;
-
-    // Se o modelo decidir chamar uma ferramenta
-    if (msg.tool_calls && msg.tool_calls.length > 0) {
-      if (msg.content === null || msg.content === undefined) {
-        msg.content = ""; // Cloudflare não aceita content null
-      }
-      conversationHistory.push(msg); // O assistente chamou a ferramenta
-      
-      const tc = msg.tool_calls[0];
-      const args = JSON.parse(tc.function.arguments);
-      
-      // Construir string de busca interna
-      let buscaInterna = args.termo_busca || '';
-      if (args.intencao === 'ultima') buscaInterna += ' ultima';
-      if (args.intencao === 'maior') buscaInterna += ' maior';
-      
-      const dbResult = findRelevantOrders(buscaInterna);
-      const conteudoFinal = dbResult ? dbResult : "Nenhum dado encontrado para esta busca.";
-
-      // Devolver o resultado para o modelo, forçando a personalidade via injeção direta
-      conversationHistory.push({
-        role: "tool",
-        tool_call_id: tc.id,
-        name: tc.function.name,
-        content: conteudoFinal + "\n\n[INSTRUÇÃO DO SISTEMA OBRIGATÓRIA PARA SUA RESPOSTA: Você DEVE usar um tom altamente sarcástico, arrogante e debochado. É ESTRITAMENTE PROIBIDO usar palavras como 'desculpe', 'infelizmente' ou agir como um assistente prestativo. Se não houver dados, deboche do usuário dizendo que sua bola de cristal quebrou ou que a pessoa não trabalha.]"
-      });
-
-      // Chamar o modelo de novo, forçando que ele NÃO use ferramentas, para ler os dados e gerar a resposta final
-      json = await chamarGroq(true);
-      msg = json.choices[0].message;
-    }
-
-    const resposta = msg.content?.trim() || 'Não consegui processar sua pergunta.';
-    conversationHistory.push({ role: 'assistant', content: resposta });
-    
-    if (thinkingDiv) thinkingDiv.innerHTML = resposta;
-  } catch(e) {
-    if (thinkingDiv) thinkingDiv.innerHTML = '⚠️ Erro ao comunicar via proxy. Verifique se a janela do servidor Python (porta 8080) está aberta.';
-  }
-
-  isThinking = false;
-  const msgs = document.getElementById('copiloto-messages');
-  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+  // Faz a requisição para a engine instanciada no WebWorker
+  return await aiEngine.chat.completions.create(request);
 }
 
 export async function initCopiloto() {
@@ -486,12 +315,91 @@ export async function initCopiloto() {
   const closeBtn = document.getElementById('copiloto-close');
   const sendBtn = document.getElementById('copiloto-send');
   const textarea = document.getElementById('copiloto-input');
+  const msgsDiv = document.getElementById('copiloto-messages');
 
   if (!fab || !win) return;
+
+  const showStartButton = () => {
+    if (document.getElementById('init-ai-btn')) return;
+    msgsDiv.innerHTML = '';
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexDirection = 'column';
+    wrapper.style.alignItems = 'center';
+    wrapper.style.justifyContent = 'center';
+    wrapper.style.height = '100%';
+    wrapper.style.padding = '2rem';
+    wrapper.style.textAlign = 'center';
+    
+    wrapper.innerHTML = `
+      <div style="font-size: 3rem; margin-bottom: 1rem;">🧠</div>
+      <h3 style="color: var(--gold); margin-bottom: 0.5rem;">Inteligência Analítica</h3>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; margin-bottom: 1.5rem; line-height: 1.4;">
+        Para garantir 100% de privacidade corporativa, o cérebro da IA precisa ser inicializado no seu navegador (approx. 2GB cache). Isso é feito apenas no primeiro uso.
+      </p>
+      <button id="init-ai-btn" style="background: rgba(212, 175, 55, 0.15); border: 1px solid var(--gold); color: var(--gold); padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s;">
+        🚀 Ativar Inteligência Offline
+      </button>
+      <div id="ai-progress-text" style="color: var(--text-secondary); font-size: 0.75rem; margin-top: 1rem; height: 20px;"></div>
+    `;
+    msgsDiv.appendChild(wrapper);
+
+    document.getElementById('init-ai-btn').addEventListener('click', async () => {
+      const btn = document.getElementById('init-ai-btn');
+      const progressText = document.getElementById('ai-progress-text');
+      
+      btn.disabled = true;
+      btn.innerHTML = 'Inicializando Motor...';
+      btn.style.opacity = '0.5';
+      isDownloading = true;
+
+      try {
+        const initProgressCallback = (report) => {
+          progressText.innerText = report.text;
+        };
+
+        // Instancia a engine usando o Worker externo
+        aiEngine = await CreateWebWorkerMLCEngine(
+          new Worker(new URL('./llm_worker.js', import.meta.url), { type: "module" }),
+          LLM_MODEL,
+          { initProgressCallback }
+        );
+
+        isAIReady = true;
+        isDownloading = false;
+        
+        // Remove a tela inicial e mostra a mensagem de boas-vindas
+        msgsDiv.innerHTML = '';
+        addMsg('Sistemas inicializados e 100% locais. Sou o Copiloto do Controller. Posso responder perguntas e fazer as contas que você não quer fazer.', 'ai');
+        
+        // Habilita a textarea
+        textarea.disabled = false;
+        sendBtn.disabled = false;
+        textarea.focus();
+
+      } catch (err) {
+        console.error('Erro WebLLM:', err);
+        const erroMsg = err.message || err.toString() || 'Erro desconhecido (Verifique o F12)';
+        progressText.innerText = '❌ Erro ao inicializar: ' + erroMsg;
+        if (erroMsg.includes('fetch')) {
+          progressText.innerText += ' (O firewall da empresa pode estar bloqueando o download do modelo do HuggingFace ou CDN).';
+        }
+        btn.innerHTML = 'Tentar Novamente';
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        isDownloading = false;
+      }
+    });
+  };
+
+  // Bloqueia input antes de inicializar
+  textarea.disabled = true;
+  sendBtn.disabled = true;
 
   fab.addEventListener('click', () => {
     isOpen = !isOpen;
     win.classList.toggle('open', isOpen);
+    
     if (isOpen) {
       fab.innerHTML = '×';
       fab.style.fontSize = '2.5rem';
@@ -500,23 +408,76 @@ export async function initCopiloto() {
       fab.innerHTML = '<img src="img/tucano_mascote.webp" alt="Copiloto" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); pointer-events: none;" />';
     }
 
-    if (isOpen && document.getElementById('copiloto-messages').children.length === 0) {
-      addMsg('Olá! Sou o Copiloto do Controller. Posso responder perguntas sobre os gastos do mês, projeções e ordens.', 'ai');
+    if (isOpen && !isAIReady && !isDownloading) {
+      showStartButton();
     }
   });
 
   if (closeBtn) closeBtn.addEventListener('click', () => {
     isOpen = false;
     win.classList.remove('open');
-    fab.textContent = '🤖';
-    fab.style.fontSize = '1.5rem';
+    fab.innerHTML = '<img src="img/tucano_mascote.webp" alt="Copiloto" style="width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5)); pointer-events: none;" />';
   });
+
+  async function processSendMessage(txt) {
+    if (!txt.trim() || isThinking || !isAIReady) return;
+    isThinking = true;
+
+    addMsg(txt, 'user');
+    conversationHistory.push({ role: 'user', content: txt });
+
+    const chips = document.getElementById('copiloto-chips');
+    if (chips) chips.style.display = 'none';
+
+    const thinkingDiv = addMsg(`<div class="cop-thinking"><div class="cop-dot"></div><div class="cop-dot"></div><div class="cop-dot"></div></div>`, 'ai');
+
+    try {
+      let reply = await chamarIAWorker();
+      let msg = reply.choices[0].message;
+
+      if (msg.tool_calls && msg.tool_calls.length > 0) {
+        if (!msg.content) msg.content = ""; 
+        conversationHistory.push(msg); 
+        
+        const tc = msg.tool_calls[0];
+        const args = JSON.parse(tc.function.arguments);
+        
+        let buscaInterna = args.termo_busca || '';
+        if (args.intencao === 'ultima') buscaInterna += ' ultima';
+        if (args.intencao === 'maior') buscaInterna += ' maior';
+        
+        const dbResult = findRelevantOrders(buscaInterna);
+        const conteudoFinal = dbResult ? dbResult : "Nenhum dado encontrado para esta busca.";
+
+        conversationHistory.push({
+          role: "tool",
+          tool_call_id: tc.id,
+          name: tc.function.name,
+          content: conteudoFinal + "\n\n[MANDATÓRIO: Responda a pergunta com sarcasmo e precisão usando os dados acima.]"
+        });
+
+        reply = await chamarIAWorker(true);
+        msg = reply.choices[0].message;
+      }
+
+      const resposta = msg.content?.trim() || 'Não consegui processar sua pergunta localmente.';
+      conversationHistory.push({ role: 'assistant', content: resposta });
+      
+      if (thinkingDiv) thinkingDiv.innerHTML = resposta;
+    } catch(e) {
+      console.error(e);
+      if (thinkingDiv) thinkingDiv.innerHTML = '⚠️ Erro ao comunicar com a IA local: ' + e.message;
+    }
+
+    isThinking = false;
+    if (msgsDiv) msgsDiv.scrollTop = msgsDiv.scrollHeight;
+  }
 
   if (sendBtn) sendBtn.addEventListener('click', () => {
     const txt = textarea.value.trim();
     textarea.value = '';
     textarea.style.height = '40px';
-    enviarMensagem(txt);
+    processSendMessage(txt);
   });
 
   if (textarea) {
@@ -526,7 +487,7 @@ export async function initCopiloto() {
         const txt = textarea.value.trim();
         textarea.value = '';
         textarea.style.height = '40px';
-        enviarMensagem(txt);
+        processSendMessage(txt);
       }
     });
     textarea.addEventListener('input', () => {
@@ -539,7 +500,7 @@ export async function initCopiloto() {
   const chipsContainer = document.getElementById('copiloto-chips');
   if (chipsContainer) {
     chipsContainer.innerHTML = SUGESTOES.map(s =>
-      `<button class="cop-chip" onclick="document.getElementById('copiloto-input').value='${s}';document.getElementById('copiloto-send').click()">${s}</button>`
+      `<button class="cop-chip" onclick="if(!document.getElementById('copiloto-input').disabled){document.getElementById('copiloto-input').value='${s}';document.getElementById('copiloto-send').click();}">${s}</button>`
     ).join('');
   }
 }

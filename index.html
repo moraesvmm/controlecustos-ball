@@ -381,14 +381,14 @@
         <!-- KPIs Hero -->
         <div style="display: grid; grid-template-columns: 2fr 2fr 1.5fr 1.1fr; gap: 1.5rem; margin-bottom: 2rem; flex-shrink: 0;">
           <div class="kpi-card glass-premium" style="padding: 1.5rem; border-radius: var(--radius); background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); position: relative; overflow: hidden; display: flex; flex-direction: column; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-2px)'; this.style.background='rgba(255, 255, 255, 0.04)'; this.style.borderColor='rgba(37, 99, 235, 0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.background='rgba(255, 255, 255, 0.02)'; this.style.borderColor='rgba(255, 255, 255, 0.05)';">
-            <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 0.5rem; font-weight: 600;">Budget Anual</div>
+            <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 0.5rem; font-weight: 600;">Budget Manutenção</div>
             <div id="movKpiBudget" style="font-size: 2.25rem; color: var(--text); font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: -0.02em;">R$ 0,00</div>
             <div id="movKpiBudgetTrend" style="font-size: 0.85rem; margin-top: 0.25rem;"></div>
             <div style="font-size: 0.7rem; color: var(--muted); margin-top: 1rem; z-index: 1;">Última atualização: Hoje</div>
             <div id="sparklineBudget" style="height: 60px; margin-top: auto; margin-left: -1.5rem; margin-right: -1.5rem; margin-bottom: -1.5rem; opacity: 0.9;"></div>
           </div>
           <div class="kpi-card glass-premium" style="padding: 1.5rem; border-radius: var(--radius); background: rgba(255, 255, 255, 0.02); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2); position: relative; overflow: hidden; display: flex; flex-direction: column; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);" onmouseover="this.style.transform='translateY(-2px)'; this.style.background='rgba(255, 255, 255, 0.04)'; this.style.borderColor='rgba(16, 185, 129, 0.2)';" onmouseout="this.style.transform='translateY(0)'; this.style.background='rgba(255, 255, 255, 0.02)'; this.style.borderColor='rgba(255, 255, 255, 0.05)';">
-            <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 0.5rem; font-weight: 600;">Consumo Acumulado</div>
+            <div style="font-size: 0.75rem; text-transform: uppercase; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 0.5rem; font-weight: 600;">Consumo Manutenção</div>
             <div id="movKpiConsumido" style="font-size: 2.25rem; color: var(--text); font-weight: 700; font-family: 'DM Sans', sans-serif; letter-spacing: -0.02em;">R$ 0,00</div>
             <div id="movKpiConsumoTrend" style="font-size: 0.85rem; margin-top: 0.25rem;"></div>
             <div style="font-size: 0.7rem; color: var(--muted); margin-top: 1rem; z-index: 1;">Última atualização: Hoje</div>
@@ -1593,42 +1593,79 @@
 
 
     <div id="view-por-maquina" class="view">
-      <div class="panel" style="padding: 2rem; width: 100%; display:flex; gap:2rem; min-height: calc(100vh - 100px);">
-        <aside style="width:250px; border-right:1px solid var(--border); padding-right:1rem; flex-shrink: 0;">
-          <h3 style="margin-bottom:1rem;">Máquinas</h3>
-          <ul id="machineList" style="list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:0.5rem;">
+      <div class="pm-layout">
+        <!-- LAYER 0: Sidebar -->
+        <aside class="pm-sidebar">
+          <div class="pm-sidebar-header">
+            <h4>Máquinas</h4>
+            <div class="pm-search">
+              <svg class="pm-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="pmSearchMachine" placeholder="Buscar máquina..." autocomplete="off" />
+            </div>
+          </div>
+          <ul id="machineList" class="pm-sidebar-list">
             <!-- populated by JS -->
           </ul>
         </aside>
-        <section style="flex:1; min-width:0;">
-          <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
-            <h3 id="machineTitle" style="margin:0;">Selecione uma máquina</h3>
-            <div style="display: flex; gap: 1rem; align-items: center;">
-              <button type="button" class="btn btn-outline" id="btnImportarPlano" onclick="importarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(110,231,183,0.4); color: #6ee7b7;">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                Importar Excel
-              </button>
-              <button type="button" class="btn btn-outline" id="btnExportarPlano" onclick="exportarMaquinaExcel()" style="font-size: 0.85rem; display: flex; align-items: center; gap: 0.4rem; border-color: rgba(56,189,248,0.4); color: #38bdf8;">
-                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
-                Exportar Excel
-              </button>
-              <div id="geralSetorFilterContainer">
-                <select id="geralSetorFilter" onchange="renderMachineList(); renderMachineActivities()" style="background: rgba(30,41,59,0.8); border: 1px solid var(--primary); color: var(--primary); border-radius: 6px; padding: 0.5rem 2rem 0.5rem 1rem; font-weight: 600; cursor: pointer; outline: none; appearance: none; font-family: 'DM Sans', sans-serif;">
-                  <option value="todos">Setor: Todos</option>
-                  <option value="frontend">Setor: Front-end</option>
-                  <option value="backend">Setor: Back-end</option>
-                </select>
-              </div>
+
+        <!-- LAYER 1: Main Content -->
+        <section class="pm-main">
+          <!-- Toolbar -->
+          <div class="pm-toolbar">
+            <div class="pm-toolbar-title">
+              <h3 id="machineTitle">Selecione uma máquina</h3>
+              <div class="pm-toolbar-subtitle" id="pmSubtitle"></div>
             </div>
-          </header>
-          <div class="table-scroll-main" style="border-radius: 6px; border: 1px solid var(--border); flex: 1; display: flex; flex-direction: column; overflow: hidden; height: 75vh;">
-            <div class="table-scroll-inner" style="flex: 1; overflow: auto;">
-              <table class="data-table" id="machineActivitiesTable">
-                <thead></thead>
-                <tbody></tbody>
-              </table>
+            <div class="pm-toolbar-actions">
+              <div class="pm-segmented" id="pmSegmented">
+                <button type="button" data-setor="todos" class="active">Todos</button>
+                <button type="button" data-setor="backend">Back-end</button>
+                <button type="button" data-setor="frontend">Front-end</button>
+              </div>
+              <button type="button" class="pm-action-btn" id="btnImportarPlano" onclick="importarMaquinaExcel()" title="Importar Excel">
+                <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Importar
+              </button>
+              <button type="button" class="pm-action-btn" id="btnExportarPlano" onclick="exportarMaquinaExcel()" title="Exportar Excel">
+                <svg fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Exportar
+              </button>
             </div>
           </div>
+
+          <!-- LAYER 1.5: KPI Ribbon -->
+          <div class="pm-kpi-ribbon" id="pmKpiRibbon">
+            <div class="pm-kpi-item">
+              <span class="pm-kpi-label">Atividades</span>
+              <span class="pm-kpi-value" id="pmKpiTotal">0</span>
+            </div>
+            <div class="pm-kpi-item">
+              <span class="pm-kpi-label">Duração Média</span>
+              <span class="pm-kpi-value" id="pmKpiDuracao">0h</span>
+            </div>
+            <div class="pm-kpi-item">
+              <span class="pm-kpi-label">Custo Estimado</span>
+              <span class="pm-kpi-value" id="pmKpiCusto">R$ 0</span>
+            </div>
+          </div>
+
+          <!-- LAYER 2+3: Cards Container -->
+          <div class="pm-cards-container" id="pmCardsContainer">
+            <!-- populated by JS -->
+          </div>
+
+          <!-- Hidden table for Excel export compatibility -->
+          <table class="data-table" id="machineActivitiesTable" style="display:none;">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+
+          <!-- Hidden select for backward compatibility -->
+          <select id="geralSetorFilter" style="display:none;">
+            <option value="todos">Setor: Todos</option>
+            <option value="frontend">Setor: Front-end</option>
+            <option value="backend">Setor: Back-end</option>
+          </select>
         </section>
       </div>
     </div>
