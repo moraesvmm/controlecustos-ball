@@ -1347,6 +1347,7 @@ function showView(name) {
     'plano-preventiva-frontend': 'Gerador de Planos — Front-end',
     'movimentacoes-dashboard': 'Custo Geral',
     'movimentacoes-grid': 'Movimentações',
+    'indicadores': 'Painel Executivo de Indicadores',
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
