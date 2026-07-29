@@ -43,7 +43,7 @@ import { initImportPlanoMestre } from './import_plano_mestre.js';
 import { renderPrevisoes } from './previsoes.js';
 import { initAlertas, toggleAlertasPanel } from './alertas.js';
 import { initCopiloto } from './copiloto.js';
-import { initIndicadores, initConfiabilidade } from './indicadores.js?v=4';
+import { initIndicadores, initConfiabilidade } from './indicadores.js?v=5';
 
 let registros = [];
 
@@ -1589,7 +1589,10 @@ async function excluir(id) {
 
 async function duplicar(id) {
   try {
-    const salvo = await duplicarRegistro(id);
+    const orig = registros.find(r => String(r.id) === String(id));
+    if (!orig) throw new Error('Registro original não encontrado na tela.');
+    
+    const salvo = await duplicarRegistro(orig);
     registros.push(salvo);
     toast('Registro duplicado.', 'success');
     renderFiltros();

@@ -250,18 +250,19 @@ export async function salvarRegistro(registro) {
 
 export async function excluirRegistro(id) {
   if (USE_LOCAL_DATA) {
-    cacheLocal = cacheLocal.filter((r) => r.id !== id);
+    cacheLocal = cacheLocal.filter((r) => String(r.id) !== String(id));
     return;
   }
   const client = getClient();
   const { error } = await client.from('rc_registros').delete().eq('id', id);
   if (error) throw error;
+  
+  // Forçar atualização do cache removendo a chave de last_sync
+  invalidateCache('cache_rc_v2');
 }
 
-export async function duplicarRegistro(id) {
-  const lista = await carregarRegistros();
-  const orig = lista.find((r) => r.id === id);
-  if (!orig) throw new Error('Registro não encontrado');
+export async function duplicarRegistro(orig) {
+  if (!orig || !orig.id) throw new Error('Registro original inválido para duplicar');
   const { id: _id, created_at, updated_at, ...rest } = orig;
   const copia = {
     ...rest,

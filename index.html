@@ -862,50 +862,93 @@
 
             </div> <!-- Fim mtbf-integrada-container -->
 
-            <!-- CONTAINER: MTBF ANALYTICS -->
-            <div id="mtbf-analytics-container" style="display: none; flex-direction: column; gap: 1.5rem; transition: opacity 0.3s ease; opacity: 0;">
+            <!-- CONTAINER: MTBF ANALYTICS (ENTERPRISE MASTER-DETAIL) -->
+            <div id="mtbf-analytics-container" style="display: none; flex-direction: column; height: calc(100vh - 180px); transition: opacity 0.3s ease; opacity: 0;">
               
-              <!-- 1. Hero Strip -->
-              <div class="mtbf-hero-strip" id="mtbfHeroStrip">
-                <!-- Preenchido via JS -->
+              <!-- Tabs para Controle de Visão -->
+              <div style="display: flex; gap: 1rem; border-bottom: 1px solid var(--border); margin-bottom: 0;">
+                <button type="button" class="mtbf-tab-btn active" id="btnTabAnaliseMaquina">Análise por Máquina</button>
+                <button type="button" class="mtbf-tab-btn" id="btnTabHeatmapGlobal">Heatmap Global</button>
               </div>
-              
-              <!-- 2. Heatmap & Stability -->
-              <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem;">
-                <!-- Heatmap -->
-                <div class="mtbf-heatmap-container">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
-                    <h4 style="margin:0; color:var(--text-primary); font-size:1rem; font-weight:600;">Evolução de Confiabilidade (MTBF)</h4>
-                    <span style="font-size: 0.75rem; color:var(--text-secondary);">% vs Meta</span>
+
+              <!-- VIEW 1: ANÁLISE POR MÁQUINA (Master-Detail) -->
+              <div id="mtbfViewMaquina" style="display: flex; height: 100%; background: var(--bg); overflow: hidden;">
+                
+                <!-- Master: Navigation Panel -->
+                <div style="width: 340px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg2); flex-shrink: 0;">
+                  <div style="padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);">
+                    <h3 style="margin: 0; font-size: 0.95rem; font-weight: 600; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.5px;">Máquinas</h3>
+                    <p style="margin: 0.2rem 0 0 0; font-size: 0.75rem; color: var(--text-secondary);">Ordene por ofensores</p>
+                    <div style="margin-top: 1rem; position: relative;">
+                      <svg style="position: absolute; left: 0.6rem; top: 50%; transform: translateY(-50%); color: var(--muted);" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                      <input type="text" id="mtbfSearchMachine" placeholder="Buscar máquina..." style="width: 100%; background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 0.4rem 0.75rem 0.4rem 2rem; border-radius: 4px; font-size: 0.8rem; outline: none; transition: border-color 0.2s;" />
+                    </div>
                   </div>
-                  <div id="mtbfHeatmapWrapper" style="overflow-x:auto;"></div>
+                  <div id="mtbfMasterList" style="flex: 1; overflow-y: auto; padding: 0.5rem;">
+                    <!-- Preenchido via JS: Itens com classe mtbf-master-item -->
+                  </div>
                 </div>
-                <!-- Stability -->
-                <div class="mtbf-ledger-container" style="padding:1.5rem; display:flex; flex-direction:column; gap:1rem;">
-                  <h4 style="margin:0; color:var(--text-primary); font-size:1rem; font-weight:600;">Estabilidade por Linha</h4>
-                  <div id="mtbfStabilityWrapper" style="display:flex; flex-direction:column; gap:0.75rem;"></div>
+
+                <!-- Detail: Machine Focus Panel -->
+                <div style="flex: 1; display: flex; flex-direction: column; padding: 2rem 3rem; overflow-y: auto; position: relative;">
+                  
+                  <div id="mtbfDetailEmpty" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; color: var(--text-secondary); background: var(--bg);">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 1rem; opacity: 0.5;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    <span style="font-size: 1.1rem; letter-spacing: 0.5px;">Selecione uma máquina no painel para iniciar a análise.</span>
+                  </div>
+
+                  <div id="mtbfDetailContent" style="display: none; flex-direction: column; height: 100%;">
+                    <!-- Cabeçalho Executivo -->
+                    <header style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 1.5rem;">
+                      <div>
+                        <div id="mtbfDetailLinha" style="font-size: 0.75rem; color: var(--gold); text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600; margin-bottom: 0.5rem;">LINHA 4</div>
+                        <h2 id="mtbfDetailNome" style="margin: 0; font-size: 1.8rem; font-weight: 600; color: var(--text-primary); letter-spacing: -0.02em;">Nome da Máquina</h2>
+                      </div>
+                      <div style="display: flex; flex-direction: column; align-items: flex-end;">
+                        <div id="mtbfDetailPeriodLabel" style="font-size: 0.8rem; font-weight: 600; color: var(--text-primary); margin-bottom: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.3rem;">Desempenho no Período (--):</div>
+                        <div style="display: flex; gap: 2rem; text-align: right;">
+                          <div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">MTBF Geral</div>
+                            <div id="mtbfDetailKpiGeral" style="font-size: 1.5rem; font-family: 'DM Sans', sans-serif; font-weight: 700; color: var(--text-primary);">--h</div>
+                          </div>
+                          <div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Mecânica</div>
+                            <div id="mtbfDetailKpiMec" style="font-size: 1.5rem; font-family: 'DM Sans', sans-serif; font-weight: 700; color: #60a5fa;">--h</div>
+                          </div>
+                          <div>
+                            <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 0.25rem;">Elétrica</div>
+                            <div id="mtbfDetailKpiEle" style="font-size: 1.5rem; font-family: 'DM Sans', sans-serif; font-weight: 700; color: #f43f5e;">--h</div>
+                          </div>
+                        </div>
+                      </div>
+                    </header>
+
+                    <!-- Gráfico Principal (ECharts) -->
+                    <div style="flex: 1; display: flex; flex-direction: column;">
+                      <h4 style="margin: 0 0 1rem 0; font-size: 0.95rem; font-weight: 500; color: var(--text-primary);">Evolução Histórica de Confiabilidade</h4>
+                      <div id="chartMtbfMaquinaIsolada" style="width: 100%; flex: 1; min-height: 400px;"></div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <!-- 3. Machine Ledger -->
-              <div class="mtbf-ledger-container">
-                <div class="mtbf-ledger-header">
-                  <h4 style="margin:0; color:var(--text-primary); font-size:1rem; font-weight:600;">Machine Performance Ledger</h4>
-                  <span style="font-size: 0.75rem; color:var(--text-secondary);">Ranking de confiabilidade (Maior = Melhor)</span>
+              <!-- VIEW 2: HEATMAP GLOBAL -->
+              <div id="mtbfViewHeatmap" style="display: none; flex-direction: column; padding: 2rem; background: var(--bg); overflow-y: auto;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2.5rem;">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
+                      <div>
+                        <h4 style="margin:0; color:var(--text-primary); font-size:1.1rem; font-weight:500;">Evolução de Confiabilidade (Linhas)</h4>
+                        <p style="margin: 0.25rem 0 0 0; font-size: 0.8rem; color: var(--text-secondary);">Matriz de calor: Desempenho vs Meta (%)</p>
+                      </div>
+                    </div>
+                    <div id="mtbfHeatmapWrapper" style="overflow-x:auto;"></div>
+                  </div>
+                  <div>
+                    <h4 style="margin:0 0 1.5rem 0; color:var(--text-primary); font-size:1.1rem; font-weight:500;">Estabilidade Sistêmica</h4>
+                    <div id="mtbfStabilityWrapper" style="display:flex; flex-direction:column; gap:1rem;"></div>
+                  </div>
                 </div>
-                <table class="mtbf-ledger-table">
-                  <thead>
-                    <tr>
-                      <th>Máquina / Linha</th>
-                      <th>Status</th>
-                      <th>MTBF Médio</th>
-                      <th style="width:30%;">Performance vs Meta</th>
-                      <th style="text-align:right;">Tendência</th>
-                    </tr>
-                  </thead>
-                  <tbody id="mtbfLedgerTbody">
-                  </tbody>
-                </table>
               </div>
 
             </div> <!-- Fim mtbf-analytics-container -->
@@ -2728,7 +2771,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
 
   <div id="toast" class="toast"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.8.0/countUp.umd.js"></script>
-  <script type="module" src="js/app.js?v=95"></script>
+  <script type="module" src="js/app.js?v=99"></script>
 
   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
   <div class="modal-overlay" id="modalEditarAtividadePM">
