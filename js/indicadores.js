@@ -1842,10 +1842,19 @@ async function renderMtbfAnalytics(dadosOld, globalMetaMtbf) {
     results.forEach(({ p, data }) => {
       data.forEach(d => {
         if (!machineData[d.maquina]) {
-          machineData[d.maquina] = { maquina: d.maquina, linha: _confiabLinha === 'TODAS' ? '' : _confiabLinha, history: {}, currentMtbf: 0, prevMtbf: 0 };
+          machineData[d.maquina] = { maquina: d.maquina, linha: _confiabLinha === 'TODAS' ? '' : _confiabLinha, history: {}, currentMtbf: 0, prevMtbf: 0, currentNFalhas: 0, totalWeightedMtbf: 0, totalFalhasAllPeriods: 0 };
         }
         machineData[d.maquina].history[p] = d.mtbf_h;
-        if (p === currentPeriod) machineData[d.maquina].currentMtbf = d.mtbf_h;
+        // Acumula para média ponderada (apenas períodos com falhas reais)
+        const nf = d.n_falhas || 0;
+        if (nf > 0) {
+          machineData[d.maquina].totalWeightedMtbf += d.mtbf_h * nf;
+          machineData[d.maquina].totalFalhasAllPeriods += nf;
+        }
+        if (p === currentPeriod) {
+          machineData[d.maquina].currentMtbf = d.mtbf_h;
+          machineData[d.maquina].currentNFalhas = nf;
+        }
         if (p === previousPeriod) machineData[d.maquina].prevMtbf = d.mtbf_h;
       });
     });
@@ -1856,9 +1865,9 @@ async function renderMtbfAnalytics(dadosOld, globalMetaMtbf) {
   // Não filtra mais por currentMtbf > 0. Mostra TODAS as máquinas que tiveram histórico no período filtrado.
   const ledgerArray = Object.values(machineData);
   ledgerArray.sort((a, b) => {
-    // Máquinas que não tiveram falhas no período atual ficam no topo (MTBF "infinito")
-    const mtbfA = a.currentMtbf || Infinity;
-    const mtbfB = b.currentMtbf || Infinity;
+    // Ordena por MTBF Médio (média ponderada). Máquinas sem falhas ficam no topo.
+    const mtbfA = a.totalFalhasAllPeriods > 0 ? (a.totalWeightedMtbf / a.totalFalhasAllPeriods) : Infinity;
+    const mtbfB = b.totalFalhasAllPeriods > 0 ? (b.totalWeightedMtbf / b.totalFalhasAllPeriods) : Infinity;
     return mtbfB - mtbfA; // Maior MTBF primeiro
   });
 
@@ -1987,15 +1996,24 @@ async function renderMtbfAnalytics(dadosOld, globalMetaMtbf) {
 
   // 6. Renderiza Ledger Ranking
   let ledgerHtml = '';
+  const numMaquinas = ledgerArray.length || 1;
+  
   ledgerArray.forEach(m => {
     // Como a API não retornou linha confiável pra TODAS, assumimos a global
     const metaL = (m.linha && _confiabMetas[m.linha]) ? _confiabMetas[m.linha].meta_mtbf_h : globalMetaMtbf;
-    const isSemFalhas = !m.currentMtbf || m.currentMtbf === 0;
-    const currentMtbfDisplay = isSemFalhas ? 'Sem falhas' : `${m.currentMtbf.toFixed(1)}h`;
+    
+    // A meta (metaL) é para a linha inteira. Para cobrar uma máquina individual de forma justa,
+    // a meta da máquina deve ser proporcional ao número de equipamentos que compõem a linha.
+    // Fórmula de confiabilidade em série: MTBF_maq = MTBF_linha * N_maquinas
+    const metaMaquina = metaL * numMaquinas;
+    
+    const isSemFalhas = !m.totalFalhasAllPeriods || m.totalFalhasAllPeriods === 0;
+    const avgMtbf = isSemFalhas ? 0 : (m.totalWeightedMtbf / m.totalFalhasAllPeriods);
+    const currentMtbfDisplay = isSemFalhas ? 'Sem falhas' : `${avgMtbf.toFixed(1)}h`;
     
     // Se não quebrou, a % da meta atingida é 100%. Se quebrou, calcula.
-    const pct = isSemFalhas ? 100 : Math.min((m.currentMtbf / metaL) * 100, 100);
-    const isGood = isSemFalhas || m.currentMtbf >= metaL;
+    const pct = isSemFalhas ? 100 : Math.min((avgMtbf / metaMaquina) * 100, 100);
+    const isGood = isSemFalhas || avgMtbf >= metaMaquina;
     
     let trendIcon = '<span style="color:var(--muted);">-</span>';
     const prev = m.prevMtbf || Infinity;
@@ -2022,7 +2040,7 @@ async function renderMtbfAnalytics(dadosOld, globalMetaMtbf) {
         <td>
           <div style="display:flex; justify-content:space-between; font-size:0.7rem; margin-bottom:2px; color:var(--text-secondary);">
             <span>${pct.toFixed(0)}%</span>
-            <span>Meta: ${metaL}h</span>
+            <span title="Meta proporcional por equipamento (Meta Linha x Qtd Máquinas)">Meta: ${metaMaquina.toFixed(0)}h</span>
           </div>
           <div class="mtbf-bar-bg">
             <div class="mtbf-bar-fill" style="width: ${pct}%; background: ${isGood ? 'var(--success)' : 'var(--danger)'}; box-shadow: 0 0 8px ${isGood ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'};"></div>

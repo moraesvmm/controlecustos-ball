@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Outfit:wght@300;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
-  <link rel="stylesheet" href="css/styles.css?v=104">
+  <link rel="stylesheet" href="css/styles.css?v=105">
   <style>
     /* FORCED PREMIUM STYLES TO BYPASS LOCAL CACHE */
     .alertas-panel {
@@ -813,25 +813,23 @@
 
 
             <!-- Cards de resumo -->
-            <div id="confiabCardsArea" class="premium-glass-surface" style="display: flex !important; flex-direction: row !important; width: 100% !important; justify-content: space-between; padding: 2rem 2.5rem;">
+            <div id="confiabCardsArea" class="premium-glass-surface confiab-grid-3" style="padding: 1.5rem;">
               <!-- Card MTBF -->
-              <div style="flex: 1; padding-right: 2rem;">
+              <div class="kpi-card" style="margin: 0;">
                 <div class="kpi-label-luxury">MTBF Médio (h)<span class="kpi-help-icon" data-tooltip="Tempo Médio Entre Falhas (MTBF).&#10;Avalia a confiabilidade da máquina. Quanto MAIOR, mais confiável é a máquina.&#10;&#10;Lógica de Cálculo:&#10;• Tempo Disp. = 30 dias (Mês) ou 7 dias (Semana)&#10;• Fórmula = (Tempo Disp. - Total de Minutos Parados) ÷ Número de Falhas" style="margin-left:6px;">?</span></div>
                 <div id="cardConfiabMtbf" class="kpi-number-luxury">--</div>
                 <div id="cardConfiabMtbfMeta" style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">Meta: --h</div>
                 <div id="cardConfiabMtbfVar" style="font-size:0.8rem; margin-top:0.2rem; font-weight:500;"></div>
               </div>
-              <div class="micro-divider"></div>
               <!-- Card MTTR -->
-              <div style="flex: 1; padding: 0 2rem;">
+              <div class="kpi-card" style="margin: 0;">
                 <div class="kpi-label-luxury">MTTR Médio (h)<span class="kpi-help-icon" data-tooltip="Tempo Médio de Reparo (MTTR).&#10;Avalia a agilidade e eficiência da equipe de manutenção. Quanto MENOR, melhor.&#10;&#10;Lógica de Cálculo:&#10;• Fórmula = Total de Minutos Parados ÷ Número de Falhas" style="margin-left:6px;">?</span></div>
                 <div id="cardConfiabMttr" class="kpi-number-luxury">--</div>
                 <div id="cardConfiabMttrMeta" style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">Meta: --h</div>
                 <div id="cardConfiabMttrVar" style="font-size:0.8rem; margin-top:0.2rem; font-weight:500;"></div>
               </div>
-              <div class="micro-divider"></div>
               <!-- Card MTTA -->
-              <div style="flex: 1; padding-left: 2rem;">
+              <div class="kpi-card" style="margin: 0;">
                 <div class="kpi-label-luxury">MTTA Médio (min)<span class="kpi-help-icon" data-tooltip="Tempo Médio de Acknowledge (MTTA).&#10;Avalia o tempo de resposta inicial da equipe após o reporte. Quanto MENOR, melhor.&#10;&#10;Lógica de Cálculo:&#10;• Ack = Tempo decorrido entre a Falha e o Início do Atendimento&#10;• Fórmula = Soma de Minutos de Ack ÷ Número de Falhas" style="margin-left:6px;">?</span></div>
                 <div id="cardConfiabMtta" class="kpi-number-luxury">--</div>
                 <div id="cardConfiabMttaMeta" style="font-size:0.75rem; color:var(--text-secondary); margin-top:0.4rem;">Meta: --m</div>
@@ -840,20 +838,18 @@
             </div>
 
             <!-- Gráficos (3 colunas) -->
-            <div class="premium-glass-surface" style="display: flex !important; flex-direction: row !important; width: 100% !important; justify-content: space-between; margin-top: 1.5rem; padding: 2rem 2.5rem; gap: 1rem;">
-              <div style="flex: 1;">
+            <div class="premium-glass-surface confiab-grid-3" style="margin-top: 1.5rem; padding: 1.5rem;">
+              <div class="chart-box" style="margin: 0; padding: 1.25rem;">
                 <h4 style="margin:0 0 1.5rem; color:var(--text-primary); font-size:1.05rem; font-weight:500; display:flex; align-items:center;">MTBF por Período (h)<span class="kpi-help-icon" data-tooltip="Evolução do MTBF.&#10;Mostra se a confiabilidade das máquinas está melhorando ou piorando ao longo do tempo." style="margin-left:6px;">?</span></h4>
-                <div id="chartConfiabMtbf" style="width:100%; height:260px;"></div>
+                <div id="chartConfiabMtbf" style="width:100%; height:300px;"></div>
               </div>
-              <div class="micro-divider"></div>
-              <div style="flex: 1;">
+              <div class="chart-box" style="margin: 0; padding: 1.25rem;">
                 <h4 style="margin:0 0 1.5rem; color:var(--text-primary); font-size:1.05rem; font-weight:500; display:flex; align-items:center;">MTTR por Período (h)<span class="kpi-help-icon" data-tooltip="Evolução do MTTR.&#10;Mostra se o tempo de resposta e conserto da equipe está mais rápido ao longo do tempo." style="margin-left:6px;">?</span></h4>
-                <div id="chartConfiabMttr" style="width:100%; height:260px;"></div>
+                <div id="chartConfiabMttr" style="width:100%; height:300px;"></div>
               </div>
-              <div class="micro-divider"></div>
-              <div style="flex: 1;">
+              <div class="chart-box" style="margin: 0; padding: 1.25rem;">
                 <h4 style="margin:0 0 1.5rem; color:var(--text-primary); font-size:1.05rem; font-weight:500; display:flex; align-items:center;">MTTA (m)<span class="kpi-help-icon" data-tooltip="Evolução do MTTA.&#10;Mostra a evolução do tempo médio até o início do atendimento da falha." style="margin-left:6px;">?</span></h4>
-                <div id="chartMtta" style="width:100%; height:260px;"></div>
+                <div id="chartMtta" style="width:100%; height:300px;"></div>
               </div>
             </div>
 
@@ -2732,7 +2728,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
 
   <div id="toast" class="toast"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.8.0/countUp.umd.js"></script>
-  <script type="module" src="js/app.js?v=94"></script>
+  <script type="module" src="js/app.js?v=95"></script>
 
   <!-- MODAL EDITAR ATIVIDADE (PLANO MESTRE) -->
   <div class="modal-overlay" id="modalEditarAtividadePM">

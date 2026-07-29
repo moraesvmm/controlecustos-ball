@@ -43,7 +43,7 @@ import { initImportPlanoMestre } from './import_plano_mestre.js';
 import { renderPrevisoes } from './previsoes.js';
 import { initAlertas, toggleAlertasPanel } from './alertas.js';
 import { initCopiloto } from './copiloto.js';
-import { initIndicadores, initConfiabilidade } from './indicadores.js?v=3';
+import { initIndicadores, initConfiabilidade } from './indicadores.js?v=4';
 
 let registros = [];
 
