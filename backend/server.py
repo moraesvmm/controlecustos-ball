@@ -2048,7 +2048,7 @@ def get_lifespan_components():
             
             # Cruzar a data_instalacao com a tabela kpi_producao_raw para calcular horas reais trabalhadas e dados de latas
             prod = conn.execute(
-                "SELECT SUM(tempo_disponivel_min) as t_min, SUM(quantidade_produzida) as q_prod, COUNT(id) as dias_prod FROM kpi_producao_raw WHERE linha=? AND data > ? AND tempo_disponivel_min > 0", 
+                "SELECT SUM(tempo_disponivel_min) as t_min, SUM(quantidade_produzida) as q_prod, COUNT(id) as dias_prod FROM kpi_producao_raw WHERE linha=? AND data >= ? AND tempo_disponivel_min > 0", 
                 (d['linha'], d['data_instalacao'])
             ).fetchone()
             
