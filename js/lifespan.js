@@ -277,9 +277,120 @@ function initLifespan() {
               </div>
             </td>
           `;
+          `;
+          
+          tr.addEventListener('dblclick', () => {
+             abrirDrilldownLifespan(comp.id);
+          });
+          
+          // Make tr look clickable
+          tr.style.cursor = 'pointer';
+          tr.style.transition = 'background 0.2s';
+          tr.addEventListener('mouseover', () => tr.style.background = 'rgba(255,255,255,0.02)');
+          tr.addEventListener('mouseout', () => tr.style.background = 'transparent');
+          
           tbody.appendChild(tr);
        });
     }
+
+    // Modal Logic for Drilldown
+    window.abrirDrilldownLifespan = async function(id) {
+        const comp = window.lifespanData.find(c => c.id === id);
+        if (!comp) return;
+        
+        // Populate current data
+        document.getElementById('modalDrilldownLifespanTitulo').textContent = comp.nome_componente;
+        document.getElementById('modalDrilldownLifespanSub').textContent = `${comp.maquina} • ${comp.codigo_componente || 'Sem código'}`;
+        
+        let latasFmt = comp.latas_produzidas >= 1000000 ? (comp.latas_produzidas/1000000).toFixed(1) + 'M' : 
+                       comp.latas_produzidas >= 1000 ? (comp.latas_produzidas/1000).toFixed(1) + 'K' : comp.latas_produzidas;
+        
+        document.getElementById('lifespanDrillVol').textContent = latasFmt + ' UN';
+        document.getElementById('lifespanDrillDias').textContent = comp.dias_corridos_produzidos;
+        
+        document.getElementById('lifespanDrillReal').textContent = comp.horas_passadas + 'h';
+        document.getElementById('lifespanDrillAlvo').textContent = comp.vida_alvo_horas + 'h';
+        
+        const pct = comp.vida_alvo_horas > 0 ? (comp.horas_passadas / comp.vida_alvo_horas) * 100 : 0;
+        document.getElementById('lifespanDrillPct').textContent = pct.toFixed(1) + '%';
+        document.getElementById('lifespanDrillBar').style.width = Math.min(pct, 100) + '%';
+        
+        let colorHex = '#22c55e';
+        if (pct >= 100) colorHex = '#ef4444';
+        else if (pct >= 85) colorHex = '#f97316';
+        else if (pct >= 60) colorHex = '#eab308';
+        
+        document.getElementById('lifespanDrillBar').style.background = `linear-gradient(90deg, ${colorHex}, ${colorHex}dd)`;
+        document.getElementById('lifespanDrillBar').style.boxShadow = `0 0 10px ${colorHex}50`;
+        document.getElementById('lifespanDrillPct').style.color = colorHex;
+        
+        // Show modal
+        document.getElementById('modalDrilldownLifespan').style.display = 'flex';
+        
+        // Fetch History
+        const timeline = document.getElementById('lifespanDrillTimeline');
+        timeline.innerHTML = `
+          <div style="position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; background: rgba(255,255,255,0.05); z-index: 0;"></div>
+          <div style="text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem;">Carregando histórico...</div>
+        `;
+        
+        try {
+            const url = `/api/lifespan/history?maquina=${encodeURIComponent(comp.maquina)}&linha=${encodeURIComponent(comp.linha)}&nome_componente=${encodeURIComponent(comp.nome_componente)}`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('Falha ao carregar histórico');
+            const history = await res.json();
+            
+            if (history.length === 0) {
+               timeline.innerHTML = `
+                  <div style="position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; background: rgba(255,255,255,0.05); z-index: 0;"></div>
+                  <div style="text-align: center; padding: 2rem; color: var(--muted); font-size: 0.85rem;">Nenhuma troca registrada para este componente.</div>
+               `;
+               return;
+            }
+            
+            let html = '<div style="position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; background: rgba(255,255,255,0.05); z-index: 0;"></div>';
+            
+            history.forEach(h => {
+               const hpct = h.vida_alvo_horas > 0 ? (h.horas_passadas / h.vida_alvo_horas) * 100 : 0;
+               let hColor = '#22c55e';
+               if (hpct >= 100) hColor = '#ef4444';
+               else if (hpct >= 85) hColor = '#f97316';
+               else if (hpct >= 60) hColor = '#eab308';
+               
+               let hLatasFmt = h.latas_produzidas >= 1000000 ? (h.latas_produzidas/1000000).toFixed(1) + 'M' : 
+                               h.latas_produzidas >= 1000 ? (h.latas_produzidas/1000).toFixed(1) + 'K' : h.latas_produzidas;
+                               
+               html += `
+                  <div style="position: relative; z-index: 1; display: flex; gap: 1rem; align-items: flex-start;">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 2px solid ${hColor}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 10px ${hColor}30; margin-top: 4px;">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${hColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.25rem; border-radius: 12px; flex: 1; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
+                         <div style="font-weight: 600; font-size: 0.95rem; color: var(--text);">${h.horas_passadas}h <span style="color:var(--muted); font-weight:400; font-size:0.85rem;">/ ${h.vida_alvo_horas}h</span></div>
+                         <div style="font-size: 0.75rem; color: ${hColor}; font-weight: 600;">${hpct.toFixed(1)}%</div>
+                      </div>
+                      <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 1rem;">
+                        Substituído em: ${String(h.data_remocao || '').slice(0, 10)}
+                      </div>
+                      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; color: var(--muted);">VOL: ${hLatasFmt} UN</span>
+                        <span style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; color: var(--muted);">OP: ${h.dias_corridos_produzidos} DIAS</span>
+                      </div>
+                      ${h.descricao_troca ? `<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;"><strong>Nota:</strong> ${h.descricao_troca}</div>` : ''}
+                    </div>
+                  </div>
+               `;
+            });
+            timeline.innerHTML = html;
+        } catch(e) {
+            console.error(e);
+            timeline.innerHTML = `
+              <div style="position: absolute; left: 15px; top: 10px; bottom: 10px; width: 2px; background: rgba(255,255,255,0.05); z-index: 0;"></div>
+              <div style="text-align: center; padding: 2rem; color: var(--danger); font-size: 0.85rem;">Erro ao carregar histórico.</div>
+            `;
+        }
+    };
 
     // Re-bind events
     document.querySelectorAll('.lifespan-btn-troca').forEach(btn => {

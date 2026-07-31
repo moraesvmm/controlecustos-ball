@@ -2085,6 +2085,43 @@ def get_lifespan_components():
     finally:
         conn.close()
 
+@app.get("/api/lifespan/history")
+def get_lifespan_history(maquina: str, linha: str, nome_componente: str):
+    conn = get_db()
+    try:
+        comps = conn.execute("SELECT * FROM kpi_lifespan_components WHERE status='HISTORICO' AND maquina=? AND linha=? AND nome_componente=? ORDER BY data_instalacao DESC", (maquina, linha, nome_componente)).fetchall()
+        
+        result = []
+        for c in comps:
+            d = dict(c)
+            # Find the end date (which is when it was replaced, meaning the updated_at timestamp)
+            # If updated_at is null, we can try to guess by the next component's installation date, but updated_at should exist for HISTORICO.
+            end_date_str = d['updated_at'] if d['updated_at'] else datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            d['data_remocao'] = end_date_str
+            
+            # Since it's historical, we must calculate the hours passed from data_instalacao to the day it was replaced.
+            # We can use the date part of updated_at.
+            dt_fim = end_date_str.split(' ')[0]
+            prod = conn.execute(
+                "SELECT SUM(tempo_disponivel_min) as t_min, SUM(quantidade_produzida) as q_prod, COUNT(id) as dias_prod FROM kpi_producao_raw WHERE linha=? AND data > ? AND data <= ? AND tempo_disponivel_min > 0", 
+                (d['linha'], d['data_instalacao'], dt_fim)
+            ).fetchone()
+            
+            t_min = prod['t_min'] if prod['t_min'] else 0
+            horas = t_min / 60.0
+            
+            latas = prod['q_prod'] if prod['q_prod'] else 0
+            dias_operados = prod['dias_prod'] if prod['dias_prod'] else 0
+            
+            d['horas_passadas'] = round(horas, 1)
+            d['latas_produzidas'] = latas
+            d['dias_corridos_produzidos'] = dias_operados
+            
+            result.append(d)
+        return result
+    finally:
+        conn.close()
+
 @app.post("/api/lifespan/components")
 def add_lifespan_component(comp: LifespanComponent):
     conn = get_db()
