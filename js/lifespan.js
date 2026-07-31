@@ -277,17 +277,71 @@ function initLifespan() {
               </div>
             </td>
           `;
-          `;
           
           tr.addEventListener('dblclick', () => {
              abrirDrilldownLifespan(comp.id);
           });
           
+          tr.addEventListener('click', (e) => {
+             // Remove class 'selected' from all other tr
+             document.querySelectorAll('#lifespanGrid tr').forEach(r => r.style.background = 'transparent');
+             tr.style.background = 'rgba(212,175,55,0.05)';
+             
+             const bar = document.getElementById('rowActionBarLifespan');
+             if(bar) {
+                bar.style.display = 'flex';
+                document.getElementById('actionBarLifespanTitle').textContent = comp.nome_componente + ' (' + (comp.codigo_componente || '-') + ')';
+                
+                // Unbind previous events using clone
+                const btnDrill = document.getElementById('btnLifespanAcaoDrilldown');
+                const btnTroca = document.getElementById('btnLifespanAcaoTroca');
+                const btnDel = document.getElementById('btnLifespanAcaoDelete');
+                
+                const nDrill = btnDrill.cloneNode(true);
+                const nTroca = btnTroca.cloneNode(true);
+                const nDel = btnDel.cloneNode(true);
+                
+                btnDrill.replaceWith(nDrill);
+                btnTroca.replaceWith(nTroca);
+                btnDel.replaceWith(nDel);
+                
+                nDrill.addEventListener('click', () => abrirDrilldownLifespan(comp.id));
+                nTroca.addEventListener('click', () => {
+                   if(window.openModalTroca) window.openModalTroca(comp.id);
+                });
+                nDel.addEventListener('click', async () => {
+                   if(window.Swal) {
+                     const res = await window.Swal.fire({
+                       title: 'Remover Componente?',
+                       text: "O componente sairá do monitoramento. O histórico será preservado.",
+                       icon: 'warning',
+                       showCancelButton: true,
+                       confirmButtonColor: '#ef4444',
+                       cancelButtonColor: '#374151',
+                       confirmButtonText: 'Sim, remover'
+                     });
+                     if(res.isConfirmed) {
+                       try {
+                         const resp = await fetch('/api/lifespan/components/' + comp.id, { method: 'DELETE' });
+                         if(resp.ok) {
+                           window.Swal.fire('Removido!', '', 'success');
+                           if(window.fetchLifespanComponents) window.fetchLifespanComponents();
+                           bar.style.display = 'none';
+                         }
+                       } catch(e) {
+                         console.error(e);
+                       }
+                     }
+                   }
+                });
+             }
+          });
+          
           // Make tr look clickable
           tr.style.cursor = 'pointer';
           tr.style.transition = 'background 0.2s';
-          tr.addEventListener('mouseover', () => tr.style.background = 'rgba(255,255,255,0.02)');
-          tr.addEventListener('mouseout', () => tr.style.background = 'transparent');
+          tr.addEventListener('mouseover', () => { if(tr.style.background === 'transparent' || tr.style.background === '') tr.style.background = 'rgba(255,255,255,0.02)'; });
+          tr.addEventListener('mouseout', () => { if(tr.style.background === 'rgba(255, 255, 255, 0.02)') tr.style.background = 'transparent'; });
           
           tbody.appendChild(tr);
        });
@@ -295,7 +349,7 @@ function initLifespan() {
 
     // Modal Logic for Drilldown
     window.abrirDrilldownLifespan = async function(id) {
-        const comp = window.lifespanData.find(c => c.id === id);
+        const comp = activeComponents.find(c => c.id === id);
         if (!comp) return;
         
         // Populate current data

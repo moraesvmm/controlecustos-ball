@@ -3152,7 +3152,7 @@ Segue abaixo itens para verificação de atraso.</textarea>
 
   <script src="js/retomada_l05.js?v=14"></script>
   <script src="js/movimentacoes.js?v=2"></script>
-  <script src="js/lifespan.js?v=3"></script>
+  <script src="js/lifespan.js?v=5"></script>
   <script>
     (function() {
       function tryInit() {
@@ -3183,6 +3183,35 @@ Segue abaixo itens para verificação de atraso.</textarea>
     <div class="copiloto-footer">
       <textarea id="copiloto-input" placeholder="Pergunte sobre os custos do mês..." rows="1"></textarea>
       <button class="cop-send" id="copiloto-send">➤</button>
+    </div>
+  </div>
+
+  <!-- Action Bar Lifespan -->
+  <div id="rowActionBarLifespan" class="row-action-bar" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+      <div style="display: flex; align-items: center; gap: 1rem;">
+        <div style="background: rgba(255,255,255,0.1); padding: 0.5rem; border-radius: 6px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"></path></svg>
+        </div>
+        <div>
+          <div style="font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px;">Componente Selecionado</div>
+          <div id="actionBarLifespanTitle" style="font-weight: 600; color: var(--text);">--</div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.75rem;">
+        <button type="button" class="btn btn-outline" id="btnLifespanAcaoDrilldown" style="padding: 0.5rem 1rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+          Abrir Análise Preditiva
+        </button>
+        <button type="button" class="btn btn-outline" id="btnLifespanAcaoTroca" style="padding: 0.5rem 1rem; border-color: rgba(212,175,55,0.4); color: var(--gold);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          Registrar Troca
+        </button>
+        <button type="button" class="btn btn-outline" id="btnLifespanAcaoDelete" style="padding: 0.5rem 1rem; border-color: rgba(239,68,68,0.4); color: var(--danger);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          Remover
+        </button>
+      </div>
     </div>
   </div>
 
