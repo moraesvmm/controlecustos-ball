@@ -2131,12 +2131,20 @@ def add_lifespan_component(comp: LifespanComponent):
         except:
             pass
 
+        codigo = comp.codigo_componente
+        if not codigo or codigo.strip() == "":
+            import random
+            random_num = str(random.randint(0, 99999)).zfill(5)
+            codigo = f"LV{random_num}"
+        else:
+            codigo = codigo.strip()
+
         hoje_str = datetime.now().strftime('%Y-%m-%d')
         conn.execute('''
             INSERT INTO kpi_lifespan_components 
             (maquina, linha, nome_componente, codigo_componente, data_instalacao, vida_alvo_dias, vida_alvo_horas, descricao_troca, foto_url, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ATIVO')
-        ''', (comp.maquina, comp.linha, comp.nome_componente, comp.codigo_componente, hoje_str, int(comp.vida_alvo_horas/24), comp.vida_alvo_horas, comp.descricao_troca, comp.foto_url))
+        ''', (comp.maquina, comp.linha, comp.nome_componente, codigo, hoje_str, int(comp.vida_alvo_horas/24), comp.vida_alvo_horas, comp.descricao_troca, comp.foto_url))
         conn.commit()
         # Trigger SSE sync
         with open(SYNC_PATH, 'a'):
