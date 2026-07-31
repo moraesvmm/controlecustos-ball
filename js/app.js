@@ -1293,7 +1293,7 @@ function showView(name) {
   const isDash = name === 'dashboard';
   const isSpecial = ['fornecedores', 'calendario', 'planos-manutencao', 'por-maquina', 'plano-preventiva',
                      'planos-manutencao-frontend', 'plano-preventiva-frontend', 'plano-mestre', 'indicadores',
-                     'movimentacoes-dashboard', 'movimentacoes-grid'].includes(name);
+                     'movimentacoes-dashboard', 'movimentacoes-grid', 'lifespan'].includes(name);
 
   const isTask = ['gestao-tarefas', 'minhas-tarefas'].includes(name);
 

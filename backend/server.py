@@ -1,4 +1,7 @@
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+from pydantic import BaseModel
+from typing import Optional, List
+from datetime import datetime
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, StreamingResponse
@@ -865,6 +868,25 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # Add codigo_componente to kpi_lifespan_components safely
+    try:
+        conn.execute("ALTER TABLE kpi_lifespan_components ADD COLUMN codigo_componente TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    # Add quantidade_produzida to kpi_producao_raw safely
+    try:
+        conn.execute("ALTER TABLE kpi_producao_raw ADD COLUMN quantidade_produzida INTEGER DEFAULT 0")
+    except sqlite3.OperationalError:
+        pass
+
+    # Clean up old test data (Linha 1 and Esmaltadeira L06)
+    try:
+        conn.execute("DELETE FROM kpi_lifespan_components WHERE linha='Linha 1'")
+        conn.execute("DELETE FROM kpi_lifespan_components WHERE maquina='Esmaltadeira L06'")
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -1296,6 +1318,7 @@ async def import_producao(req: Request):
             ln = str(r.get('linha', '')).strip()
             tt = float(r.get('tempo_trabalhado', 0) or 0)
             td = float(r.get('tempo_disponivel', 0) or 0)
+            qp = int(float(r.get('quantidade_produzida', 0) or 0))
             
             sem = semana_iso(dt)
             m = mes_num(dt)
@@ -1306,14 +1329,14 @@ async def import_producao(req: Request):
             exists = conn.execute("SELECT id FROM kpi_producao_raw WHERE linha=? AND data=?", (ln, dt)).fetchone()
             if exists:
                 conn.execute(
-                    "UPDATE kpi_producao_raw SET tempo_trabalhado_min=?, tempo_disponivel_min=? WHERE id=?", 
-                    (tt, td, exists['id'])
+                    "UPDATE kpi_producao_raw SET tempo_trabalhado_min=?, tempo_disponivel_min=?, quantidade_produzida=? WHERE id=?", 
+                    (tt, td, qp, exists['id'])
                 )
             else:
                 conn.execute('''
-                    INSERT INTO kpi_producao_raw (linha, data, semana_iso, mes, ano, tempo_trabalhado_min, tempo_disponivel_min)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (ln, dt, sem, m, a, tt, td))
+                    INSERT INTO kpi_producao_raw (linha, data, semana_iso, mes, ano, tempo_trabalhado_min, tempo_disponivel_min, quantidade_produzida)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (ln, dt, sem, m, a, tt, td, qp))
             count += 1
         conn.commit()
         return {"status": "ok", "importados": count}
@@ -1369,11 +1392,46 @@ async def import_paradas(req: Request):
         if " - " in txt:
             parts = txt.split(" - ", 1)
             if len(parts) > 1:
-                return parts[1].strip()
-        return txt.strip()
+                txt = parts[1].strip()
+        
+        # Remove prefixos comuns que poluem o nome da máquina
+        prefixos_para_remover = [
+            "Reparo Mecânico no ", "Reparo Mecânico na ", "Reparo Mecânico ", 
+            "Reparo Elétrico no ", "Reparo Elétrico na ", "Reparo Elétrico ",
+            "Reparo Mecanico ", "Reparo Eletrico ", "Reparo "
+        ]
+        
+        # Tratamento especial para aspas ou outros caracteres de escape
+        txt = txt.strip()
+        for p in prefixos_para_remover:
+            if txt.lower().startswith(p.lower()):
+                txt = txt[len(p):].strip()
+                break
+                
+        # Conserta casos específicos como "Acumulador 01" vs "no Acumulador 01"
+        if txt.lower().startswith("no "):
+            txt = txt[3:].strip()
+        if txt.lower().startswith("na "):
+            txt = txt[3:].strip()
+            
+        return txt
 
-    # Filtra apenas reparos
-    reparos = [r for r in rows if any(g in str(r.get('grupo', '')) for g in GRUPOS_REPARO)]
+    # Filtra apenas reparos e adiciona blacklist para sujeiras
+    BLACKLIST = ['falta de energia', 'segmento', 'retorno ap']
+    reparos = []
+    for r in rows:
+        grupo = str(r.get('grupo', '')).lower()
+        parada = str(r.get('parada', '')).lower()
+        
+        # Só passa se for mecânico ou elétrico
+        if not any(g.lower() in grupo for g in GRUPOS_REPARO):
+            continue
+            
+        # Bloqueia lixo cadastrado errado na planilha
+        if any(b in grupo for b in BLACKLIST) or any(b in parada for b in BLACKLIST):
+            continue
+            
+        reparos.append(r)
     if not reparos:
         raise HTTPException(status_code=400, detail="Nenhum registro de Reparos Mecânicos ou Elétricos encontrado no arquivo.")
 
@@ -1748,6 +1806,62 @@ def get_kpi_mtbf_analytics(periodo_tipo: str = 'SEMANA', ano: int = None, linha:
     finally:
         conn.close()
 
+@app.get("/api/kpi/machine_mtbf_history")
+def get_kpi_machine_mtbf_history(maquina: str, ano: int = None):
+    if not ano:
+        from datetime import datetime
+        ano = datetime.now().year
+    conn = get_db()
+    try:
+        ln_row = conn.execute("SELECT linha FROM kpi_paradas_raw WHERE maquina=? AND linha != '' LIMIT 1", (maquina,)).fetchone()
+        linha = ln_row['linha'] if ln_row else 'Linha 4'
+        
+        td_q = "SELECT semana_iso, mes, SUM(tempo_disponivel_min) as td FROM kpi_producao_raw WHERE linha=? AND ano=? GROUP BY semana_iso, mes"
+        td_rows = conn.execute(td_q, (linha, ano)).fetchall()
+        td_map = {f"S{r['semana_iso']}": r['td'] for r in td_rows if r['semana_iso']}
+        
+        q = """
+        SELECT 
+            semana_iso, 
+            COUNT(*) as n_geral,
+            SUM(CASE WHEN grupo_parada LIKE '%Mec%nic%' OR grupo_parada LIKE '%mec%nic%' THEN 1 ELSE 0 END) as n_mec,
+            SUM(CASE WHEN grupo_parada LIKE '%El%tric%' OR grupo_parada LIKE '%el%tric%' THEN 1 ELSE 0 END) as n_ele
+        FROM kpi_paradas_raw
+        WHERE maquina=? AND ano=? AND semana_iso IS NOT NULL
+        GROUP BY semana_iso
+        """
+        fail_rows = conn.execute(q, (maquina, ano)).fetchall()
+        fail_map = {r['semana_iso']: dict(r) for r in fail_rows}
+        
+        # Determine max week to avoid charting future empty weeks
+        max_week = max(fail_map.keys()) if fail_map else 52
+        
+        result = []
+        for i in range(1, max_week + 1):
+            p = f"S{i}"
+            td = td_map.get(p, 7 * 24 * 60)
+            
+            d = fail_map.get(i, {'n_geral': 0, 'n_mec': 0, 'n_ele': 0})
+            n_geral = d['n_geral']
+            n_mec = d['n_mec']
+            n_ele = d['n_ele']
+            
+            mtbf_geral = (td / n_geral / 60) if n_geral > 0 else None
+            mtbf_mec = (td / n_mec / 60) if n_mec > 0 else None
+            mtbf_ele = (td / n_ele / 60) if n_ele > 0 else None
+            
+            result.append({
+                "periodo": p,
+                "mtbf_geral": round(mtbf_geral, 1) if mtbf_geral is not None else None,
+                "mtbf_mec": round(mtbf_mec, 1) if mtbf_mec is not None else None,
+                "mtbf_ele": round(mtbf_ele, 1) if mtbf_ele is not None else None,
+                "falhas": n_geral
+            })
+            
+        return result
+    finally:
+        conn.close()
+
 @app.get("/api/kpi/drilldown_maquinas")
 def get_kpi_drilldown_maquinas(semana: str, linha: str = 'TODAS', ano: int = None):
     if not semana:
@@ -1899,6 +2013,165 @@ async def post_prazo_ciente(req: Request):
         conn.close()
     
     return {"status": "ok"}
+
+# ==========================================
+# LIFESPAN MODULE (VIDA ÚTIL DE COMPONENTES)
+# ==========================================
+
+class LifespanComponent(BaseModel):
+    maquina: str
+    linha: str
+    nome_componente: str
+    codigo_componente: Optional[str] = None
+    vida_alvo_horas: int
+    descricao_troca: Optional[str] = None
+    foto_url: Optional[str] = None
+
+@app.get("/api/lifespan/components")
+def get_lifespan_components():
+    conn = get_db()
+    try:
+        try:
+            conn.execute("ALTER TABLE kpi_lifespan_components ADD COLUMN vida_alvo_horas INTEGER DEFAULT 1000")
+        except:
+            pass
+
+        rows = conn.execute('''
+            SELECT * FROM kpi_lifespan_components 
+            WHERE status = 'ATIVO' 
+            ORDER BY data_instalacao ASC
+        ''').fetchall()
+        
+        result = []
+        for r in rows:
+            d = dict(r)
+            
+            # Cruzar a data_instalacao com a tabela kpi_producao_raw para calcular horas reais trabalhadas e dados de latas
+            prod = conn.execute(
+                "SELECT SUM(tempo_disponivel_min) as t_min, SUM(quantidade_produzida) as q_prod, COUNT(id) as dias_prod FROM kpi_producao_raw WHERE linha=? AND data > ? AND tempo_disponivel_min > 0", 
+                (d['linha'], d['data_instalacao'])
+            ).fetchone()
+            
+            t_min = prod['t_min'] if prod and prod['t_min'] else 0
+            latas_produzidas = prod['q_prod'] if prod and prod['q_prod'] else 0
+            dias_corridos_produzidos = prod['dias_prod'] if prod and prod['dias_prod'] else 0
+            horas_passadas = int(t_min / 60)
+                
+            vida_alvo = d.get('vida_alvo_horas')
+            if not vida_alvo: 
+                vida_alvo = d.get('vida_alvo_dias', 1000) * 24 # Fallback
+            if vida_alvo <= 0: vida_alvo = 1
+            
+            horas_restantes = vida_alvo - horas_passadas
+            percentual_uso = (horas_passadas / vida_alvo) * 100
+            
+            # Status visual: 0 a 85% = Verde, 85 a 100% = Amarelo, >100% = Vermelho
+            if percentual_uso < 85:
+                cor_status = 'VERDE'
+            elif percentual_uso <= 100:
+                cor_status = 'AMARELO'
+            else:
+                cor_status = 'VERMELHO'
+                
+            d['horas_passadas'] = horas_passadas
+            d['horas_restantes'] = horas_restantes
+            d['percentual_uso'] = round(percentual_uso, 1)
+            d['cor_status'] = cor_status
+            d['latas_produzidas'] = latas_produzidas
+            d['dias_corridos_produzidos'] = dias_corridos_produzidos
+            
+            result.append(d)
+        return result
+    finally:
+        conn.close()
+
+@app.post("/api/lifespan/components")
+def add_lifespan_component(comp: LifespanComponent):
+    conn = get_db()
+    try:
+        try:
+            conn.execute("ALTER TABLE kpi_lifespan_components ADD COLUMN vida_alvo_horas INTEGER DEFAULT 1000")
+        except:
+            pass
+
+        hoje_str = datetime.now().strftime('%Y-%m-%d')
+        conn.execute('''
+            INSERT INTO kpi_lifespan_components 
+            (maquina, linha, nome_componente, codigo_componente, data_instalacao, vida_alvo_dias, vida_alvo_horas, descricao_troca, foto_url, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ATIVO')
+        ''', (comp.maquina, comp.linha, comp.nome_componente, comp.codigo_componente, hoje_str, int(comp.vida_alvo_horas/24), comp.vida_alvo_horas, comp.descricao_troca, comp.foto_url))
+        conn.commit()
+        # Trigger SSE sync
+        with open(SYNC_PATH, 'a'):
+            os.utime(SYNC_PATH, None)
+        return {"status": "ok"}
+    finally:
+        conn.close()
+
+class ReplaceComponentRequest(BaseModel):
+    nova_descricao: Optional[str] = None
+    foto_url: Optional[str] = None
+    novo_alvo_horas: int
+    novo_codigo: Optional[str] = None
+
+@app.post("/api/lifespan/components/{comp_id}/replace")
+def replace_lifespan_component(comp_id: int, req: ReplaceComponentRequest):
+    conn = get_db()
+    try:
+        old = conn.execute("SELECT * FROM kpi_lifespan_components WHERE id=? AND status='ATIVO'", (comp_id,)).fetchone()
+        if not old:
+            raise HTTPException(status_code=404, detail="Componente ativo não encontrado")
+            
+        # Aposenta o antigo
+        conn.execute("UPDATE kpi_lifespan_components SET status='HISTORICO', updated_at=CURRENT_TIMESTAMP WHERE id=?", (comp_id,))
+        
+        # Cria o novo
+        hoje_str = datetime.now().strftime('%Y-%m-%d')
+        conn.execute('''
+            INSERT INTO kpi_lifespan_components 
+            (maquina, linha, nome_componente, codigo_componente, data_instalacao, vida_alvo_dias, vida_alvo_horas, descricao_troca, foto_url, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ATIVO')
+        ''', (old['maquina'], old['linha'], old['nome_componente'], req.novo_codigo, hoje_str, int(req.novo_alvo_horas/24), req.novo_alvo_horas, req.nova_descricao, req.foto_url))
+        
+        conn.commit()
+        # Trigger SSE sync
+        with open(SYNC_PATH, 'a'):
+            os.utime(SYNC_PATH, None)
+        return {"status": "ok"}
+    finally:
+        conn.close()
+
+@app.delete("/api/lifespan/components/{comp_id}")
+def delete_lifespan_component(comp_id: int):
+    conn = get_db()
+    try:
+        comp = conn.execute("SELECT id, maquina, linha, nome_componente FROM kpi_lifespan_components WHERE id=?", (comp_id,)).fetchone()
+        if not comp:
+            raise HTTPException(status_code=404, detail="Componente não encontrado")
+            
+        # O usuário solicitou que a exclusão apague não só a peça atual, mas todo o histórico daquele slot na máquina.
+        conn.execute("DELETE FROM kpi_lifespan_components WHERE maquina=? AND linha=? AND nome_componente=?", (comp['maquina'], comp['linha'], comp['nome_componente']))
+        conn.commit()
+        
+        # Trigger SSE sync
+        with open(SYNC_PATH, 'a'):
+            os.utime(SYNC_PATH, None)
+        return {"status": "ok"}
+    finally:
+        conn.close()
+
+@app.delete("/api/lifespan/reset")
+def reset_lifespan_data():
+    conn = get_db()
+    try:
+        conn.execute("DELETE FROM kpi_lifespan_components")
+        conn.commit()
+        # Trigger SSE sync
+        with open(SYNC_PATH, 'a'):
+            os.utime(SYNC_PATH, None)
+        return {"status": "ok", "message": "Banco de dados Lifespan resetado."}
+    finally:
+        conn.close()
 
 # ==========================================
 # SSE (Server-Sent Events) - REALTIME SYNC

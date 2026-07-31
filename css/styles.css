@@ -5230,3 +5230,145 @@ body.light-mode .executive-kpi:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================
+   MTBF ANALYTICS - MASTER-DETAIL (ENTERPRISE)
+   ========================================================== */
+.mtbf-tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.mtbf-tab-btn:hover {
+  color: var(--text-primary);
+}
+.mtbf-tab-btn.active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+  font-weight: 600;
+}
+
+.mtbf-master-item {
+  padding: 1rem 1.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  border: 1px solid transparent;
+  margin-bottom: 0.25rem;
+}
+.mtbf-master-item:hover {
+  background: rgba(255,255,255,0.02);
+}
+.mtbf-master-item.active {
+  background: linear-gradient(90deg, rgba(212,175,55,0.08) 0%, rgba(212,175,55,0.02) 100%);
+  border: 1px solid rgba(212,175,55,0.2);
+  border-left: 3px solid var(--gold);
+}
+.mtbf-master-item-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mtbf-master-item.active .mtbf-master-item-title {
+  color: var(--gold);
+}
+.mtbf-master-item-subtitle {
+  font-size: 0.75rem;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+}
+
+/* ==========================================================
+   HIGH PREMIUM GLASSMORPHISM SWAL
+   ========================================================== */
+.glass-swal {
+  background: rgba(10, 12, 16, 0.45) !important;
+  backdrop-filter: blur(32px) saturate(200%) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(200%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 28px !important;
+  box-shadow: 
+    0 40px 80px rgba(0, 0, 0, 0.8), 
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 0 20px rgba(255, 255, 255, 0.02) !important;
+  color: #fff !important;
+  padding: 2.5rem 2rem !important;
+}
+
+.glass-swal .swal2-title {
+  color: #ffffff !important;
+  font-family: 'Inter', sans-serif !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.03em !important;
+  font-size: 1.5rem !important;
+  margin-bottom: 0.5rem !important;
+}
+
+.glass-swal .swal2-html-container {
+  color: rgba(255, 255, 255, 0.6) !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.95rem !important;
+  line-height: 1.6 !important;
+  font-weight: 400 !important;
+}
+
+.glass-swal .swal2-actions {
+  gap: 16px;
+  margin-top: 2rem !important;
+}
+
+.glass-swal .swal2-confirm {
+  background: rgba(212, 175, 55, 0.1) !important;
+  border: 1px solid rgba(212, 175, 55, 0.2) !important;
+  border-radius: 12px !important;
+  color: var(--gold) !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.1) !important;
+}
+
+.glass-swal .swal2-confirm:hover {
+  background: rgba(212, 175, 55, 0.15) !important;
+  border-color: rgba(212, 175, 55, 0.3) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.2) !important;
+}
+
+.glass-swal-cancel {
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 12px !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  font-weight: 500 !important;
+  padding: 0.75rem 1.5rem !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.glass-swal-cancel:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #fff !important;
+}
+
+.glass-swal .swal2-icon.swal2-warning {
+  border-color: rgba(212, 175, 55, 0.3) !important;
+  color: var(--gold) !important;
+  background: rgba(212, 175, 55, 0.05) !important;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.1) !important;
+}

@@ -539,3 +539,114 @@ body.light-mode .alerta-card { background: rgba(0,0,0,0.02); }
   border-color: rgba(255,255,255,0.3);
   background: rgba(255,255,255,0.05);
 }
+
+/* ── LIFESPAN MODULE ───────────────────────────────────── */
+.lifespan-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.lifespan-card:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.lifespan-info {
+  flex: 1;
+  padding-right: 1.5rem;
+}
+.lifespan-info h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.lifespan-info .machine {
+  font-size: 0.8rem;
+  color: var(--gold);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+.lifespan-info .details {
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.lifespan-gauge-wrapper {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.lifespan-gauge {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  border-radius: 50%;
+  background: conic-gradient(var(--gauge-color) var(--gauge-percent), rgba(255,255,255,0.05) 0);
+  box-shadow: inset 0 0 0 8px var(--surface); /* To create the "ring" effect, but this might block the center. Actually, we'll use a pseudo element for the inner circle */
+}
+.lifespan-gauge::after {
+  content: "";
+  position: absolute;
+  top: 6px; left: 6px; right: 6px; bottom: 6px;
+  background: var(--surface);
+  border-radius: 50%;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+.lifespan-gauge-text {
+  position: relative;
+  z-index: 2;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  line-height: 1.1;
+}
+.lifespan-gauge-text span {
+  display: block;
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+.lifespan-actions {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+.lifespan-btn-troca {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text);
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+.lifespan-btn-troca:hover {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #000;
+}
