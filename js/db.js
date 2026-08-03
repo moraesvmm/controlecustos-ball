@@ -276,10 +276,10 @@ export async function duplicarRegistro(orig) {
 }
 
 /* AUTENTICAÇÃO */
-export async function signUp(email, password, username) {
+export async function signUp(email, password, username, role = 'ADMIN') {
   const res = await fetch(`${SUPABASE_URL}/auth/v1/signup`, {
     method: "POST", headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ email, password, data: { username } })
+    body: JSON.stringify({ email, password, data: { username, role } })
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
@@ -629,4 +629,53 @@ export async function excluirEvidencia(id) {
   let data = cache ? JSON.parse(cache) : [];
   data = data.filter(e => e.id !== id);
   localStorage.setItem('evidencias_mensais', JSON.stringify(data));
+}
+
+// ==========================================
+// NOTIFICAÇÕES LIFESPAN
+// ==========================================
+
+export async function verificarStatusAlertaLifespan(email) {
+  const localVal = localStorage.getItem(`lifespan_alerta_${email}`);
+  if (USE_LOCAL_DATA) return localVal || null;
+
+  try {
+    const client = getClient();
+    const { data, error } = await client
+      .from('lifespan_notificacoes')
+      .select('data_ciente')
+      .eq('email', email)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116' && error.code !== '42P01') {
+      console.warn('Erro DB alerta lifespan (usando fallback local):', error.message);
+      return localVal || null;
+    }
+    return data ? data.data_ciente : (localVal || null);
+  } catch (err) {
+    console.warn('Fallback ativado em verificarStatusAlertaLifespan:', err);
+    return localVal || null;
+  }
+}
+
+export async function registrarCienteLifespan(email) {
+  const dt = new Date().toISOString();
+  // Sempre salva localmente primeiro para garantir a resiliência na máquina do técnico
+  localStorage.setItem(`lifespan_alerta_${email}`, dt);
+  
+  if (USE_LOCAL_DATA) return;
+  
+  try {
+    const client = getClient();
+    const { error } = await client.from('lifespan_notificacoes').upsert(
+      { email, data_ciente: dt },
+      { onConflict: 'email' }
+    );
+    if (error) {
+      console.warn('Erro ao registrar no banco, mas salvo localmente', error.message);
+      // Não lança throw para permitir que o modal feche!
+    }
+  } catch (err) {
+    console.warn('Fallback ativado em registrarCienteLifespan:', err);
+  }
 }

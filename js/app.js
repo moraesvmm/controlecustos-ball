@@ -20,7 +20,7 @@ import {
 carregarRegistros, salvarRegistro, excluirRegistro, duplicarRegistro, signIn, signUp, signOut, onAuthStateChange, 
 getClient, carregarPreventiva, salvarPreventiva, excluirPreventiva, getMachines, getMachineActivities, createMachine, 
 createMachineActivity, getFornecedoresContatos, upsertFornecedorContato,
-getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync } from './db.js?v=14';
+getTarefasDelegadas, criarTarefaDelegada, atualizarStatusTarefa, initRealtimeSync, verificarStatusAlertaLifespan, registrarCienteLifespan } from './db.js?v=14';
 import { renderDashboardCharts, renderCrudMesChart, destroyCrudMesChart, renderConsertoFluxoChart, destroyFluxoChart } from './charts.js';
 import {
   COLUNAS_TABELA,
@@ -48,6 +48,134 @@ import { initIndicadores, initConfiabilidade } from './indicadores.js?v=5';
 let registros = [];
 
 let registrosPreventiva = [];
+
+window.applyRoleUI = function(user) {
+  const role = user?.user_metadata?.role || 'ADMIN';
+  const sidebarTitle = document.getElementById('sidebarTitle');
+  const sidebarSubtitle = document.getElementById('sidebarSubtitle');
+
+  if (role === 'LIFESPAN_ONLY') {
+    // Ocultar todos os grupos da sidebar que NÃO contêm o botão lifespan
+    document.querySelectorAll('.sidebar-nav > div').forEach(group => {
+      const hasLifespan = group.querySelector('[data-tab="lifespan"]');
+      group.style.display = hasLifespan ? '' : 'none';
+      if (hasLifespan) {
+        // Renomear o título do grupo RC
+        const groupLabel = group.querySelector('div:first-child');
+        if (groupLabel && !groupLabel.hasAttribute('data-tab')) {
+          groupLabel.textContent = 'Menu Operacional';
+          groupLabel.style.color = 'var(--gold)';
+        }
+      }
+    });
+
+    // Ocultar botões individuais dentro do grupo RC que não são lifespan
+    document.querySelectorAll('.sidebar-nav [data-tab]').forEach(btn => {
+      if (btn.dataset.tab !== 'lifespan') {
+        btn.style.display = 'none';
+      }
+    });
+
+    // Ocultar o trigger do accordion (Controle Global)
+    const accordionTrigger = document.querySelector('[data-accordion="nav-rc"]');
+    if (accordionTrigger) accordionTrigger.style.setProperty('display', 'none', 'important');
+
+    // Remover indentação do submenu para o Lifespan parecer botão principal
+    const subMenuRc = document.getElementById('nav-rc-sub');
+    if (subMenuRc) {
+      subMenuRc.style.setProperty('padding-left', '0', 'important');
+      subMenuRc.style.setProperty('border-left', 'none', 'important');
+      subMenuRc.style.setProperty('margin-left', '0', 'important');
+    }
+
+    // Melhorar visualmente o botão Lifespan para parecer um item principal
+    const btnLifespan = document.querySelector('[data-tab="lifespan"]');
+    if (btnLifespan) {
+      btnLifespan.innerHTML = `<svg class="nav-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:0.5rem;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg> Lifespan Preditivo`;
+      btnLifespan.style.padding = '0.75rem 1rem';
+      btnLifespan.style.fontSize = '0.95rem';
+    }
+
+    // Criar um widget informativo preenchendo o vazio da sidebar
+    let infoWidget = document.getElementById('lifespan-info-widget');
+    if (!infoWidget) {
+      infoWidget = document.createElement('div');
+      infoWidget.id = 'lifespan-info-widget';
+      infoWidget.style.marginTop = 'auto'; // empurra para o fundo
+      infoWidget.style.padding = '1.25rem';
+      infoWidget.style.background = 'rgba(212, 175, 55, 0.05)';
+      infoWidget.style.border = '1px solid rgba(212, 175, 55, 0.15)';
+      infoWidget.style.borderRadius = '12px';
+      infoWidget.innerHTML = `
+        <div style="font-size: 0.7rem; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.4rem;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          Status Operacional
+        </div>
+        <p style="font-size: 0.8rem; color: var(--muted); margin: 0; line-height: 1.5;">Voc\u00ea est\u00e1 no portal dedicado para apontamentos em ch\u00e3o de f\u00e1brica. Realize os lan\u00e7amentos da vida \u00fatil logo ap\u00f3s as interven\u00e7\u00f5es f\u00edsicas.</p>
+      `;
+      const nav = document.querySelector('.sidebar-nav');
+      if (nav) nav.appendChild(infoWidget);
+    } else {
+      infoWidget.style.display = 'block';
+    }
+
+    // Ocultar elementos do topbar desnecessários
+    const btnImportar = document.getElementById('btnImportarExcel');
+    if (btnImportar) btnImportar.style.display = 'none';
+
+    if (sidebarTitle) sidebarTitle.textContent = 'PORTAL OPERACIONAL';
+    if (sidebarSubtitle) sidebarSubtitle.textContent = 'Acesso T\u00e9cnico Limitado';
+
+    // Forçar aba lifespan
+    setTimeout(() => {
+      if (btnLifespan) btnLifespan.click();
+    }, 200);
+
+  } else {
+    // Restaurar tudo para ADMIN/usuário normal
+    document.querySelectorAll('.sidebar-nav > div').forEach(group => {
+      group.style.display = '';
+      const groupLabel = group.querySelector('div:first-child');
+      if (groupLabel && !groupLabel.hasAttribute('data-tab') && groupLabel.textContent === 'Menu Operacional') {
+        groupLabel.textContent = 'Módulo RC';
+        groupLabel.style.color = '';
+      }
+    });
+    document.querySelectorAll('.sidebar-nav [data-tab]').forEach(btn => {
+      btn.style.display = '';
+    });
+
+    // NOTA TÉCNICA: Troquei o style.display = '' e style.paddingLeft = '' etc. por style.removeProperty('display'), style.removeProperty('padding-left'), etc. — que é a única forma correta de limpar uma propriedade CSS setada com !important via JavaScript.
+    // Usar removeProperty para limpar display com !important
+    const accordionTrigger = document.querySelector('[data-accordion="nav-rc"]');
+    if (accordionTrigger) {
+      accordionTrigger.style.removeProperty('display');
+    }
+
+    // Usar removeProperty para limpar padding-left/border-left/margin-left com !important
+    const subMenuRc = document.getElementById('nav-rc-sub');
+    if (subMenuRc) {
+      subMenuRc.style.removeProperty('padding-left');
+      subMenuRc.style.removeProperty('border-left');
+      subMenuRc.style.removeProperty('margin-left');
+    }
+
+    const btnLifespan = document.querySelector('[data-tab="lifespan"]');
+    if (btnLifespan) {
+      btnLifespan.innerHTML = '↳ Lifespan';
+      btnLifespan.style.padding = '';
+      btnLifespan.style.fontSize = '';
+    }
+
+    const infoWidget = document.getElementById('lifespan-info-widget');
+    if (infoWidget) infoWidget.style.display = 'none';
+
+    const btnImportar = document.getElementById('btnImportarExcel');
+    if (btnImportar) btnImportar.style.display = '';
+    if (sidebarTitle) sidebarTitle.textContent = 'MANUTENÇÃO';
+    if (sidebarSubtitle) sidebarSubtitle.textContent = 'Sistema Central';
+  }
+};
 
 Object.defineProperty(window, '_registrosPreventiva', { get: () => registrosPreventiva });
 window.fornecedoresContatosData = [];
@@ -1348,6 +1476,7 @@ function showView(name) {
     'movimentacoes-dashboard': 'Custo Geral',
     'movimentacoes-grid': 'Movimentações',
     'indicadores': 'Painel Executivo de Indicadores',
+    'lifespan': 'Lifespan Preditivo'
   };
   const topbarTitle = $('#topbarTitle');
   if (topbarTitle && titles[name]) topbarTitle.textContent = titles[name];
@@ -2160,8 +2289,9 @@ document.getElementById('formCadastro')?.addEventListener('submit', async (e) =>
   const nome = document.getElementById('cadNome')?.value.trim();
   const email = document.getElementById('cadEmail')?.value.trim();
   const senha = document.getElementById('cadSenha')?.value;
+  const role = document.getElementById('cadRole')?.value || 'ADMIN';
   try {
-    await signUp(email, senha, nome);
+    await signUp(email, senha, nome, role);
     toast('Conta criada com sucesso! Faça login para acessar.', 'success');
     document.getElementById('cadEmail').value = '';
     document.getElementById('cadSenha').value = '';
@@ -2178,23 +2308,6 @@ document.getElementById('formCadastro')?.addEventListener('submit', async (e) =>
   }
 });
 
-document.getElementById('btnToggleCadastro')?.addEventListener('click', (e) => {
-  const fCad = document.getElementById('formCadastro');
-  const fLog = document.getElementById('formLogin');
-  const btn = e.currentTarget;
-  const p = document.querySelector('.login-footer p');
-  if (fCad.style.display === 'none') {
-    fCad.style.display = 'flex';
-    fLog.style.display = 'none';
-    btn.textContent = 'Já tenho uma conta';
-    if (p) p.textContent = 'Já tem acesso?';
-  } else {
-    fCad.style.display = 'none';
-    fLog.style.display = 'flex';
-    btn.textContent = 'Ainda não possui acesso? Registrar';
-    if (p) p.textContent = 'Ainda não possui acesso?';
-  }
-});
 
 document.getElementById('btnSair')?.addEventListener('click', async () => {
   await signOut();
@@ -3575,23 +3688,24 @@ onAuthStateChange((user) => {
       
       const nomeUsuario = user.user_metadata?.username || user.email?.split('@')[0] || 'Usuário';
       greetingEl.textContent = `${saudacao}, ${nomeUsuario}!`;
-      window.currentUser = { id: user.id, email: user.email, username: user.user_metadata?.username || nomeUsuario };
+      window.currentUser = { id: user.id, email: user.email, username: user.user_metadata?.username || nomeUsuario, user_metadata: user.user_metadata || { role: 'ADMIN' } };
     }
 
+    // Iniciar fluxos da UI
     document.getElementById('app-container').style.display = 'flex';
     if (!isAppInitialized) {
       isAppInitialized = true;
       init().then(() => {
         initCalendario(registros);
-        // Inicializar módulos de IA
         initAlertas();
         initCopiloto();
         initIndicadores();
-        // Sininho de alertas
         document.getElementById('btnAlertaBell')?.addEventListener('click', toggleAlertasPanel);
-        
-        // --- Notificações de Prazos por Usuário ---
         checkPrazosAlerts();
+        if (window.applyRoleUI) window.applyRoleUI(window.currentUser);
+        
+        // Checagem quinzenal do Lifespan
+        checkLifespanAlert(window.currentUser);
       });
     }
   } else {
@@ -5483,3 +5597,59 @@ async function checkPrazosAlerts() {
     console.error("Erro ao buscar alertas de prazo:", err);
   }
 }
+
+// ==========================================
+// NOTIFICAÇÕES QUINZENAIS LIFESPAN
+// ==========================================
+async function checkLifespanAlert(user) {
+  if (!user || !user.email) return;
+  
+  // Como solicitado, restringir aos perfis que acessam Lifespan
+  const role = user.user_metadata?.role || 'ADMIN';
+  if (role !== 'LIFESPAN_ONLY' && role !== 'ADMIN') return;
+
+  try {
+    const lastAckDate = await verificarStatusAlertaLifespan(user.email);
+    let shouldShow = false;
+
+    if (!lastAckDate) {
+      shouldShow = true;
+    } else {
+      const msPerDay = 1000 * 60 * 60 * 24;
+      const daysSince = (new Date() - new Date(lastAckDate)) / msPerDay;
+      if (daysSince >= 15) {
+        shouldShow = true;
+      }
+    }
+
+    if (shouldShow) {
+      const modal = document.getElementById('modalLifespanAlerta');
+      if (modal) modal.style.display = 'flex';
+    }
+  } catch (err) {
+    console.error('Erro ao verificar alerta do lifespan:', err);
+  }
+}
+
+// Vincular o evento do botão Ciente no contexto global
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('btnCienteLifespan')?.addEventListener('click', async (e) => {
+    if (!window.currentUser || !window.currentUser.email) return;
+    const btn = e.currentTarget;
+    const originalText = btn.textContent;
+    try {
+      btn.textContent = 'Registrando...';
+      btn.disabled = true;
+      await registrarCienteLifespan(window.currentUser.email);
+      document.getElementById('modalLifespanAlerta').style.display = 'none';
+      toast('Obrigado! Lembrete registrado com sucesso.', 'success');
+    } catch (err) {
+      toast('Erro ao registrar ciência. Tente novamente.', 'error');
+      console.error(err);
+    } finally {
+      btn.textContent = originalText;
+      btn.disabled = false;
+    }
+  });
+});
+window.checkLifespanAlert = checkLifespanAlert;

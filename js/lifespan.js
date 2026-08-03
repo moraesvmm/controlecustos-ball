@@ -36,8 +36,28 @@ function initLifespan() {
     'Linha 6': maquinasPadrao,
     'Linha 7': maquinasPadrao,
     'Linha 8': maquinasPadrao,
+    'Linha 8': maquinasPadrao,
     'Linha 9': maquinasPadrao
   };
+
+  function atualizarDataSyncUI() {
+    const el = document.getElementById('lifespanSyncDate');
+    if (!el) return;
+    const dateStr = localStorage.getItem('last_lifespan_sync');
+    if (dateStr) {
+      const d = new Date(dateStr);
+      const dia = String(d.getDate()).padStart(2, '0');
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const ano = d.getFullYear();
+      const hh = String(d.getHours()).padStart(2, '0');
+      const mm = String(d.getMinutes()).padStart(2, '0');
+      el.textContent = `Última Sync: ${dia}/${mes}/${ano} ${hh}:${mm}`;
+      el.style.color = 'var(--gold)';
+    } else {
+      el.textContent = `Última Sync: Pendente`;
+      el.style.color = 'var(--danger)';
+    }
+  }
 
   // API Calls
   async function fetchLifespanComponents() {
@@ -46,6 +66,8 @@ function initLifespan() {
       if (res.ok) {
         activeComponents = await res.json();
         renderLifespanGrid();
+        const bar = document.getElementById('rowActionBarLifespan');
+        if (bar) bar.style.display = 'none';
       }
     } catch (e) {
       console.error("Erro ao buscar componentes Lifespan", e);
@@ -310,6 +332,18 @@ function initLifespan() {
                    if(window.openModalTroca) window.openModalTroca(comp.id);
                 });
                 nDel.addEventListener('click', async () => {
+                   const userRole = window.currentUser?.user_metadata?.role || 'ADMIN';
+                   if (userRole === 'LIFESPAN_ONLY') {
+                     if(window.Swal) {
+                       window.Swal.fire({
+                         title: 'Acesso Negado',
+                         text: 'Apenas administradores podem excluir componentes.',
+                         icon: 'error',
+                         confirmButtonColor: 'var(--gold)'
+                       });
+                     } else alert('Acesso Negado.');
+                     return;
+                   }
                    if(window.Swal) {
                      const res = await window.Swal.fire({
                        title: 'Remover Componente?',
@@ -450,6 +484,7 @@ function initLifespan() {
     // Re-bind events
     document.querySelectorAll('.lifespan-btn-troca').forEach(btn => {
       btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const id = parseInt(e.currentTarget.getAttribute('data-id'));
         openModalTroca(id);
       });
@@ -457,6 +492,20 @@ function initLifespan() {
 
     document.querySelectorAll('.lifespan-btn-delete').forEach(btn => {
       btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const userRole = window.currentUser?.user_metadata?.role || 'ADMIN';
+        if (userRole === 'LIFESPAN_ONLY') {
+          if(window.Swal) {
+            window.Swal.fire({
+              title: 'Acesso Negado',
+              text: 'Apenas administradores podem excluir componentes.',
+              icon: 'error',
+              confirmButtonColor: 'var(--gold)'
+            });
+          } else alert('Acesso Negado.');
+          return;
+        }
+
         const id = parseInt(e.currentTarget.getAttribute('data-id'));
         if(window.Swal) {
           const res = await Swal.fire({
@@ -494,8 +543,12 @@ function initLifespan() {
   // --- Admin Factory Reset ---
   const btnReset = document.getElementById('btnResetLifespan');
   if (btnReset) {
-    // Exibir o botão forçadamente para que o usuário possa testar e limpar o banco
-    btnReset.style.display = 'flex';
+    const userRole = window.currentUser?.user_metadata?.role || 'ADMIN';
+    if (userRole === 'LIFESPAN_ONLY') {
+      btnReset.style.display = 'none';
+    } else {
+      btnReset.style.display = 'flex';
+    }
 
     btnReset.addEventListener('click', async () => {
       if(window.Swal) {
@@ -554,7 +607,11 @@ function initLifespan() {
       const maquina = currentMaquina; 
       const componente = document.getElementById('lifespanNovoComponente').value.trim();
       const codigoInput = document.getElementById('lifespanNovoCodigo');
-      const codigo = codigoInput ? codigoInput.value.trim() : null;
+      let codigo = codigoInput ? codigoInput.value.trim() : null;
+      
+      if (!codigo && componente.toLowerCase().includes('livre retirada')) {
+        codigo = 'LV' + Math.floor(10000 + Math.random() * 90000);
+      }
       
       // BLOQUEIO DE CLONES (Componente já existente na máquina)
       const isDuplicate = activeComponents.some(c => 
@@ -684,9 +741,15 @@ function initLifespan() {
       }
     }
 
+    let nCodigo = document.getElementById('lifespanTrocaCodigo') ? document.getElementById('lifespanTrocaCodigo').value.trim() : null;
+    const nComponente = document.getElementById('lifespanTrocaComponente').value.trim();
+    if (!nCodigo && nComponente.toLowerCase().includes('livre retirada')) {
+      nCodigo = 'LV' + Math.floor(10000 + Math.random() * 90000);
+    }
+    
     const payload = {
       novo_alvo_horas: parseInt(document.getElementById('lifespanTrocaAlvo').value),
-      novo_codigo: document.getElementById('lifespanTrocaCodigo') ? document.getElementById('lifespanTrocaCodigo').value : null,
+      novo_codigo: nCodigo,
       nova_descricao: document.getElementById('lifespanTrocaDescricao').value,
       foto_url: fotoBase64
     };
@@ -821,6 +884,8 @@ function initLifespan() {
           if (!resp.ok) throw new Error(result.detail || 'Erro no servidor');
 
           if(window.Swal) Swal.fire('Sucesso!', `${result.importados} registros de produção sincronizados.`, 'success');
+          localStorage.setItem('last_lifespan_sync', new Date().toISOString());
+          atualizarDataSyncUI();
           fetchLifespanComponents(); // Refresh UI to calculate new aging
 
         } catch (err) {
@@ -846,7 +911,8 @@ function initLifespan() {
     }
   });
 
-  // Initial Fetch
+  // Initial Fetch & UI Setup
+  atualizarDataSyncUI();
   fetchLifespanComponents();
 }
 

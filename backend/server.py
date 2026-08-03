@@ -621,7 +621,8 @@ def init_db():
             id TEXT PRIMARY KEY,
             email TEXT UNIQUE,
             username TEXT,
-            password TEXT
+            password TEXT,
+            role TEXT DEFAULT 'ADMIN'
         )
     ''')
     
@@ -887,6 +888,12 @@ def init_db():
     except sqlite3.OperationalError:
         pass
 
+    # Add role to usuarios safely
+    try:
+        conn.execute("ALTER TABLE usuarios ADD COLUMN role TEXT DEFAULT 'ADMIN'")
+    except sqlite3.OperationalError:
+        pass
+
     conn.commit()
     conn.close()
 
@@ -1009,7 +1016,7 @@ async def login(req: Request):
         u_dict = dict(user)
         return {
             "access_token": "local-token-123", 
-            "user": {"id": u_dict["id"], "email": u_dict["email"], "user_metadata": {"username": u_dict["username"]}}
+            "user": {"id": u_dict["id"], "email": u_dict["email"], "user_metadata": {"username": u_dict["username"], "role": u_dict.get("role", "ADMIN")}}
         }
     raise HTTPException(status_code=401, detail="Credenciais inválidas")
 
@@ -1018,19 +1025,21 @@ async def register(req: Request):
     data = await req.json()
     email = data.get("email")
     password = data.get("password")
-    username = data.get("data", {}).get("username", "Usuario_Local")
+    user_data = data.get("data", {})
+    username = user_data.get("username", "Usuario_Local")
+    role = user_data.get("role", "ADMIN")
     
     import uuid
     new_id = str(uuid.uuid4())
     
     conn = get_db()
     try:
-        conn.execute("INSERT INTO usuarios (id, email, username, password) VALUES (?, ?, ?, ?)", 
-                     (new_id, email, username, password))
+        conn.execute("INSERT INTO usuarios (id, email, username, password, role) VALUES (?, ?, ?, ?, ?)", 
+                     (new_id, email, username, password, role))
         conn.commit()
         return {
             "access_token": "local-token-123", 
-            "user": {"id": new_id, "email": email, "user_metadata": {"username": username}}
+            "user": {"id": new_id, "email": email, "user_metadata": {"username": username, "role": role}}
         }
     except sqlite3.IntegrityError:
         print("Integrity Error!")
@@ -2199,7 +2208,8 @@ def delete_lifespan_component(comp_id: int):
     try:
         comp = conn.execute("SELECT id, maquina, linha, nome_componente FROM kpi_lifespan_components WHERE id=?", (comp_id,)).fetchone()
         if not comp:
-            raise HTTPException(status_code=404, detail="Componente não encontrado")
+            # Retorna 200 OK silenciosamente se já foi removido (evita erro 404 no frontend por duplo-clique)
+            return {"status": "ok", "message": "Componente já removido anteriormente."}
             
         # O usuário solicitou que a exclusão apague não só a peça atual, mas todo o histórico daquele slot na máquina.
         conn.execute("DELETE FROM kpi_lifespan_components WHERE maquina=? AND linha=? AND nome_componente=?", (comp['maquina'], comp['linha'], comp['nome_componente']))
