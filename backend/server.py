@@ -2103,7 +2103,7 @@ def get_lifespan_history(maquina: str, linha: str, nome_componente: str):
             # We can use the date part of updated_at.
             dt_fim = end_date_str.split(' ')[0]
             prod = conn.execute(
-                "SELECT SUM(tempo_disponivel_min) as t_min, SUM(quantidade_produzida) as q_prod, COUNT(id) as dias_prod FROM kpi_producao_raw WHERE linha=? AND data > ? AND data <= ? AND tempo_disponivel_min > 0", 
+                "SELECT SUM(tempo_disponivel_min) as t_min, SUM(quantidade_produzida) as q_prod, COUNT(id) as dias_prod FROM kpi_producao_raw WHERE linha=? AND data >= ? AND data <= ? AND tempo_disponivel_min > 0", 
                 (d['linha'], d['data_instalacao'], dt_fim)
             ).fetchone()
             
@@ -2167,16 +2167,23 @@ def replace_lifespan_component(comp_id: int, req: ReplaceComponentRequest):
         if not old:
             raise HTTPException(status_code=404, detail="Componente ativo não encontrado")
             
-        # Aposenta o antigo
-        conn.execute("UPDATE kpi_lifespan_components SET status='HISTORICO', updated_at=CURRENT_TIMESTAMP WHERE id=?", (comp_id,))
+        # Aposenta o antigo e salva o motivo da troca e a foto na peça velha
+        conn.execute('''
+            UPDATE kpi_lifespan_components 
+            SET status='HISTORICO', 
+                updated_at=CURRENT_TIMESTAMP,
+                descricao_troca=?,
+                foto_url=?
+            WHERE id=?
+        ''', (req.nova_descricao, req.foto_url, comp_id))
         
-        # Cria o novo
+        # Cria o novo zerado
         hoje_str = datetime.now().strftime('%Y-%m-%d')
         conn.execute('''
             INSERT INTO kpi_lifespan_components 
             (maquina, linha, nome_componente, codigo_componente, data_instalacao, vida_alvo_dias, vida_alvo_horas, descricao_troca, foto_url, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'ATIVO')
-        ''', (old['maquina'], old['linha'], old['nome_componente'], req.novo_codigo, hoje_str, int(req.novo_alvo_horas/24), req.novo_alvo_horas, req.nova_descricao, req.foto_url))
+            VALUES (?, ?, ?, ?, ?, ?, ?, NULL, NULL, 'ATIVO')
+        ''', (old['maquina'], old['linha'], old['nome_componente'], req.novo_codigo, hoje_str, int(req.novo_alvo_horas/24), req.novo_alvo_horas))
         
         conn.commit()
         # Trigger SSE sync

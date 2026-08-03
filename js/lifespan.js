@@ -432,6 +432,7 @@ function initLifespan() {
                         <span style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; color: var(--muted);">OP: ${h.dias_corridos_produzidos} DIAS</span>
                       </div>
                       ${h.descricao_troca ? `<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;"><strong>Nota:</strong> ${h.descricao_troca}</div>` : ''}
+                      ${h.foto_url ? `<div style="margin-top: 1rem;"><a href="${h.foto_url}" target="_blank" style="display:inline-block; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);"><img src="${h.foto_url}" style="max-width: 100%; max-height: 200px; object-fit: cover; display: block;" alt="Foto da troca" /></a></div>` : ''}
                     </div>
                   </div>
                `;
