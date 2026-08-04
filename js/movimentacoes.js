@@ -141,6 +141,22 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderDashboard(timeline, raw_summary) {
         if (!timeline || timeline.length === 0) return;
         
+        const today = new Date();
+        const currentMonthNum = today.getMonth() + 1;
+        const currentYearNum = today.getFullYear();
+        
+        const ultimoMesTimeline = timeline[timeline.length - 1];
+        
+        if (ultimoMesTimeline.mes !== currentMonthNum || ultimoMesTimeline.ano !== currentYearNum) {
+            timeline.push({
+                mes: currentMonthNum,
+                ano: currentYearNum,
+                budget: ultimoMesTimeline.budget || 0,
+                consumo: 0,
+                kpi_score: 100
+            });
+        }
+
         window.lastTimelineMov = timeline; // Export to allow toggles to recalculate
         
         const ultimoMes = timeline[timeline.length - 1];
@@ -174,7 +190,6 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // --- 2. Lógica de Pacing (Run Rate): Projeção de fechamento ---
         let projectedPerc = percManutencao;
-        const today = new Date();
         
         if (ultimoMes.mes === (today.getMonth() + 1) && ultimoMes.ano === today.getFullYear()) {
             const currentDay = today.getDate();
