@@ -599,6 +599,36 @@ function initLifespan() {
     });
   }
 
+  function levenshtein(a, b) {
+    if(a.length === 0) return b.length; 
+    if(b.length === 0) return a.length; 
+    var matrix = [];
+    for(let i = 0; i <= b.length; i++){ matrix[i] = [i]; }
+    for(let j = 0; j <= a.length; j++){ matrix[0][j] = j; }
+    for(let i = 1; i <= b.length; i++){
+      for(let j = 1; j <= a.length; j++){
+        if(b.charAt(i-1) == a.charAt(j-1)){
+          matrix[i][j] = matrix[i-1][j-1];
+        } else {
+          matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, Math.min(matrix[i][j-1] + 1, matrix[i-1][j] + 1));
+        }
+      }
+    }
+    return matrix[b.length][a.length];
+  }
+  
+  function getSimilarity(s1, s2) {
+    let longer = s1;
+    let shorter = s2;
+    if (s1.length < s2.length) {
+      longer = s2;
+      shorter = s1;
+    }
+    let longerLength = longer.length;
+    if (longerLength === 0) return 1.0;
+    return (longerLength - levenshtein(longer, shorter)) / parseFloat(longerLength);
+  }
+
   if (formNovo) {
     formNovo.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -609,7 +639,7 @@ function initLifespan() {
       const codigoInput = document.getElementById('lifespanNovoCodigo');
       let codigo = codigoInput ? codigoInput.value.trim() : null;
       
-      if (!codigo && componente.toLowerCase().includes('livre retirada')) {
+      if (!codigo) {
         codigo = 'LV' + Math.floor(10000 + Math.random() * 90000);
       }
       
@@ -632,6 +662,36 @@ function initLifespan() {
           alert("⚠️ ATENÇÃO: Este componente já está cadastrado e rodando nesta máquina!\n\nPara substituí-lo, feche este modal e clique no botão '🔄 Registrar Troca'.");
         }
         return; // Block submission
+      }
+
+      // FUZZY MATCHING (Prevenir erros de digitação e clones disfarçados)
+      const sameMachineComps = activeComponents.filter(c => c.linha === linha && c.maquina === maquina);
+      let fuzzyMatch = null;
+      for (let c of sameMachineComps) {
+        const sim = getSimilarity(c.nome_componente.toLowerCase(), componente.toLowerCase());
+        if (sim >= 0.85) {
+          fuzzyMatch = c;
+          break;
+        }
+      }
+
+      if (fuzzyMatch) {
+        if (window.Swal) {
+          const res = await Swal.fire({
+            title: 'Possível Duplicidade',
+            html: `Encontramos um componente muito parecido nesta máquina:<br><br><b style="color:var(--gold)">${fuzzyMatch.nome_componente}</b><br><br>Tem certeza que deseja criar um novo chamado <b>${componente}</b> em vez de registrar a troca do existente?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: 'var(--danger)',
+            cancelButtonColor: 'var(--border)',
+            confirmButtonText: 'Sim, criar novo',
+            cancelButtonText: 'Não, cancelar'
+          });
+          if (!res.isConfirmed) return;
+        } else {
+          const conf = confirm(`Encontramos um componente muito parecido nesta máquina: ${fuzzyMatch.nome_componente}.\nTem certeza que deseja criar um novo em vez de registrar a troca do existente?`);
+          if (!conf) return;
+        }
       }
 
       const payload = {
@@ -706,7 +766,7 @@ function initLifespan() {
     document.getElementById('lifespanTrocaDescricao').value = '';
     
     const codigoInput = document.getElementById('lifespanTrocaCodigo');
-    if (codigoInput) codigoInput.value = '';
+    if (codigoInput) codigoInput.value = comp.codigo_componente || '';
 
     const fotoInput = document.getElementById('lifespanTrocaFoto');
     if (fotoInput) fotoInput.value = ''; // clear previous

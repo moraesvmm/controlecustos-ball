@@ -5372,3 +5372,13 @@ body.light-mode .executive-kpi:hover {
   background: rgba(212, 175, 55, 0.05) !important;
   box-shadow: 0 0 20px rgba(212, 175, 55, 0.1) !important;
 }
+
+/* Global Number Input Spinners Styling */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}

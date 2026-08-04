@@ -3302,21 +3302,24 @@ Segue abaixo itens para verificação de atraso.</textarea>
             <label style="color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; display: flex; flex-direction: column;">Componente Anterior
               <input type="text" id="lifespanTrocaComponente" readonly style="background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: var(--muted); padding: 0.85rem; border-radius: 8px; font-family: inherit; margin-top: 0.4rem; font-size: 0.95rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); pointer-events: none;" />
             </label>
-            <label style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; display: flex; flex-direction: column;">Código do Componente (Nova Peça)
-              <input type="text" id="lifespanTrocaCodigo" placeholder="Ex: UCMAN006014" style="background:rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); color: var(--text); padding: 0.85rem; border-radius: 8px; font-family: inherit; margin-top: 0.4rem; font-size: 0.95rem; transition: all 0.2s; outline: none;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'" />
+
+            <label style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; display: flex; flex-direction: column;">Código do Componente
+              <input type="text" id="lifespanTrocaCodigo" readonly style="background:rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); color: var(--muted); padding: 0.85rem; border-radius: 8px; font-family: inherit; margin-top: 0.4rem; font-size: 0.95rem; box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); pointer-events: none;" />
             </label>
             <label style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; display: flex; flex-direction: column;">Alvo de Durabilidade (Horas de Produção)
               <input type="number" id="lifespanTrocaAlvo" required min="1" style="background:rgba(0,0,0,0.4); border: 1px solid rgba(212,175,55,0.3); color: var(--gold); padding: 0.85rem; border-radius: 8px; font-family: inherit; margin-top: 0.4rem; font-size: 1rem; font-weight: 600; transition: all 0.2s; outline: none;" onfocus="this.style.borderColor='var(--gold)'" onblur="this.style.borderColor='rgba(212,175,55,0.3)'" />
-            </label>
-            <label style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; display: flex; flex-direction: column;">Anexar Foto da Troca (Opcional)
-              <input type="file" id="lifespanTrocaFoto" accept="image/*" style="background:rgba(0,0,0,0.2); border: 1px dashed rgba(255,255,255,0.15); color: var(--text); padding: 0.6rem; border-radius: 8px; margin-top: 0.4rem; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.15)'" />
             </label>
             <label style="grid-column: 1 / -1; color: var(--text-secondary); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 600; display: flex; flex-direction: column;">Anotações / Descrição do Serviço
               <textarea id="lifespanTrocaDescricao" rows="3" placeholder="Por que foi trocado? Observações..." style="background:rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); color: var(--text); padding: 0.85rem; border-radius: 8px; font-family: inherit; margin-top: 0.4rem; font-size: 0.95rem; transition: all 0.2s; outline: none; resize: vertical;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor='rgba(255,255,255,0.08)'"></textarea>
             </label>
           </div>
         </div>
-        <footer class="modal-header" style="justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: none; margin-top:2rem; padding-top: 1.5rem;">
+        <footer class="modal-header" style="justify-content: flex-end; border-top: 1px solid rgba(255,255,255,0.05); border-bottom: none; margin-top:2rem; padding-top: 1.5rem; gap: 1rem; align-items: center;">
+          <label style="display: flex; align-items: center; gap: 0.4rem; cursor: pointer; opacity: 0.6; transition: 0.2s;" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.6'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            <span id="lifespanTrocaFotoName" style="color: var(--text); font-size: 0.75rem; font-weight: 500; letter-spacing: 0.02em;">Anexar Mídia</span>
+            <input type="file" id="lifespanTrocaFoto" accept="image/*" style="display: none;" onchange="const n = document.getElementById('lifespanTrocaFotoName'); if(this.files.length > 0) { n.textContent = 'Anexado'; n.style.color = 'var(--gold)'; this.previousElementSibling.style.stroke = 'var(--gold)'; this.parentElement.style.opacity='1'; } else { n.textContent = 'Anexar Mídia'; n.style.color = 'var(--text)'; this.previousElementSibling.style.stroke = 'var(--text)'; this.parentElement.style.opacity='0.6'; }">
+          </label>
           <button type="submit" class="btn btn-primary" id="btnSalvarLifespanTroca" style="background: linear-gradient(135deg, var(--gold), #b89020); color: #000; font-weight: 600; border: none; padding: 0.75rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(212,175,55,0.2);">Confirmar Troca</button>
         </footer>
       </form>
