@@ -329,7 +329,7 @@ function initLifespan() {
                 
                 nDrill.addEventListener('click', () => abrirDrilldownLifespan(comp.id));
                 nTroca.addEventListener('click', () => {
-                   if(window.openModalTroca) window.openModalTroca(comp.id);
+                   openModalTroca(comp.id);
                 });
                 nDel.addEventListener('click', async () => {
                    const userRole = window.currentUser?.user_metadata?.role || 'ADMIN';
