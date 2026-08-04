@@ -453,17 +453,26 @@ function initLifespan() {
                     <div style="width: 32px; height: 32px; border-radius: 50%; background: rgba(0,0,0,0.5); border: 2px solid ${hColor}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 10px ${hColor}30; margin-top: 4px;">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${hColor}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                     </div>
-                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.25rem; border-radius: 12px; flex: 1; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
+                    <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 1.25rem; border-radius: 12px; flex: 1; transition: background 0.2s; backdrop-filter: blur(10px);" onmouseover="this.style.background='rgba(255,255,255,0.04)'" onmouseout="this.style.background='rgba(255,255,255,0.02)'">
                       <div style="display: flex; justify-content: space-between; margin-bottom: 0.5rem; align-items: center;">
                          <div style="font-weight: 600; font-size: 0.95rem; color: var(--text);">${h.horas_passadas}h <span style="color:var(--muted); font-weight:400; font-size:0.85rem;">/ ${h.vida_alvo_horas}h</span></div>
-                         <div style="font-size: 0.75rem; color: ${hColor}; font-weight: 600;">${hpct.toFixed(1)}%</div>
+                         <div style="font-size: 0.8rem; color: var(--muted);">Substituído em: ${String(h.data_remocao || '').slice(0, 10)}</div>
                       </div>
-                      <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 1rem;">
-                        Substituído em: ${String(h.data_remocao || '').slice(0, 10)}
-                      </div>
-                      <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <span style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; color: var(--muted);">VOL: ${hLatasFmt} UN</span>
-                        <span style="background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px; font-size: 0.7rem; color: var(--muted);">OP: ${h.dias_corridos_produzidos} DIAS</span>
+                      
+                      <!-- Microinformação Minimalista Sem Contêiner (Dark Glass) -->
+                      <div style="display: flex; gap: 1.25rem; flex-wrap: wrap; margin-bottom: 0.75rem; font-family: 'Inter', sans-serif;">
+                        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.6);">
+                          <div style="width: 6px; height: 6px; border-radius: 50%; background: ${hColor}; box-shadow: 0 0 8px ${hColor};"></div>
+                          Vida útil consumida: <span style="color: #fff; font-weight: 700; letter-spacing: 0.02em;">${hpct.toFixed(1)}%</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.6);">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="opacity: 0.8;"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                          Produção acumulada: <span style="color: #fff; font-weight: 700; letter-spacing: 0.02em;">${hLatasFmt} UN</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; font-weight: 500; color: rgba(255,255,255,0.6);">
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                          Operação: <span style="color: #fff; font-weight: 700; letter-spacing: 0.02em;">${h.dias_corridos_produzidos} DIAS</span>
+                        </div>
                       </div>
                       ${h.descricao_troca ? `<div style="margin-top: 1rem; padding-top: 0.75rem; border-top: 1px dashed rgba(255,255,255,0.1); font-size: 0.8rem; color: var(--text-secondary); line-height: 1.5;"><strong>Nota:</strong> ${h.descricao_troca}</div>` : ''}
                       ${h.foto_url ? `<div style="margin-top: 1rem;"><a href="${h.foto_url}" target="_blank" style="display:inline-block; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1);"><img src="${h.foto_url}" style="max-width: 100%; max-height: 200px; object-fit: cover; display: block;" alt="Foto da troca" /></a></div>` : ''}
