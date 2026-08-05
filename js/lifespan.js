@@ -27,7 +27,7 @@ function initLifespan() {
   const maquinasPadrao = [
     'Prensa', 'Verniz Interno', 'Acumulador 1', 'Acumulador 2', 
     'Acumulador 3', 'Verniz Externo', 'Lavadora', 'Impressora', 
-    'Esmaltadeira', 'Conificadora'
+    'Esmaltadeira', 'Conificadora', 'Tamboreador'
   ];
 
   const maquinasPorLinha = {
@@ -599,6 +599,8 @@ function initLifespan() {
       document.getElementById('lifespanNovoComponente').value = '';
       document.getElementById('lifespanNovoCodigo').value = '';
       document.getElementById('lifespanNovoAlvo').value = '';
+      const dataInput = document.getElementById('lifespanNovoData');
+      if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
       modalNovo.classList.add('open');
     });
   }
@@ -708,7 +710,8 @@ function initLifespan() {
         maquina: maquina,
         nome_componente: componente,
         codigo_componente: codigo,
-        vida_alvo_horas: parseInt(document.getElementById('lifespanNovoAlvo').value)
+        vida_alvo_horas: parseInt(document.getElementById('lifespanNovoAlvo').value),
+        data_instalacao: document.getElementById('lifespanNovoData').value || null
       };
 
       try {
@@ -780,6 +783,8 @@ function initLifespan() {
     const fotoInput = document.getElementById('lifespanTrocaFoto');
     if (fotoInput) fotoInput.value = ''; // clear previous
 
+    const dataInput = document.getElementById('lifespanTrocaData');
+    if (dataInput) dataInput.value = new Date().toISOString().split('T')[0];
     modalTroca.classList.add('open');
   }
 
@@ -820,7 +825,8 @@ function initLifespan() {
       novo_alvo_horas: parseInt(document.getElementById('lifespanTrocaAlvo').value),
       novo_codigo: nCodigo,
       nova_descricao: document.getElementById('lifespanTrocaDescricao').value,
-      foto_url: fotoBase64
+      foto_url: fotoBase64,
+      data_instalacao: document.getElementById('lifespanTrocaData').value || null
     };
 
     try {

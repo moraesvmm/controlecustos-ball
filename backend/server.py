@@ -2035,6 +2035,7 @@ class LifespanComponent(BaseModel):
     vida_alvo_horas: int
     descricao_troca: Optional[str] = None
     foto_url: Optional[str] = None
+    data_instalacao: Optional[str] = None
 
 @app.get("/api/lifespan/components")
 def get_lifespan_components():
@@ -2148,7 +2149,7 @@ def add_lifespan_component(comp: LifespanComponent):
         else:
             codigo = codigo.strip()
 
-        hoje_str = datetime.now().strftime('%Y-%m-%d')
+        hoje_str = comp.data_instalacao if comp.data_instalacao else datetime.now().strftime('%Y-%m-%d')
         conn.execute('''
             INSERT INTO kpi_lifespan_components 
             (maquina, linha, nome_componente, codigo_componente, data_instalacao, vida_alvo_dias, vida_alvo_horas, descricao_troca, foto_url, status)
@@ -2167,6 +2168,7 @@ class ReplaceComponentRequest(BaseModel):
     foto_url: Optional[str] = None
     novo_alvo_horas: int
     novo_codigo: Optional[str] = None
+    data_instalacao: Optional[str] = None
 
 @app.post("/api/lifespan/components/{comp_id}/replace")
 def replace_lifespan_component(comp_id: int, req: ReplaceComponentRequest):
@@ -2187,7 +2189,7 @@ def replace_lifespan_component(comp_id: int, req: ReplaceComponentRequest):
         ''', (req.nova_descricao, req.foto_url, comp_id))
         
         # Cria o novo zerado
-        hoje_str = datetime.now().strftime('%Y-%m-%d')
+        hoje_str = req.data_instalacao if req.data_instalacao else datetime.now().strftime('%Y-%m-%d')
         conn.execute('''
             INSERT INTO kpi_lifespan_components 
             (maquina, linha, nome_componente, codigo_componente, data_instalacao, vida_alvo_dias, vida_alvo_horas, descricao_troca, foto_url, status)
