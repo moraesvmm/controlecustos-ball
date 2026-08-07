@@ -5559,9 +5559,38 @@ async function checkPrazosAlerts() {
     // 4. Handle "Ciente" e "Fechar"
     const btnCiente = document.getElementById('btnOkAlertasDia');
     const btnFechar = document.getElementById('btnFecharAlertasDia');
+    const btnEmail = document.getElementById('btnNotificarPrazosEmail');
     
     if (btnFechar) {
       btnFechar.onclick = () => modal.classList.remove('open');
+    }
+
+    if (btnEmail) {
+      const newBtnE = btnEmail.cloneNode(true);
+      btnEmail.parentNode.replaceChild(newBtnE, btnEmail);
+      
+      newBtnE.addEventListener('click', () => {
+        const atrasados = unread.filter(u => u.faixa_prazo === 'Atrasado para retorno');
+        if (atrasados.length === 0) {
+          if (window.Swal) Swal.fire('Aviso', 'Nenhum item com status de atrasado nesta lista.', 'info');
+          else alert('Nenhum item atrasado para notificar.');
+          return;
+        }
+        
+        let body = `Boa tarde, pessoal.\r\n\r\n`;
+        
+        atrasados.forEach((u, i) => {
+          body += `Segue item com status de (Atrasado para Retorno): ${u.diasFora} dias.\r\n\r\n`;
+          body += `RC: ${u.rc || '-'}\r\n`;
+          body += `Fornecedor: ${u.fornecedor || '-'}.\r\n`;
+          body += `"${u.item || '-'}"\r\n\r\n`;
+          if(i < atrasados.length - 1) body += `------------------------\r\n\r\n`;
+        });
+        
+        const subject = encodeURIComponent('Aviso Automático: Itens Atrasados para Retorno');
+        const mailtoLink = `mailto:?subject=${subject}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoLink;
+      });
     }
 
     if (btnCiente) {

@@ -23,6 +23,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const movFiltroAno = document.getElementById('movFiltroAno');
     const movFiltroMes = document.getElementById('movFiltroMes');
     const movFiltroArea = document.getElementById('movFiltroArea');
+    
+    // Set default filters to current month/year to prevent showing all historical data initially
+    if (movFiltroAno && movFiltroMes) {
+        const d = new Date();
+        movFiltroAno.value = d.getFullYear().toString();
+        movFiltroMes.value = (d.getMonth() + 1).toString();
+    }
     const movGridVisiveis = document.getElementById('movGridVisiveis');
     const movGridTotal = document.getElementById('movGridTotal');
     const movGridSomaValor = document.getElementById('movGridSomaValor');
